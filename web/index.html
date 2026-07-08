@@ -134,8 +134,9 @@
         }
         // 빈 줄
         if (/^\s*$/.test(line)) { i++; continue; }
-        // 문단 (연속된 일반 줄 묶기)
-        const buf = [];
+        // 문단 (연속된 일반 줄 묶기) — 현재 줄은 항상 소비해 진행 보장(무한루프 방지)
+        const buf = [lines[i]];
+        i++;
         while (i < lines.length && !/^\s*$/.test(lines[i]) && !/^\s*(#{1,6}\s|```|&gt;\s?|[-*]\s|\d+\.\s|\|)/.test(lines[i])) {
           buf.push(lines[i]); i++;
         }
