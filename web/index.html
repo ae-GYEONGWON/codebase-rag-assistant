@@ -102,16 +102,25 @@
         if (h) { const n = Math.min(h[1].length, 4); out.push(`<h${n}>${inline(h[2])}</h${n}>`); i++; continue; }
         // 수평선
         if (/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) { out.push('<hr>'); i++; continue; }
-        // 표: | ... | 다음 줄이 구분선
-        if (/^\s*\|.*\|\s*$/.test(line) && i + 1 < lines.length && /^\s*\|?[\s:|-]+\|[\s:|-]+$/.test(lines[i + 1])) {
+        // 표: | 로 시작하는 연속 줄 묶음. 구분선(|---|)이 있으면 직전 행을 헤더로,
+        //      없으면(청크 경계로 헤더가 잘린 경우) 헤더 없이 테두리 표로 렌더.
+        if (/^\s*\|/.test(line)) {
           const cells = r => r.replace(/^\s*\|/, '').replace(/\|\s*$/, '').split('|').map(c => c.trim());
-          const head = cells(line);
-          i += 2;
-          const rows = [];
-          while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])) { rows.push(cells(lines[i])); i++; }
-          let t = '<table><thead><tr>' + head.map(c => `<th>${inline(c)}</th>`).join('') + '</tr></thead><tbody>';
-          t += rows.map(r => '<tr>' + r.map(c => `<td>${inline(c)}</td>`).join('') + '</tr>').join('');
-          out.push(t + '</tbody></table>');
+          const isSep = s => {
+            const c = s.trim().replace(/^\|/, '').replace(/\|$/, '');
+            return c.includes('-') && /^[\s:|-]+$/.test(c);
+          };
+          const body = [];
+          let header = null;
+          while (i < lines.length && /^\s*\|/.test(lines[i])) {
+            if (isSep(lines[i])) { if (body.length) header = body.pop(); i++; continue; }
+            body.push(cells(lines[i])); i++;
+          }
+          if (!body.length && !header) { continue; }  // 내용 없으면 스킵
+          let t = '<table>';
+          if (header) t += '<thead><tr>' + header.map(c => `<th>${inline(c)}</th>`).join('') + '</tr></thead>';
+          t += '<tbody>' + body.map(r => '<tr>' + r.map(c => `<td>${inline(c)}</td>`).join('') + '</tr>').join('') + '</tbody></table>';
+          out.push(t);
           continue;
         }
         // 인용문 > (escape 로 &gt; 가 된 상태)
