@@ -33,8 +33,8 @@ pip install -r requirements.txt
 copy .env.example .env            # bash: cp .env.example .env
 # .env 에 OPENAI_API_KEY 입력 (없으면 아래 '키 없이' 참고)
 
-python -m app.ingest --reset      # 문서 → 벡터 DB 인덱싱
-uvicorn app.main:app --reload     # http://127.0.0.1:8000 접속
+python -m app.ingest --reset              # 문서 → 벡터 DB 인덱싱
+uvicorn app.main:app --reload --port 8090 # http://127.0.0.1:8090 접속
 ```
 
 ### 키 없이 검색만 데모 (선택)
