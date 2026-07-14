@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import json
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -14,7 +15,20 @@ from pydantic import BaseModel
 
 from app.config import settings
 
-app = FastAPI(title="stock_prod RAG 챗봇", version="2.0.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """기동 시 임베딩 모델·Chroma 를 미리 적재(워밍업).
+
+    지연 로딩이면 첫 질문이 ~18초 걸린다(HF 모델 로드). 미리 데워두면 1~2초.
+    """
+    from app.rag import _retriever
+
+    _retriever().invoke("warmup")
+    yield
+
+
+app = FastAPI(title="stock_prod RAG 챗봇", version="2.0.0", lifespan=lifespan)
 
 _WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 

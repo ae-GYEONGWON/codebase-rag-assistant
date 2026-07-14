@@ -25,6 +25,26 @@ SYSTEM_PROMPT = (
 )
 
 
+def _text_of(content: Any) -> str:
+    """LLM 응답 content 정규화.
+
+    Gemini 3.x 계열은 content 를 문자열이 아니라 파트 배열로 반환한다:
+    `[{"type":"text","text":"..."}, {"extras":{"signature":...}}]`
+    → text 파트만 이어붙이고 thinking/서명 등 비텍스트 파트는 버린다.
+    """
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for p in content:
+            if isinstance(p, str):
+                parts.append(p)
+            elif isinstance(p, dict) and p.get("type") == "text":
+                parts.append(p.get("text", ""))
+        return "".join(parts)
+    return str(content) if content else ""
+
+
 def _format_context(docs: List[Document]) -> str:
     blocks = []
     for i, d in enumerate(docs, 1):
@@ -100,8 +120,7 @@ def answer(question: str) -> Dict[str, Any]:
         return {"answer": _extractive_text(docs), "sources": _sources(docs), "mode": "extractive"}
 
     resp = _llm().invoke(_messages(question, docs))
-    text = resp.content if isinstance(resp.content, str) else str(resp.content)
-    return {"answer": text, "sources": _sources(docs), "mode": provider}
+    return {"answer": _text_of(resp.content), "sources": _sources(docs), "mode": provider}
 
 
 def stream_answer(question: str) -> Iterator[Dict[str, Any]]:
@@ -122,9 +141,7 @@ def stream_answer(question: str) -> Iterator[Dict[str, Any]]:
 
     try:
         for chunk in _llm().stream(_messages(question, docs)):
-            piece = chunk.content
-            if not isinstance(piece, str):
-                piece = str(piece)
+            piece = _text_of(chunk.content)
             if piece:
                 yield {"type": "token", "text": piece}
     except Exception as e:  # noqa: BLE001 — 사용자에게 오류를 그대로 표시

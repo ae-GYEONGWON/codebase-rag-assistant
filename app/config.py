@@ -25,7 +25,8 @@ class Settings(BaseSettings):
 
     # LLM (생성) — 기본: Gemini 무료 티어
     llm_provider: str = "gemini"               # gemini | openai | extractive
-    gemini_chat_model: str = "gemini-2.5-flash"
+    # flash-lite: 첫 토큰 ~1.4s (thinking 기본 off). 3.5-flash 는 품질 ↑ 지만 첫 토큰 ~20s.
+    gemini_chat_model: str = "gemini-3.1-flash-lite"
     openai_chat_model: str = "gpt-4o-mini"
 
     # 분할/검색
