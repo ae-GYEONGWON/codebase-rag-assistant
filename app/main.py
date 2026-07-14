@@ -21,10 +21,11 @@ async def lifespan(app: FastAPI):
     """기동 시 임베딩 모델·Chroma 를 미리 적재(워밍업).
 
     지연 로딩이면 첫 질문이 ~18초 걸린다(HF 모델 로드). 미리 데워두면 1~2초.
+    BM25 인덱스 구축도 여기서 함께 끝난다.
     """
-    from app.rag import _retriever
+    from app.retriever import search
 
-    _retriever().invoke("warmup")
+    search("warmup")
     yield
 
 
@@ -37,7 +38,7 @@ SUGGESTED_QUESTIONS = [
     "지금 운용 모드가 뭐야?",
     "5개 포트폴리오 모드 차이를 표로 정리해줘",
     "zombie recovery 로직이 뭐야?",
-    "sl 캡은 몇 %로 정했고 왜 그랬어?",
+    "SL 은 어떻게 결정돼? 캡은 있어?",
     "2026-06-26 OCX 스톨/드리프트 사고 원인이 뭐야?",
     "broker hard_end 시각은 어떻게 정해져?",
 ]
@@ -50,12 +51,14 @@ class ChatRequest(BaseModel):
 class Source(BaseModel):
     source: str
     section: str = ""
+    snippet: str = ""   # 각주 [n] 을 펼치면 보이는 원문 발췌
 
 
 class ChatResponse(BaseModel):
     answer: str
     sources: list[Source]
     mode: str
+    retrieval: dict = {}   # 검색 진단(유사도·BM25·선택된 청크) — 데모에서 근거를 보여주는 용도
 
 
 @app.get("/health")

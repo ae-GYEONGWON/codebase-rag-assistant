@@ -34,6 +34,16 @@ class Settings(BaseSettings):
     chunk_overlap: int = 150
     retrieval_k: int = 5
 
+    # 하이브리드 검색(BM25+벡터 RRF 융합 → MMR)
+    fetch_k: int = 20            # 융합 전에 각 검색기가 가져올 후보 수
+    mmr_lambda: float = 0.6      # 1.0=적합도만, 0.0=다양성만
+
+    # 범위 밖 판정 임계(코사인). 실측 분포로 보정:
+    #   범위 안 질문 0.40~0.72 / 범위 밖(날씨·요리·상식) 0.25~0.29
+    #   → 0.35 로 두면 잡담은 검색 단계에서 컷. BM25 는 한글 2-gram 특성상
+    #     범위 밖에도 16+ 가 나와 게이트로 못 쓰고 순위 매기기에만 쓴다.
+    min_similarity: float = 0.35
+
     # 벡터 DB
     chroma_dir: str = "./chroma_db"
     collection_name: str = "stock_prod_memory"

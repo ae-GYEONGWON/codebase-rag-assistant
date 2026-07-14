@@ -12,7 +12,12 @@ from typing import Any, Dict, Iterator, List
 from langchain_core.documents import Document
 
 from app.config import settings
-from app.ingest import get_vectorstore
+from app.retriever import search, snippets_for
+
+OUT_OF_SCOPE = (
+    "제공된 문서에서 관련 내용을 찾을 수 없습니다. "
+    "이 봇은 stock_prod 프로젝트 문서에 대해서만 답할 수 있습니다."
+)
 
 SYSTEM_PROMPT = (
     "당신은 'stock_prod'(KOSPI200 선물·옵션 자동매매 시스템) 프로젝트의 문서 어시스턴트입니다.\n"
@@ -55,17 +60,6 @@ def _format_context(docs: List[Document]) -> str:
     return "\n\n---\n\n".join(blocks)
 
 
-def _sources(docs: List[Document]) -> List[Dict[str, str]]:
-    seen, out = set(), []
-    for d in docs:
-        key = (d.metadata.get("source"), d.metadata.get("section"))
-        if key in seen:
-            continue
-        seen.add(key)
-        out.append({"source": d.metadata.get("source", "?"), "section": d.metadata.get("section", "")})
-    return out
-
-
 def _extractive_text(docs: List[Document]) -> str:
     preview = "\n\n".join(
         f"• {d.metadata.get('source','?')}"
@@ -74,12 +68,6 @@ def _extractive_text(docs: List[Document]) -> str:
         for d in docs
     )
     return "**[extractive 모드 · LLM 미사용]** 관련 문서 발췌:\n\n" + preview
-
-
-@lru_cache(maxsize=1)
-def _retriever():
-    vs = get_vectorstore()
-    return vs.as_retriever(search_kwargs={"k": settings.retrieval_k})
 
 
 @lru_cache(maxsize=1)
@@ -110,33 +98,36 @@ def _messages(question: str, docs: List[Document]):
 
 
 def answer(question: str) -> Dict[str, Any]:
-    """질문 → {answer, sources, mode} (비스트리밍)."""
-    docs = _retriever().invoke(question)
+    """질문 → {answer, sources, mode, retrieval} (비스트리밍)."""
+    docs, debug = search(question)
     if not docs:
-        return {"answer": "제공된 문서에서 관련 내용을 찾을 수 없습니다.", "sources": [], "mode": "no_hit"}
+        return {"answer": OUT_OF_SCOPE, "sources": [], "mode": "no_hit", "retrieval": debug}
 
+    sources = snippets_for(docs, question)  # 순서 = 프롬프트의 [문서 N] = 답변의 [n]
     provider = settings.active_llm
     if provider == "extractive":
-        return {"answer": _extractive_text(docs), "sources": _sources(docs), "mode": "extractive"}
+        return {"answer": _extractive_text(docs), "sources": sources, "mode": "extractive", "retrieval": debug}
 
     resp = _llm().invoke(_messages(question, docs))
-    return {"answer": _text_of(resp.content), "sources": _sources(docs), "mode": provider}
+    return {"answer": _text_of(resp.content), "sources": sources, "mode": provider, "retrieval": debug}
 
 
 def stream_answer(question: str) -> Iterator[Dict[str, Any]]:
     """질문 → 이벤트 스트림. 각 이벤트: {type: sources|token|done|error, ...}."""
-    docs = _retriever().invoke(question)
-    yield {"type": "sources", "sources": _sources(docs)}
+    docs, debug = search(question)
 
     if not docs:
-        yield {"type": "token", "text": "제공된 문서에서 관련 내용을 찾을 수 없습니다."}
-        yield {"type": "done", "mode": "no_hit"}
+        yield {"type": "sources", "sources": []}
+        yield {"type": "token", "text": OUT_OF_SCOPE}
+        yield {"type": "done", "mode": "no_hit", "retrieval": debug}
         return
+
+    yield {"type": "sources", "sources": snippets_for(docs, question)}
 
     provider = settings.active_llm
     if provider == "extractive":
         yield {"type": "token", "text": _extractive_text(docs)}
-        yield {"type": "done", "mode": "extractive"}
+        yield {"type": "done", "mode": "extractive", "retrieval": debug}
         return
 
     try:
@@ -147,4 +138,4 @@ def stream_answer(question: str) -> Iterator[Dict[str, Any]]:
     except Exception as e:  # noqa: BLE001 — 사용자에게 오류를 그대로 표시
         yield {"type": "error", "message": f"LLM 호출 오류: {e}"}
         return
-    yield {"type": "done", "mode": provider}
+    yield {"type": "done", "mode": provider, "retrieval": debug}

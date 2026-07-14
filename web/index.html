@@ -29,6 +29,12 @@
     @keyframes blink { 50% { opacity:0; } }
     .sources { margin-top:10px; padding-top:8px; border-top:1px dashed var(--line); font-size:12px; color:var(--muted); }
     .sources code { color:var(--accent); background:transparent; padding:0; }
+    .src summary { cursor:pointer; padding:3px 0; list-style:none; }
+    .src summary::-webkit-details-marker { display:none; }
+    .src summary:hover code { text-decoration:underline; }
+    .src .cite { color:var(--accent); font-weight:600; }
+    .src .snip { margin:2px 0 8px 20px; padding:8px 10px; border-left:2px solid var(--accent);
+                 background:rgba(127,127,127,.08); border-radius:0 6px 6px 0; line-height:1.6; }
 
     #chips { display:flex; flex-wrap:wrap; gap:8px; padding:4px 0 12px; }
     .chip { font-size:12.5px; color:var(--fg); background:var(--card); border:1px solid var(--line);
@@ -168,13 +174,16 @@
       return d;
     }
 
+    // 답변 속 각주 [n] 과 같은 번호로 출처를 나열. 클릭하면 원문 스니펫이 펼쳐진다.
     function renderSources(container, sources) {
       if (!sources || !sources.length) return;
       const s = document.createElement('div');
       s.className = 'sources';
-      s.innerHTML = '출처: ' + sources
-        .map(x => '<code>' + escapeHtml(x.source + (x.section ? ' > ' + x.section : '')) + '</code>')
-        .join(', ');
+      s.innerHTML = '출처 ' + sources.map((x, i) =>
+        '<details class="src"><summary><span class="cite">[' + (i + 1) + ']</span> <code>'
+        + escapeHtml(x.source + (x.section ? ' > ' + x.section : ''))
+        + '</code></summary><div class="snip">' + escapeHtml(x.snippet || '') + '</div></details>'
+      ).join('');
       container.appendChild(s);
     }
 
