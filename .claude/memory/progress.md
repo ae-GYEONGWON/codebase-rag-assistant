@@ -3,7 +3,14 @@
 > 목적: `D:\stock_prod\.claude\memory` 문서를 지식원으로, 프로젝트에 대해 질문하면
 > **문서 근거 + 출처**와 함께 답하는 RAG 챗봇. (이력서 포트폴리오 겸용)
 > 위치: `D:\stock_prod_rag` (stock_prod 와 분리된 독립 repo, git init 완료)
-> 최종 작업일: 2026-07-08
+> 최종 작업일: 2026-07-14
+
+## 포트폴리오 고도화 로드맵 (사용자와 합의)
+완성도 3대 문제 = ①질문 스코프 불명 ②답 품질 ③가독성. 뿌리는 extractive(LLM 미연결).
+- **Tier 1 (체감)**: LLM 연결 + 예시질문 칩 + 지식 패널 + 스트리밍 → **구현 완료(2026-07-14)**
+- **Tier 2 (정확도)**: 하이브리드검색+리랭커, 인용/스니펫 UX, 범위 밖 처리 → TODO
+- **Tier 3 (도장)**: 평가 하네스(지표), README 다이어그램/스크린샷, Docker/테스트 → TODO
+- **LLM 결정**: 벤더 무관 → **무료 Gemini 티어** 채택(비용 0). 임베딩은 로컬 hf(무료) 유지.
 
 ---
 
@@ -44,31 +51,34 @@ uvicorn app.main:app --reload --port 8090   # 8000은 다른 서버가 점유 �
 `/` 는 요청마다 index.html 재로드 → UI 수정 시 서버 재시작 없이 F5.
 
 ## ⚠️ 현재 .env 상태 (중요)
-지금은 **키 없이 동작하도록** 테스트 모드로 설정됨:
-- `EMBEDDING_PROVIDER=hf` (로컬 임베딩, torch 설치돼 있음)
-- `LLM_PROVIDER=extractive` (LLM 미사용, 검색 발췌만 반환)
-- chroma_db 는 **hf 임베딩으로 인덱싱된 상태**.
+- `EMBEDDING_PROVIDER=hf` (로컬 무료 임베딩, torch 설치돼 있음). chroma_db 는 hf 로 인덱싱됨.
+- `LLM_PROVIDER=gemini` 이지만 `GOOGLE_API_KEY` 가 비어 있어 **active_llm=extractive 로 자동 폴백** 중.
+- config 의 `active_llm` 프로퍼티가 키 유무로 provider 자동 결정(gemini→키없으면 extractive).
 
-### OpenAI 로 "진짜 생성 답변" 켜기 (다음 단계 최우선)
-`.env` 3줄 변경 후 **반드시 재인덱싱**(임베딩 제공자 바뀌면 벡터 불일치):
-```
-OPENAI_API_KEY=sk-...
-EMBEDDING_PROVIDER=openai
-LLM_PROVIDER=openai
-```
-```powershell
-python -m app.ingest --reset
-```
-→ answer() 의 openai 경로(rag.py)는 아직 실키로 미검증. 키 넣고 첫 검증 필요.
+### Gemini 로 "진짜 생성 답변" 켜기 (사용자 액션 필요)
+1. https://aistudio.google.com/apikey 에서 **무료 키** 발급(결제수단 미등록이면 과금 불가 = 0원).
+2. `.env` 의 `GOOGLE_API_KEY=` 뒤에 붙여넣기. (임베딩은 그대로 hf → **재인덱싱 불필요**)
+3. 서버 재시작. `/health` 의 `llm_provider` 가 `gemini` 로 바뀌면 성공. 스트리밍 토큰이 여러 개로 쪼개짐.
+→ Gemini 실호출 경로(rag `_llm()` gemini 분기, `gemini-2.5-flash`)는 **키 없어 아직 실측 미완**. 키 넣고 첫 검증 필요.
+   (2.5-flash 오류 시 `.env` GEMINI_CHAT_MODEL=gemini-2.0-flash 로 교체)
+
+## Tier 1 구현 내역 (2026-07-14, 커밋됨)
+- rag.py: provider 스위치(gemini|openai|extractive), `answer()` + `stream_answer()`(이벤트 제너레이터), 가독성·[n]인용 프롬프트
+- main.py: `POST /chat/stream`(NDJSON: sources→token…→done), `GET /topics`(파일목록+예시질문), /health active_llm 표기
+- loader.py: `list_sources()` 추가
+- web/index.html: 예시질문 칩, "이 봇이 아는 것" 지식패널, **토큰 스트리밍 수신**(fetch reader + 실시간 마크다운 렌더)
+- config.py: google_api_key, gemini_chat_model, `has_gemini`/`active_llm`
+- 검증: /health·/topics·/chat/stream 전부 extractive 폴백으로 정상(파이썬 클라 테스트). Gemini 실키만 미검증.
 
 ## TODO / 다음 작업
-1. **OpenAI 키 발급 → openai 모드로 전환·재인덱싱·답변 품질 검증** (rag.py openai 분기 실측)
-2. 포트폴리오용: 아키텍처 구조도(Data Flow Diagram) 1장 + 웹UI 스크린샷
-3. GitHub 공개 repo push (현재 로컬 커밋만)
-4. (선택) `POST /ingest` 관리 엔드포인트, `docs/` 폴더도 지식원에 추가(KNOWLEDGE_DIRS)
-5. 이력서(D_data 경력기술서)에 한 줄 삽입 — README 하단 "이력서용 한 줄" 참고
+1. (사용자) Gemini 무료 키 넣고 gemini 모드 실검증.
+2. **Tier 2**: 하이브리드검색(BM25+벡터)+MMR+리랭커 / 출처 클릭시 원문 스니펫·[n]각주 링크 / 범위 밖(유사도 임계) 처리.
+3. **Tier 3**: 평가 하네스(질문셋+기대출처 → retrieval@k·정답률 스크립트), README 아키텍처 다이어그램+데모 GIF, Dockerfile, pytest.
+4. GitHub 공개 repo push (현재 로컬 커밋만).
+5. 지식원 문서가 52→54개로 늘어난 상태 → 최신 반영하려면 `python -m app.ingest --reset`.
+6. 이력서(D_data 경력기술서)에 한 줄 삽입 — README 하단 "이력서용 한 줄" 참고.
 
 ## 메모
 - Windows 콘솔 cp949 → 한글 print 시 mojibake. `PYTHONIOENCODING=utf-8` 로 실행하면 정상.
 - curl 로 한글 body 보낼 때 Windows 인코딩 이슈로 400 발생 가능. 웹UI/파이썬 클라이언트는 정상.
-- 임베딩 hf↔openai 전환은 **항상 --reset 재인덱싱** 동반해야 함.
+- 임베딩 hf↔openai 전환은 **항상 --reset 재인덱싱** 동반. (LLM provider 만 바꾸는 건 재인덱싱 불필요)

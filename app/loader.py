@@ -35,6 +35,11 @@ def _iter_files() -> List[Path]:
     return sorted(files)
 
 
+def list_sources() -> List[str]:
+    """지식원 파일들의 표시용 상대경로 목록(임베딩 없이 빠르게)."""
+    return [_display_name(p) for p in _iter_files()]
+
+
 def load_and_split() -> List[Document]:
     """지식원 전체를 읽어 청크 리스트로 반환."""
     header_splitter = MarkdownHeaderTextSplitter(

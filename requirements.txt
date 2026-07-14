@@ -1,9 +1,14 @@
 # --- Core RAG stack ---
 langchain-core>=0.3.0
 langchain-text-splitters>=0.3.0
-langchain-openai>=0.2.0
+langchain-google-genai>=2.0.0    # Gemini (무료 티어) — 기본 생성 LLM
+langchain-openai>=0.2.0          # (선택) OpenAI 대안
 langchain-chroma>=0.1.4
 chromadb>=0.5.0
+
+# --- 로컬 무료 임베딩(기본) ---
+langchain-huggingface>=0.1.0
+sentence-transformers>=3.0.0
 
 # --- API server ---
 fastapi>=0.115.0

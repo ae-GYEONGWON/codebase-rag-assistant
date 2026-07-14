@@ -8,39 +8,49 @@
     :root { --bg:#0f172a; --card:#1e293b; --line:#334155; --fg:#e2e8f0; --muted:#94a3b8; --accent:#38bdf8; --code:#0b1220; }
     * { box-sizing: border-box; }
     body { margin:0; font-family: system-ui, "Malgun Gothic", sans-serif; background:var(--bg); color:var(--fg); }
-    header { padding:16px 20px; border-bottom:1px solid var(--line); }
+    header { padding:14px 20px; border-bottom:1px solid var(--line); display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
     header h1 { margin:0; font-size:16px; }
-    header p { margin:4px 0 0; color:var(--muted); font-size:12px; }
-    #log { max-width:820px; margin:0 auto; padding:20px; display:flex; flex-direction:column; gap:14px; }
+    header p { margin:0; color:var(--muted); font-size:12px; }
+    #badge { margin-left:auto; font-size:11px; color:var(--muted); border:1px solid var(--line); padding:2px 8px; border-radius:999px; }
+
+    .wrap { max-width:860px; margin:0 auto; padding:0 20px; }
+    details.panel { margin:14px auto 0; }
+    details.panel summary { cursor:pointer; color:var(--accent); font-size:13px; list-style:none; }
+    details.panel summary::-webkit-details-marker { display:none; }
+    .files { columns:2; font-size:12px; color:var(--muted); margin:10px 0 0; padding:12px; background:var(--card);
+             border:1px solid var(--line); border-radius:8px; }
+    .files div { break-inside:avoid; padding:1px 0; }
+
+    #log { display:flex; flex-direction:column; gap:14px; padding:18px 0; }
     .msg { padding:12px 15px; border-radius:10px; line-height:1.65; word-break:break-word; }
     .user { align-self:flex-end; background:#0369a1; max-width:80%; white-space:pre-wrap; }
-    .bot { align-self:flex-start; background:var(--card); border:1px solid var(--line); max-width:92%; }
+    .bot { align-self:flex-start; background:var(--card); border:1px solid var(--line); max-width:94%; }
+    .cursor::after { content:"▍"; color:var(--accent); animation:blink 1s steps(1) infinite; }
+    @keyframes blink { 50% { opacity:0; } }
     .sources { margin-top:10px; padding-top:8px; border-top:1px dashed var(--line); font-size:12px; color:var(--muted); }
     .sources code { color:var(--accent); background:transparent; padding:0; }
 
+    #chips { display:flex; flex-wrap:wrap; gap:8px; padding:4px 0 12px; }
+    .chip { font-size:12.5px; color:var(--fg); background:var(--card); border:1px solid var(--line);
+            border-radius:999px; padding:7px 12px; cursor:pointer; }
+    .chip:hover { border-color:var(--accent); color:var(--accent); }
+
     /* --- 마크다운 렌더링 스타일 --- */
-    .md > *:first-child { margin-top:0; }
-    .md > *:last-child { margin-bottom:0; }
+    .md > *:first-child { margin-top:0; } .md > *:last-child { margin-bottom:0; }
     .md h1,.md h2,.md h3,.md h4 { margin:0.8em 0 0.4em; line-height:1.3; }
     .md h1 { font-size:1.35em; } .md h2 { font-size:1.2em; } .md h3 { font-size:1.08em; } .md h4 { font-size:1em; }
-    .md p { margin:0.5em 0; }
-    .md ul,.md ol { margin:0.4em 0; padding-left:1.4em; }
-    .md li { margin:0.2em 0; }
+    .md p { margin:0.5em 0; } .md ul,.md ol { margin:0.4em 0; padding-left:1.4em; } .md li { margin:0.2em 0; }
     .md a { color:var(--accent); }
-    .md code { background:var(--code); padding:1px 6px; border-radius:5px; font-size:0.9em;
-               font-family: ui-monospace, Consolas, monospace; color:#7dd3fc; }
-    .md pre { background:var(--code); border:1px solid var(--line); border-radius:8px;
-              padding:12px; overflow-x:auto; margin:0.6em 0; }
+    .md code { background:var(--code); padding:1px 6px; border-radius:5px; font-size:0.9em; font-family:ui-monospace,Consolas,monospace; color:#7dd3fc; }
+    .md pre { background:var(--code); border:1px solid var(--line); border-radius:8px; padding:12px; overflow-x:auto; margin:0.6em 0; }
     .md pre code { background:transparent; padding:0; color:#e2e8f0; }
     .md blockquote { margin:0.6em 0; padding:2px 12px; border-left:3px solid var(--accent); color:var(--muted); }
     .md hr { border:0; border-top:1px solid var(--line); margin:0.8em 0; }
     .md table { border-collapse:collapse; margin:0.6em 0; width:100%; font-size:0.92em; display:block; overflow-x:auto; }
     .md th,.md td { border:1px solid var(--line); padding:6px 10px; text-align:left; }
-    .md th { background:#0b1220; }
-    .md strong { color:#f1f5f9; }
+    .md th { background:#0b1220; } .md strong { color:#f1f5f9; }
 
-    form { position:sticky; bottom:0; background:var(--bg); border-top:1px solid var(--line);
-           display:flex; gap:8px; padding:14px; max-width:820px; margin:0 auto; }
+    form { position:sticky; bottom:0; background:var(--bg); border-top:1px solid var(--line); display:flex; gap:8px; padding:14px 0; }
     input { flex:1; padding:12px; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--fg); font-size:14px; }
     button { padding:12px 18px; border:0; border-radius:8px; background:var(--accent); color:#04263a; font-weight:700; cursor:pointer; }
     button:disabled { opacity:.5; cursor:default; }
@@ -50,16 +60,28 @@
 <body>
   <header>
     <h1>📈 stock_prod 문서 RAG 챗봇</h1>
-    <p>KOSPI200 선물·옵션 자동매매 시스템의 memory 문서에만 근거해 답합니다.</p>
+    <p>KOSPI200 선물·옵션 자동매매 시스템 문서에만 근거해 답합니다.</p>
+    <span id="badge">…</span>
   </header>
-  <div id="log">
-    <div class="msg bot"><div class="md">안녕하세요. stock_prod 프로젝트에 대해 무엇이든 물어보세요.<br>
-<span class="hint">예: "현재 운용 모드가 뭐야?", "zombie recovery 로직 설명해줘", "sl 캡은 몇 %야?"</span></div></div>
+
+  <div class="wrap">
+    <details class="panel" id="panel">
+      <summary id="panel-summary">📚 이 봇이 아는 것 …</summary>
+      <div class="files" id="files"></div>
+    </details>
+
+    <div id="log">
+      <div class="msg bot"><div class="md">안녕하세요. stock_prod 프로젝트에 대해 무엇이든 물어보세요.<br>
+<span class="hint">아래 예시 질문을 눌러도 되고, 직접 입력해도 됩니다.</span></div></div>
+    </div>
+
+    <div id="chips"></div>
+
+    <form id="f">
+      <input id="q" placeholder="질문을 입력하세요…" autocomplete="off" autofocus />
+      <button id="send" type="submit">전송</button>
+    </form>
   </div>
-  <form id="f">
-    <input id="q" placeholder="질문을 입력하세요…" autocomplete="off" autofocus />
-    <button id="send" type="submit">전송</button>
-  </form>
 
   <script>
     const log = document.getElementById('log');
@@ -67,9 +89,7 @@
     const input = document.getElementById('q');
     const btn = document.getElementById('send');
 
-    function escapeHtml(s) {
-      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    }
+    function escapeHtml(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
     // 인라인 서식: `코드`, **굵게**, *기울임*, [텍스트](url)
     function inline(t) {
@@ -87,65 +107,50 @@
       let i = 0;
       while (i < lines.length) {
         const line = lines[i];
-
-        // 코드블록 ```
         if (/^\s*```/.test(line)) {
-          const buf = [];
-          i++;
+          const buf = []; i++;
           while (i < lines.length && !/^\s*```/.test(lines[i])) { buf.push(lines[i]); i++; }
           i++;
           out.push('<pre><code>' + buf.join('\n') + '</code></pre>');
           continue;
         }
-        // 헤딩 #~####
         const h = line.match(/^(#{1,6})\s+(.*)$/);
         if (h) { const n = Math.min(h[1].length, 4); out.push(`<h${n}>${inline(h[2])}</h${n}>`); i++; continue; }
-        // 수평선
         if (/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) { out.push('<hr>'); i++; continue; }
-        // 표: | 로 시작하는 연속 줄 묶음. 구분선(|---|)이 있으면 직전 행을 헤더로,
-        //      없으면(청크 경계로 헤더가 잘린 경우) 헤더 없이 테두리 표로 렌더.
+        // 표: | 로 시작하는 연속 줄 묶음. 구분선(|---|)이 있으면 직전 행을 헤더로.
         if (/^\s*\|/.test(line)) {
           const cells = r => r.replace(/^\s*\|/, '').replace(/\|\s*$/, '').split('|').map(c => c.trim());
-          const isSep = s => {
-            const c = s.trim().replace(/^\|/, '').replace(/\|$/, '');
-            return c.includes('-') && /^[\s:|-]+$/.test(c);
-          };
-          const body = [];
-          let header = null;
+          const isSep = s => { const c = s.trim().replace(/^\|/, '').replace(/\|$/, ''); return c.includes('-') && /^[\s:|-]+$/.test(c); };
+          const body = []; let header = null;
           while (i < lines.length && /^\s*\|/.test(lines[i])) {
             if (isSep(lines[i])) { if (body.length) header = body.pop(); i++; continue; }
             body.push(cells(lines[i])); i++;
           }
-          if (!body.length && !header) { continue; }  // 내용 없으면 스킵
+          if (!body.length && !header) { continue; }
           let t = '<table>';
           if (header) t += '<thead><tr>' + header.map(c => `<th>${inline(c)}</th>`).join('') + '</tr></thead>';
           t += '<tbody>' + body.map(r => '<tr>' + r.map(c => `<td>${inline(c)}</td>`).join('') + '</tr>').join('') + '</tbody></table>';
           out.push(t);
           continue;
         }
-        // 인용문 > (escape 로 &gt; 가 된 상태)
         if (/^\s*&gt;\s?/.test(line)) {
           const buf = [];
           while (i < lines.length && /^\s*&gt;\s?/.test(lines[i])) { buf.push(lines[i].replace(/^\s*&gt;\s?/, '')); i++; }
           out.push('<blockquote>' + inline(buf.join('<br>')) + '</blockquote>');
           continue;
         }
-        // 리스트 (- * 또는 1.)
         if (/^\s*([-*]|\d+\.)\s+/.test(line)) {
           const ordered = /^\s*\d+\.\s+/.test(line);
           const buf = [];
           while (i < lines.length && /^\s*([-*]|\d+\.)\s+/.test(lines[i])) {
-            buf.push('<li>' + inline(lines[i].replace(/^\s*([-*]|\d+\.)\s+/, '')) + '</li>');
-            i++;
+            buf.push('<li>' + inline(lines[i].replace(/^\s*([-*]|\d+\.)\s+/, '')) + '</li>'); i++;
           }
           out.push((ordered ? '<ol>' : '<ul>') + buf.join('') + (ordered ? '</ol>' : '</ul>'));
           continue;
         }
-        // 빈 줄
         if (/^\s*$/.test(line)) { i++; continue; }
-        // 문단 (연속된 일반 줄 묶기) — 현재 줄은 항상 소비해 진행 보장(무한루프 방지)
-        const buf = [lines[i]];
-        i++;
+        // 문단 — 현재 줄은 항상 소비해 진행 보장(무한루프 방지)
+        const buf = [lines[i]]; i++;
         while (i < lines.length && !/^\s*$/.test(lines[i]) && !/^\s*(#{1,6}\s|```|&gt;\s?|[-*]\s|\d+\.\s|\|)/.test(lines[i])) {
           buf.push(lines[i]); i++;
         }
@@ -159,47 +164,94 @@
       d.className = 'msg ' + cls;
       d.textContent = text;
       log.appendChild(d);
-      d.scrollIntoView({ behavior: 'smooth' });
+      d.scrollIntoView({ behavior: 'smooth', block: 'end' });
       return d;
     }
 
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const q = input.value.trim();
+    function renderSources(container, sources) {
+      if (!sources || !sources.length) return;
+      const s = document.createElement('div');
+      s.className = 'sources';
+      s.innerHTML = '출처: ' + sources
+        .map(x => '<code>' + escapeHtml(x.source + (x.section ? ' > ' + x.section : '')) + '</code>')
+        .join(', ');
+      container.appendChild(s);
+    }
+
+    async function ask(q) {
+      q = q.trim();
       if (!q) return;
       bubble(q, 'user');
       input.value = '';
       btn.disabled = true;
-      const thinking = bubble('생각 중…', 'bot');
+
+      const wrap = bubble('', 'bot');
+      const body = document.createElement('div');
+      body.className = 'md cursor';
+      body.textContent = '생각 중…';
+      wrap.appendChild(body);
+
+      let acc = '';
+      let sources = null;
       try {
-        const res = await fetch('/chat', {
+        const res = await fetch('/chat/stream', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ question: q })
         });
-        const data = await res.json();
-        // 답변을 마크다운으로 렌더링
-        thinking.textContent = '';
-        const body = document.createElement('div');
-        body.className = 'md';
-        body.innerHTML = renderMarkdown(data.answer || '(빈 응답)');
-        thinking.appendChild(body);
-        if (data.sources && data.sources.length) {
-          const s = document.createElement('div');
-          s.className = 'sources';
-          s.innerHTML = '출처: ' + data.sources
-            .map(x => '<code>' + escapeHtml(x.source + (x.section ? ' > ' + x.section : '')) + '</code>')
-            .join(', ');
-          thinking.appendChild(s);
+        const reader = res.body.getReader();
+        const dec = new TextDecoder();
+        let buf = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += dec.decode(value, { stream: true });
+          let nl;
+          while ((nl = buf.indexOf('\n')) >= 0) {
+            const line = buf.slice(0, nl); buf = buf.slice(nl + 1);
+            if (!line.trim()) continue;
+            const ev = JSON.parse(line);
+            if (ev.type === 'sources') { sources = ev.sources; }
+            else if (ev.type === 'token') {
+              acc += ev.text;
+              body.innerHTML = renderMarkdown(acc);
+              wrap.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }
+            else if (ev.type === 'error') { acc += '\n\n**[오류]** ' + ev.message; body.innerHTML = renderMarkdown(acc); }
+            else if (ev.type === 'done') { /* 종료 */ }
+          }
         }
-        thinking.scrollIntoView({ behavior: 'smooth' });
+        body.classList.remove('cursor');
+        if (!acc.trim()) { body.textContent = '(빈 응답)'; }
+        renderSources(wrap, sources);
       } catch (err) {
-        thinking.textContent = '오류: ' + err;
+        body.classList.remove('cursor');
+        body.textContent = '오류: ' + err;
       } finally {
         btn.disabled = false;
         input.focus();
+        wrap.scrollIntoView({ behavior: 'smooth', block: 'end' });
       }
-    });
+    }
+
+    form.addEventListener('submit', (e) => { e.preventDefault(); ask(input.value); });
+
+    // 시작: 지식 패널 + 예시 칩 + 배지 로드
+    (async () => {
+      try {
+        const t = await (await fetch('/topics')).json();
+        document.getElementById('badge').textContent = 'LLM: ' + t.llm + ' · 문서 ' + t.count + '개';
+        document.getElementById('panel-summary').textContent = `📚 이 봇이 아는 것 — 문서 ${t.count}개 (클릭해서 목록 보기)`;
+        document.getElementById('files').innerHTML = t.files.map(f => '<div>' + escapeHtml(f) + '</div>').join('');
+        const chips = document.getElementById('chips');
+        (t.suggestions || []).forEach(qs => {
+          const b = document.createElement('button');
+          b.className = 'chip'; b.type = 'button'; b.textContent = qs;
+          b.addEventListener('click', () => ask(qs));
+          chips.appendChild(b);
+        });
+      } catch (e) { document.getElementById('badge').textContent = '연결 오류'; }
+    })();
   </script>
 </body>
 </html>
