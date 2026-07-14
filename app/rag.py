@@ -20,13 +20,20 @@ OUT_OF_SCOPE = (
 )
 
 SYSTEM_PROMPT = (
-    "당신은 'stock_prod'(KOSPI200 선물·옵션 자동매매 시스템) 프로젝트의 문서 어시스턴트입니다.\n"
+    "당신은 'stock_prod'(KOSPI200 선물·옵션 자동매매 시스템) 프로젝트의 어시스턴트입니다.\n"
+    "[근거] 에는 **프로젝트 문서(.md)** 와 **실제 소스코드(.py)** 발췌가 섞여 들어옵니다.\n"
+    "코드 발췌는 `# 파일: … / # 심볼: …` 헤더로 시작합니다.\n"
     "규칙:\n"
-    "1. 반드시 아래 [문서] 발췌에만 근거해 한국어로 답하세요. 없는 내용은 지어내지 말고 "
+    "1. 반드시 아래 [근거] 에만 기반해 한국어로 답하세요. 없는 내용은 지어내지 말고 "
     "'제공된 문서에서 관련 내용을 찾을 수 없습니다.'라고 답하세요.\n"
-    "2. 읽기 좋게 마크다운으로 구조화하세요: 핵심 결론을 한 문장으로 먼저, 그 뒤 필요하면 불릿/표로. 장황하지 않게.\n"
-    "3. 근거로 쓴 문서를 해당 문장 끝에 [1], [2] 형태 각주로 표기하세요. 번호는 [문서 N]의 N과 일치시킵니다.\n"
-    "4. 코드·설정값·수치는 문서에 적힌 그대로 정확히 인용하세요."
+    "2. 읽는 사람은 개발자가 아닐 수 있습니다. **핵심 결론을 평이한 한 문장으로 먼저** 쓰고, "
+    "그 뒤에 필요하면 불릿/표로 풀어 쓰세요. 장황하지 않게.\n"
+    "3. 근거로 쓴 발췌를 문장 끝에 [1], [2] 형태 각주로 표기하세요. 번호는 [근거 N]의 N과 일치시킵니다.\n"
+    "4. 코드가 근거일 때는 파일·함수명을 밝히고(예: `app/…/vix_strategy.py` 의 `apply_vix_sl`), "
+    "코드 자체는 설명에 꼭 필요한 짧은 조각만 인용하세요.\n"
+    "5. **문서와 코드가 어긋나면 그 사실을 명시**하세요(예: 문서에는 남아 있으나 코드에서는 제거됨). "
+    "실제 동작은 코드가 기준입니다.\n"
+    "6. 설정값·수치는 근거에 적힌 그대로 정확히 인용하세요."
 )
 
 
@@ -55,7 +62,8 @@ def _format_context(docs: List[Document]) -> str:
     for i, d in enumerate(docs, 1):
         src = d.metadata.get("source", "?")
         sec = d.metadata.get("section", "")
-        head = f"[문서 {i}] {src}" + (f" > {sec}" if sec else "")
+        kind = "코드" if d.metadata.get("doc_type") == "code" else "문서"
+        head = f"[근거 {i}] ({kind}) {src}" + (f" > {sec}" if sec else "")
         blocks.append(f"{head}\n{d.page_content}")
     return "\n\n---\n\n".join(blocks)
 
@@ -93,7 +101,7 @@ def _messages(question: str, docs: List[Document]):
 
     return [
         SystemMessage(content=SYSTEM_PROMPT),
-        HumanMessage(content=f"[문서]\n{_format_context(docs)}\n\n[질문]\n{question}"),
+        HumanMessage(content=f"[근거]\n{_format_context(docs)}\n\n[질문]\n{question}"),
     ]
 
 

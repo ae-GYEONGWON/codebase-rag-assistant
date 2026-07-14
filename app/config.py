@@ -14,9 +14,14 @@ class Settings(BaseSettings):
     google_api_key: str = ""     # Gemini (무료 티어) — https://aistudio.google.com/apikey
     openai_api_key: str = ""     # (선택) OpenAI 를 쓸 경우에만
 
-    # 지식원
+    # 지식원 — 문서
     knowledge_dirs: str = "D:/stock_prod/.claude/memory"
     file_globs: str = "*.md"
+
+    # 지식원 — 소스코드(AST 청킹). 문서가 말하지 않는 '실제 구현'을 답하게 하는 축.
+    index_code: bool = True
+    code_dirs: str = "D:/stock_prod/app,D:/stock_prod/scripts"
+    code_globs: str = "*.py"
 
     # 임베딩 (기본: 로컬 무료 hf)
     embedding_provider: str = "hf"             # hf(로컬 무료) | openai
@@ -58,6 +63,14 @@ class Settings(BaseSettings):
     @property
     def glob_list(self) -> List[str]:
         return [g.strip() for g in self.file_globs.split(",") if g.strip()]
+
+    @property
+    def code_dir_list(self) -> List[Path]:
+        return [Path(p.strip()) for p in self.code_dirs.split(",") if p.strip()]
+
+    @property
+    def code_glob_list(self) -> List[str]:
+        return [g.strip() for g in self.code_globs.split(",") if g.strip()]
 
     @property
     def has_gemini(self) -> bool:

@@ -39,7 +39,7 @@ SUGGESTED_QUESTIONS = [
     "5개 포트폴리오 모드 차이를 표로 정리해줘",
     "zombie recovery 로직이 뭐야?",
     "SL 은 어떻게 결정돼? 캡은 있어?",
-    "2026-06-26 OCX 스톨/드리프트 사고 원인이 뭐야?",
+    "zombie recovery 는 코드에서 어떻게 구현돼 있어?",
     "broker hard_end 시각은 어떻게 정해져?",
 ]
 
@@ -51,7 +51,8 @@ class ChatRequest(BaseModel):
 class Source(BaseModel):
     source: str
     section: str = ""
-    snippet: str = ""   # 각주 [n] 을 펼치면 보이는 원문 발췌
+    doc_type: str = "doc"   # doc | code
+    snippet: str = ""       # 각주 [n] 을 펼치면 보이는 원문 발췌
 
 
 class ChatResponse(BaseModel):
@@ -74,13 +75,16 @@ def health() -> dict:
 
 @app.get("/topics")
 def topics() -> dict:
-    """지식원 파일 목록 + 시작 질문. 프런트의 '이 봇이 아는 것' 패널·칩에 사용."""
+    """지식원 목록 + 시작 질문. 프런트의 '이 봇이 아는 것' 패널·칩에 사용."""
+    from app.code_loader import list_code_sources
     from app.loader import list_sources
 
     files = list_sources()
+    code = list_code_sources()
     return {
         "count": len(files),
         "files": files,
+        "code_count": len(code),
         "suggestions": SUGGESTED_QUESTIONS,
         "llm": settings.active_llm,
     }

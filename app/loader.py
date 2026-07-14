@@ -76,6 +76,7 @@ def load_and_split() -> List[Document]:
                             "source": rel,
                             "path": str(path),
                             "section": section_title,
+                            "doc_type": "doc",
                         },
                     )
                 )

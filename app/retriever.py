@@ -178,6 +178,7 @@ def snippets_for(docs: List[Document], question: str) -> List[Dict[str, str]]:
         {
             "source": d.metadata.get("source", "?"),
             "section": d.metadata.get("section", ""),
+            "doc_type": d.metadata.get("doc_type", "doc"),
             "snippet": _snippet(d.page_content, question),
         }
         for d in docs
