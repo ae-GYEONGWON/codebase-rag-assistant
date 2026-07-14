@@ -36,7 +36,9 @@ class Settings(BaseSettings):
 
     # 하이브리드 검색(BM25+벡터 RRF 융합 → MMR)
     fetch_k: int = 20            # 융합 전에 각 검색기가 가져올 후보 수
-    mmr_lambda: float = 0.6      # 1.0=적합도만, 0.0=다양성만
+    # 1.0=적합도만, 0.0=다양성만. λ 스윕(eval/run_eval.py) 결과 0.8 채택:
+    #   0.5~0.7 → recall 90% / 0.8~0.9 → recall 95%(RRF 단독과 동일)면서 출처 다양성 ↑
+    mmr_lambda: float = 0.8
 
     # 범위 밖 판정 임계(코사인). 실측 분포로 보정:
     #   범위 안 질문 0.40~0.72 / 범위 밖(날씨·요리·상식) 0.25~0.29

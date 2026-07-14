@@ -1,0 +1,33 @@
+{
+  "_comment": "검색 평가용 질문셋. expected = 정답으로 인정할 출처 파일(하나라도 top-k 에 있으면 hit).",
+  "in_scope": [
+    { "q": "좀비 자동 회복은 어떻게 동작해?", "expected": ["prod/zombie_recovery.md"] },
+    { "q": "broker hard_end 시각은 어떻게 정해져?", "expected": ["prod/broker_hard_end.md"] },
+    { "q": "5개 포트폴리오 모드 차이가 뭐야?", "expected": ["prod/portfolio_modes_5.md"] },
+    { "q": "지금 운용 중인 모드는 뭐야?", "expected": ["prod_status.md", "prod/portfolio_modes_5.md"] },
+    { "q": "2026-06-26 OCX 스톨/드리프트 사고 원인이 뭐야?", "expected": ["broker/incident_2026-06-26_ocx_stall_drift_storm.md"] },
+    { "q": "신호 타임아웃은 몇 초로 잡았어?", "expected": ["prod/signal_timeout_5s.md"] },
+    { "q": "동적 MAX_OPEN 은 어떻게 계산돼?", "expected": ["prod/max_open_dynamic.md"] },
+    { "q": "청산 분할 발송 BATCH_EXIT 도입 배경은?", "expected": ["prod/exit_split_send.md"] },
+    { "q": "갭 3% 면 SL 을 어떻게 줄여?", "expected": ["prod/gap3_sl_shrink.md"] },
+    { "q": "옵션 strangle 2x 전략이 뭐야?", "expected": ["option/strangle2x.md", "option/_index.md"] },
+    { "q": "트레일링 스톱 백테스트 결과는?", "expected": ["tests/trailing_stop.md"] },
+    { "q": "broker netting 처리 방식은?", "expected": ["prod/broker_netting.md"] },
+    { "q": "SL_CAP_PERCENT 는 지금 어떻게 됐어?", "expected": ["prod/param_selection_overhaul_spec.md", "prod/sl_cap_best_params.md", "prod_status.md"] },
+    { "q": "2026-07-13 머신 마이그레이션에서 뭘 했어?", "expected": ["prod/machine_migration_2026-07-13.md"] },
+    { "q": "웹 대시보드 페이지 구성이 어떻게 돼?", "expected": ["arch/web_system_design.md", "arch/web_api_schema.md"] },
+    { "q": "composite m9s5 테스트 목적이 뭐야?", "expected": ["tests/composite_m9s5.md"] },
+    { "q": "RC4025 오류는 왜 나?", "expected": ["prod/exit_split_send.md", "prod/broker_split_send.md", "prod/max_open_dynamic.md"] },
+    { "q": "rolling R swap 규칙 설명해줘", "expected": ["prod/rolling_r_swap.md", "prod/rr_only_swap.md"] },
+    { "q": "옵션 구독 스로틀은 왜 넣었어?", "expected": ["prod/opt_sub_throttle.md", "prod/opt_sub_thin_strike.md"] },
+    { "q": "TP/SL 퍼센트는 어떻게 통일했어?", "expected": ["prod/tp_sl_percent.md", "prod/param_selection_overhaul_spec.md"] }
+  ],
+  "out_of_scope": [
+    "고양이 키우는 법 알려줘",
+    "오늘 서울 날씨 어때?",
+    "파스타 레시피 알려줘",
+    "대한민국 대통령이 누구야?",
+    "삼성전자 주가 얼마야?",
+    "여행 가기 좋은 곳 추천해줘"
+  ]
+}

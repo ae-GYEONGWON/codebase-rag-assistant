@@ -38,6 +38,10 @@ def _tokenize(text: str) -> List[str]:
         tokens.append(tok)
         if not tok.isascii() and len(tok) > 1:
             tokens.extend(tok[i : i + 2] for i in range(len(tok) - 1))
+        elif "_" in tok:
+            # snake_case 식별자는 조각으로도 색인. 파일명 composite_m9s5 를 통째 토큰으로만
+            # 두면 "composite m9s5" 질의가 어디에도 걸리지 않는다(본문 표기는 'm=9 / s=5').
+            tokens.extend(p for p in tok.split("_") if p)
     return tokens
 
 
