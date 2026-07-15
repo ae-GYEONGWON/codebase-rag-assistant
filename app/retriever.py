@@ -25,6 +25,7 @@ from app.ingest import get_vectorstore
 # 영문/숫자/밑줄 토큰(RC4025, HARD_END …) 과 한글 덩어리를 분리
 _TOKEN_RE = re.compile(r"[a-zA-Z0-9_]+|[가-힣]+")
 _RRF_K = 60  # RRF 상수(관례값). 상위 순위 간 점수 차를 완만하게 만든다.
+_SYMBOL_SLOTS = 2  # 심볼 정확매칭 코드를 top-k 에 보장할 최대 개수(나머지는 일반 검색).
 
 
 def _tokenize(text: str) -> List[str]:
@@ -72,6 +73,39 @@ def _corpus() -> Tuple[List[Document], np.ndarray, BM25Okapi]:
     return docs, embs, bm25
 
 
+@lru_cache(maxsize=1)
+def _symbol_index() -> List[tuple]:
+    """(소문자 심볼명, 청크 인덱스) 목록 — 코드 청크의 함수/메서드명 정확 매칭용.
+
+    코드 본문은 영어 식별자뿐이라 한국어 질문과 임베딩 유사도가 낮아 검색에서 밀린다.
+    질문에 심볼명이 그대로 등장하면("apply_vix_sl 함수?") 그 청크를 강제로 끌어올린다.
+    """
+    docs, _, _ = _corpus()
+    out = []
+    for i, d in enumerate(docs):
+        if d.metadata.get("doc_type") != "code":
+            continue
+        sym = d.metadata.get("section", "")
+        # 전체 심볼(apply_vix_sl)과 메서드명(BrokerMain.foo → foo) 둘 다 후보
+        for cand in {sym, sym.split(".")[-1]}:
+            c = cand.lower().lstrip("_")
+            if len(c) >= 5 and c != "module":
+                out.append((c, i))
+    return out
+
+
+def _symbol_hits(question: str) -> List[int]:
+    """질문에 코드 심볼명이 그대로 들어 있는 코드 청크 인덱스 목록(중복 제거)."""
+    ql = question.lower()
+    seen: set = set()
+    hits: List[int] = []
+    for sym, i in _symbol_index():
+        if sym in ql and i not in seen:
+            seen.add(i)
+            hits.append(i)
+    return hits
+
+
 def _mmr(cands: List[int], embs: np.ndarray, rel: Dict[int, float], k: int, lam: float) -> List[int]:
     """Maximal Marginal Relevance — 적합도와 '이미 고른 것과의 차별성'을 lam 으로 절충.
 
@@ -79,17 +113,18 @@ def _mmr(cands: List[int], embs: np.ndarray, rel: Dict[int, float], k: int, lam:
     희귀 식별자 문서가 최종 선택에서 다시 탈락해 하이브리드가 무의미해진다.
     임베딩은 중복 penalty(청크 간 유사도) 계산에만 쓴다.
     """
-    top = max(rel.values()) or 1.0
+    # rel 에 없는 후보(심볼 매칭으로 뒤늦게 합류한 청크)는 적합도 0 으로 본다.
+    top = (max(rel.values()) if rel else 0.0) or 1.0
     selected: List[int] = []
     pool = list(cands)
     while pool and len(selected) < k:
         if not selected:
-            best = max(pool, key=lambda i: rel[i])
+            best = max(pool, key=lambda i: rel.get(i, 0.0))
         else:
             chosen = embs[selected]  # (n_sel, dim)
             best = max(
                 pool,
-                key=lambda i: lam * (rel[i] / top)
+                key=lambda i: lam * (rel.get(i, 0.0) / top)
                 - (1 - lam) * float(np.max(chosen @ embs[i])),
             )
         selected.append(best)
@@ -137,8 +172,14 @@ def search(question: str, k: int | None = None) -> Tuple[List[Document], Dict[st
     for rank, idx in enumerate(bm_rank):
         fused[int(idx)] = fused.get(int(idx), 0.0) + 1.0 / (_RRF_K + rank + 1)
 
+    # 질문에 코드 심볼명이 그대로 있으면(예 "apply_vix_sl 함수?") 그 청크를 후보에 넣는다.
+    sym_hits = _symbol_hits(question)
+
     n_cands = max(settings.rerank_candidates if settings.use_reranker else fetch, k)
     cands = sorted(fused, key=lambda i: -fused[i])[:n_cands]
+    for i in sym_hits:  # 후보에 없으면 합류(MMR 대상이 되도록)
+        if i not in cands:
+            cands.append(i)
 
     # --- 범위 밖 판정: 코사인 단독 게이트 ---
     # BM25 는 게이트로 쓰지 않는다. 한글 2-gram 이 흔한 음절에 걸려 "고양이 키우는 법"
@@ -146,7 +187,7 @@ def search(question: str, k: int | None = None) -> Tuple[List[Document], Dict[st
     # 코사인이 오히려 0.5+ 라 이 게이트만으로 충분하다. — 실측 보정, config 주석 참고.
     best_sim = float(sims.max())
     best_bm = float(bm_scores.max())
-    if best_sim < settings.min_similarity:
+    if best_sim < settings.min_similarity and not sym_hits:  # 심볼 정확매칭이면 범위 안으로 인정
         return [], {
             "reason": "out_of_scope",
             "best_similarity": round(best_sim, 3),
@@ -167,6 +208,15 @@ def search(question: str, k: int | None = None) -> Tuple[List[Document], Dict[st
         rel = {i: (s - lo) / span for i, s in rr_scores.items()}
 
     picked = _mmr(cands, embs, rel, k, settings.mmr_lambda)
+
+    # 심볼 정확매칭 청크를 top-k 에 최대 _SYMBOL_SLOTS 개 보장(융합점수 순). 나머지 슬롯은
+    # 일반 검색 결과 유지 → "hard_end 시각?"(정답=문서)이 코드에 독점당하지 않게.
+    if sym_hits:
+        extra = [i for i in sorted(sym_hits, key=lambda i: -fused.get(i, 0.0)) if i not in picked][:_SYMBOL_SLOTS]
+        if extra:
+            picked = extra + [p for p in picked if p not in extra]
+            picked = picked[:k]
+
     chosen = [docs[i] for i in picked]
 
     debug = {

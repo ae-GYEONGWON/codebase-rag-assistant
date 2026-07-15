@@ -29,11 +29,21 @@ SYSTEM_PROMPT = (
     "2. 읽는 사람은 개발자가 아닐 수 있습니다. **핵심 결론을 평이한 한 문장으로 먼저** 쓰고, "
     "그 뒤에 필요하면 불릿/표로 풀어 쓰세요. 장황하지 않게.\n"
     "3. 근거로 쓴 발췌를 문장 끝에 [1], [2] 형태 각주로 표기하세요. 번호는 [근거 N]의 N과 일치시킵니다.\n"
-    "4. 코드가 근거일 때는 파일·함수명을 밝히고(예: `app/…/vix_strategy.py` 의 `apply_vix_sl`), "
-    "코드 자체는 설명에 꼭 필요한 짧은 조각만 인용하세요.\n"
+    "4. 코드가 근거일 때는 파일·함수명을 밝히세요(예: `app/…/vix_strategy.py` 의 `apply_vix_sl`).\n"
     "5. **문서와 코드가 어긋나면 그 사실을 명시**하세요(예: 문서에는 남아 있으나 코드에서는 제거됨). "
     "실제 동작은 코드가 기준입니다.\n"
     "6. 설정값·수치는 근거에 적힌 그대로 정확히 인용하세요."
+)
+
+# 독자 층에 따른 코드 인용 방침. 개발자 모드 토글이 답변 형태를 실제로 바꾼다.
+_DEV_ON = (
+    "\n\n[개발자 모드 ON] 질문이 구현·코드에 관한 것이고 근거에 관련 함수/메서드 본문이 있으면, "
+    "그 코드를 ```python 코드블록으로 인용한 뒤 핵심 라인을 짚어 설명하세요. "
+    "근거에 코드 본문이 없으면 없다고 밝히고 파일·심볼 위치만 안내하세요."
+)
+_DEV_OFF = (
+    "\n\n[개발자 모드 OFF] 독자는 비개발자입니다. 코드 본문(``` 블록)은 넣지 말고, "
+    "그 코드가 무엇을 하는지 일상어로 설명하세요. 함수명·파일명은 언급해도 되지만 코드 자체는 보이지 마세요."
 )
 
 
@@ -96,16 +106,17 @@ def _llm():
     raise RuntimeError("LLM provider 가 extractive 인데 _llm() 이 호출됨")
 
 
-def _messages(question: str, docs: List[Document]):
+def _messages(question: str, docs: List[Document], dev_mode: bool = False):
     from langchain_core.messages import HumanMessage, SystemMessage
 
+    system = SYSTEM_PROMPT + (_DEV_ON if dev_mode else _DEV_OFF)
     return [
-        SystemMessage(content=SYSTEM_PROMPT),
+        SystemMessage(content=system),
         HumanMessage(content=f"[근거]\n{_format_context(docs)}\n\n[질문]\n{question}"),
     ]
 
 
-def answer(question: str) -> Dict[str, Any]:
+def answer(question: str, dev_mode: bool = False) -> Dict[str, Any]:
     """질문 → {answer, sources, mode, retrieval} (비스트리밍)."""
     docs, debug = search(question)
     if not docs:
@@ -116,11 +127,11 @@ def answer(question: str) -> Dict[str, Any]:
     if provider == "extractive":
         return {"answer": _extractive_text(docs), "sources": sources, "mode": "extractive", "retrieval": debug}
 
-    resp = _llm().invoke(_messages(question, docs))
+    resp = _llm().invoke(_messages(question, docs, dev_mode))
     return {"answer": _text_of(resp.content), "sources": sources, "mode": provider, "retrieval": debug}
 
 
-def stream_answer(question: str) -> Iterator[Dict[str, Any]]:
+def stream_answer(question: str, dev_mode: bool = False) -> Iterator[Dict[str, Any]]:
     """질문 → 이벤트 스트림. 각 이벤트: {type: sources|token|done|error, ...}."""
     docs, debug = search(question)
 
@@ -139,7 +150,7 @@ def stream_answer(question: str) -> Iterator[Dict[str, Any]]:
         return
 
     try:
-        for chunk in _llm().stream(_messages(question, docs)):
+        for chunk in _llm().stream(_messages(question, docs, dev_mode)):
             piece = _text_of(chunk.content)
             if piece:
                 yield {"type": "token", "text": piece}

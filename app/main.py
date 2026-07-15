@@ -50,6 +50,7 @@ SUGGESTED_QUESTIONS = [
 
 class ChatRequest(BaseModel):
     question: str
+    dev_mode: bool = False   # True 면 답변에 코드 본문을 ``` 블록으로 인용
 
 
 class Source(BaseModel):
@@ -105,7 +106,7 @@ def topics() -> dict:
 def chat(req: ChatRequest) -> ChatResponse:
     from app.rag import answer
 
-    return ChatResponse(**answer(req.question.strip()))
+    return ChatResponse(**answer(req.question.strip(), dev_mode=req.dev_mode))
 
 
 @app.post("/chat/stream")
@@ -114,9 +115,10 @@ def chat_stream(req: ChatRequest) -> StreamingResponse:
     from app.rag import stream_answer
 
     question = req.question.strip()
+    dev_mode = req.dev_mode
 
     def gen():
-        for ev in stream_answer(question):
+        for ev in stream_answer(question, dev_mode=dev_mode):
             yield json.dumps(ev, ensure_ascii=False) + "\n"
 
     return StreamingResponse(gen(), media_type="application/x-ndjson; charset=utf-8")

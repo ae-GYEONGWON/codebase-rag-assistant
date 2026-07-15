@@ -95,7 +95,7 @@
   <header>
     <h1>📈 stock_prod 문서 RAG 챗봇</h1>
     <p>KOSPI200 선물·옵션 자동매매 시스템의 문서·코드에 근거해 답합니다.</p>
-    <label class="toggle" id="devtoggle" title="켜면 코드 인용을 펼쳐서 보여줍니다">
+    <label class="toggle" id="devtoggle" title="켜면 답변에 코드 원문을 함께 인용합니다 (다음 질문부터 적용)">
       <input type="checkbox" id="devmode" /><span class="track"></span>개발자 모드
     </label>
     <span id="badge">…</span>
@@ -283,7 +283,7 @@
         const res = await fetch('/chat/stream', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ question: q })
+          body: JSON.stringify({ question: q, dev_mode: devMode })
         });
         const reader = res.body.getReader();
         const dec = new TextDecoder();
