@@ -66,6 +66,13 @@ class ChatResponse(BaseModel):
     retrieval: dict = {}   # 검색 진단(유사도·BM25·선택된 청크) — 데모에서 근거를 보여주는 용도
 
 
+class FeedbackRequest(BaseModel):
+    question: str
+    verdict: str           # up | down
+    answer: str = ""
+    mode: str = ""
+
+
 @app.get("/health")
 def health() -> dict:
     return {
@@ -113,6 +120,15 @@ def chat_stream(req: ChatRequest) -> StreamingResponse:
             yield json.dumps(ev, ensure_ascii=False) + "\n"
 
     return StreamingResponse(gen(), media_type="application/x-ndjson; charset=utf-8")
+
+
+@app.post("/feedback")
+def feedback(req: FeedbackRequest) -> dict:
+    """답변에 대한 👍/👎. 👎 질문은 평가셋 확장 후보로 쌓인다."""
+    from app.feedback import log_feedback
+
+    log_feedback(req.model_dump())
+    return {"ok": True}
 
 
 @app.get("/", response_class=HTMLResponse)

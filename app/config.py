@@ -71,6 +71,9 @@ class Settings(BaseSettings):
     chroma_dir: str = "./chroma_db"
     collection_name: str = "stock_prod_memory"
 
+    # 사용자 피드백 로그(👍/👎). 개인 로그라 git 제외(data/).
+    feedback_log: str = "./data/feedback.jsonl"
+
     # --- 파생 헬퍼 ---
     @property
     def knowledge_dir_list(self) -> List[Path]:

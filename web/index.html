@@ -60,6 +60,30 @@
     .md th,.md td { border:1px solid var(--line); padding:6px 10px; text-align:left; }
     .md th { background:#0b1220; } .md strong { color:#f1f5f9; }
 
+    /* 개발자 모드 토글 */
+    .toggle { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); cursor:pointer; user-select:none; }
+    .toggle input { display:none; }
+    .toggle .track { width:34px; height:18px; border-radius:999px; background:var(--line); position:relative; transition:background .15s; }
+    .toggle .track::after { content:""; position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:var(--fg); transition:transform .15s; }
+    .toggle input:checked + .track { background:var(--accent); }
+    .toggle input:checked + .track::after { transform:translateX(16px); }
+
+    /* 코드 접기(비개발자 모드 기본) */
+    .md details.codefold { margin:0.6em 0; }
+    .md details.codefold summary { cursor:pointer; font-size:12.5px; color:var(--accent); list-style:none;
+                                   padding:6px 10px; background:var(--code); border:1px solid var(--line); border-radius:8px; }
+    .md details.codefold summary::-webkit-details-marker { display:none; }
+    .md details.codefold[open] summary { border-bottom-left-radius:0; border-bottom-right-radius:0; }
+    .md details.codefold pre { margin:0; border-top-left-radius:0; border-top-right-radius:0; }
+
+    /* 피드백 버튼 */
+    .fb { margin-top:10px; display:flex; align-items:center; gap:8px; font-size:12px; color:var(--muted); }
+    .fb button { padding:4px 10px; font-size:13px; background:var(--card); color:var(--fg); border:1px solid var(--line);
+                 border-radius:999px; font-weight:400; }
+    .fb button:hover { border-color:var(--accent); }
+    .fb button.on { background:var(--accent); color:#04263a; border-color:var(--accent); }
+    .fb .thanks { color:var(--accent); }
+
     form { position:sticky; bottom:0; background:var(--bg); border-top:1px solid var(--line); display:flex; gap:8px; padding:14px 0; }
     input { flex:1; padding:12px; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--fg); font-size:14px; }
     button { padding:12px 18px; border:0; border-radius:8px; background:var(--accent); color:#04263a; font-weight:700; cursor:pointer; }
@@ -70,7 +94,10 @@
 <body>
   <header>
     <h1>📈 stock_prod 문서 RAG 챗봇</h1>
-    <p>KOSPI200 선물·옵션 자동매매 시스템 문서에만 근거해 답합니다.</p>
+    <p>KOSPI200 선물·옵션 자동매매 시스템의 문서·코드에 근거해 답합니다.</p>
+    <label class="toggle" id="devtoggle" title="켜면 코드 인용을 펼쳐서 보여줍니다">
+      <input type="checkbox" id="devmode" /><span class="track"></span>개발자 모드
+    </label>
     <span id="badge">…</span>
   </header>
 
@@ -98,6 +125,15 @@
     const form = document.getElementById('f');
     const input = document.getElementById('q');
     const btn = document.getElementById('send');
+    const devToggle = document.getElementById('devmode');
+
+    // 개발자 모드: localStorage 유지. 끄면(비개발자 기본) 답변 속 코드블록을 접어 소음을 줄인다.
+    let devMode = localStorage.getItem('devMode') === '1';
+    devToggle.checked = devMode;
+    devToggle.addEventListener('change', () => {
+      devMode = devToggle.checked;
+      localStorage.setItem('devMode', devMode ? '1' : '0');
+    });
 
     function escapeHtml(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
@@ -121,7 +157,10 @@
           const buf = []; i++;
           while (i < lines.length && !/^\s*```/.test(lines[i])) { buf.push(lines[i]); i++; }
           i++;
-          out.push('<pre><code>' + buf.join('\n') + '</code></pre>');
+          const pre = '<pre><code>' + buf.join('\n') + '</code></pre>';
+          // 비개발자 모드: 코드블록을 접어서 "코드 보기"로. 개발자 모드: 그대로 펼침.
+          out.push(devMode ? pre
+            : '<details class="codefold"><summary>💻 코드 보기 (' + buf.length + '줄)</summary>' + pre + '</details>');
           continue;
         }
         const h = line.match(/^(#{1,6})\s+(.*)$/);
@@ -195,6 +234,35 @@
       container.appendChild(s);
     }
 
+    // 답변 하단 👍/👎. 클릭 시 서버에 기록(👎 질문은 평가셋 확장 후보로 쌓임).
+    function renderFeedback(container, question, getAnswer, mode) {
+      const fb = document.createElement('div');
+      fb.className = 'fb';
+      fb.innerHTML = '<span>이 답변이 도움이 되었나요?</span>';
+      let done = false;
+      [['up', '👍'], ['down', '👎']].forEach(([verdict, emoji]) => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.textContent = emoji;
+        b.addEventListener('click', async () => {
+          if (done) return;
+          done = true;
+          b.classList.add('on');
+          try {
+            await fetch('/feedback', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ question, verdict, answer: getAnswer().slice(0, 4000), mode: mode || '' })
+            });
+            const t = document.createElement('span');
+            t.className = 'thanks';
+            t.textContent = verdict === 'up' ? '고맙습니다!' : '알려주셔서 고맙습니다. 개선에 반영할게요.';
+            fb.appendChild(t);
+          } catch (e) { /* 조용히 무시 */ }
+        });
+        fb.appendChild(b);
+      });
+      container.appendChild(fb);
+    }
+
     async function ask(q) {
       q = q.trim();
       if (!q) return;
@@ -210,6 +278,7 @@
 
       let acc = '';
       let sources = null;
+      let mode = '';
       try {
         const res = await fetch('/chat/stream', {
           method: 'POST',
@@ -235,12 +304,13 @@
               wrap.scrollIntoView({ behavior: 'smooth', block: 'end' });
             }
             else if (ev.type === 'error') { acc += '\n\n**[오류]** ' + ev.message; body.innerHTML = renderMarkdown(acc); }
-            else if (ev.type === 'done') { /* 종료 */ }
+            else if (ev.type === 'done') { mode = ev.mode || ''; }
           }
         }
         body.classList.remove('cursor');
         if (!acc.trim()) { body.textContent = '(빈 응답)'; }
         renderSources(wrap, sources);
+        if (acc.trim() && mode !== 'no_hit') renderFeedback(wrap, q, () => acc, mode);
       } catch (err) {
         body.classList.remove('cursor');
         body.textContent = '오류: ' + err;
@@ -257,8 +327,10 @@
     (async () => {
       try {
         const t = await (await fetch('/topics')).json();
-        document.getElementById('badge').textContent = 'LLM: ' + t.llm + ' · 문서 ' + t.count + '개';
-        document.getElementById('panel-summary').textContent = `📚 이 봇이 아는 것 — 문서 ${t.count}개 (클릭해서 목록 보기)`;
+        const codeTxt = t.code_count ? ' · 코드 ' + t.code_count + '파일' : '';
+        document.getElementById('badge').textContent = 'LLM: ' + t.llm + ' · 문서 ' + t.count + '개' + codeTxt;
+        document.getElementById('panel-summary').textContent =
+          `📚 이 봇이 아는 것 — 문서 ${t.count}개${t.code_count ? ' + 코드 ' + t.code_count + '파일 + git 이력' : ''} (클릭해서 목록 보기)`;
         document.getElementById('files').innerHTML = t.files.map(f => '<div>' + escapeHtml(f) + '</div>').join('');
         const chips = document.getElementById('chips');
         (t.suggestions || []).forEach(qs => {
