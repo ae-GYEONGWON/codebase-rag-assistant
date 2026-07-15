@@ -12,14 +12,17 @@
 - **Tier 2 (정확도)**: 하이브리드검색+MMR, 인용 스니펫, 범위밖 처리 → **완료**
 - **코드 인덱싱**: 소스 160파일 AST 청킹 → 문서+코드 통합 → **완료**
 - **리랭커**: cross-encoder 구현 + 2모델 측정 → **완료(측정 후 기본 OFF 결정)**
-- **Tier 3 (도장)**: 검색 평가 완료. 답변품질(faithfulness)·README·Docker·pytest → TODO
+- **git 히스토리 인덱싱**: 커밋 266개 → "언제 왜 바뀌었나" 답변 → **완료**
+- **답변 품질 평가(faithfulness)**: LLM-as-judge groundedness 0.962 → **완료**
+- **Tier 3 (도장)**: README·Docker·pytest·비개발자 UX → TODO
 
 ## 다음 작업 (합의 순서)
-1. **git 히스토리 인덱싱** — 커밋·diff 로 "언제 왜 바뀌었나" 답변. 최신성 가중치·폐기 인지.
-2. **답변 품질 평가**(LLM-as-judge, Gemini 무료) — 지금 지표는 검색만 잰다(faithfulness 미측정)
-3. **비개발자 UX** — 코드 인용 접기/개발자 모드 토글, 피드백 버튼(👍/👎)→질문로그→평가셋 확장
-4. Docker + pytest + README(다이어그램·측정표·비교리포트) + 면접 대비 문서
+1. **비개발자 UX** — 코드 인용 접기/개발자 모드 토글, 피드백 버튼(👍/👎)→질문로그→평가셋 확장
+2. Docker + pytest + README(다이어그램·측정표·비교리포트) + 면접 대비 문서
    → 사용자가 직접 써보며 RAG/벡터DB 개념 익힌 **후** 문서 작성
+3. (후보) 최신성 가중치 — commit_date 로 시간질문("언제/최근") 개선. 단 특정날짜 질문
+   ("2026-06-26 사고")을 망칠 리스크 → 측정 설계 후 결정(리랭커 교훈: 측정 없이 넣지 말 것)
+4. (후보) 코드질문 미스 2건 — 의도 라우팅(doc_type 부스트)
 
 ## 지식원 문서 정리 관련 (사용자 논의 결론)
 - **챗봇용으로 문서를 다듬지 말 것**. 깨끗한 코퍼스는 오히려 경쟁력↓("정리돼야 동작하는 시스템"으로 보임).
@@ -61,8 +64,10 @@ app/reranker.py    ★cross-encoder(bge-reranker-base). 기본 OFF(측정상 코
 app/rag.py         answer() / stream_answer(). _text_of()=Gemini 파트배열 정규화. 코드/문서 혼합 프롬프트
 app/main.py        FastAPI: /health /chat /chat/stream /topics /(UI). lifespan 워밍업
 web/index.html     챗UI + 자체 마크다운 렌더러 + 출처 DOC/CODE 배지·스니펫 펼침
-eval/questions.json  문서 20문항 + 코드 8문항 + 범위밖 6문항 (정답=실제 구현 파일)
-eval/run_eval.py     vector/bm25/RRF/MMR 분리 측정. --rerank 로 리랭커 비교행
+app/git_loader.py  ★git log → 커밋 청크(doc_type=commit, commit_date 메타)
+eval/questions.json  문서 20 + 코드 8 + 범위밖 6문항 (정답=실제 구현 파일)
+eval/run_eval.py     검색 평가: vector/bm25/RRF/MMR 분리 측정. --rerank 로 리랭커 비교행
+eval/faithfulness.py ★답변 groundedness: LLM-as-judge(Gemini). throttle+429 재시도
 ```
 
 ## 측정 결과 (k=5, 2026-07-15) — 포트폴리오 핵심 숫자
@@ -75,6 +80,10 @@ eval/run_eval.py     vector/bm25/RRF/MMR 분리 측정. --rerank 로 리랭커 �
 | hybrid+rerank(base) | ↓ | ↓ | 95% / 50% (해로움→OFF) |
 
 범위 밖 거절 5/6 (83%). "삼성전자 주가"(cos 0.425)만 통과 → LLM 프롬프트가 거절.
+
+**답변 groundedness(LLM-as-judge) = 0.962** (28문항+범위밖1). 검색뿐 아니라 환각까지 측정.
+judge 가 실제 과일반화 환각 검출 사례: "옵션 스로틀=월물전환 churn 방지"(0.50, 문서 실제
+원인은 OCX 큐포화+strike flip-flop). self-judge 편차는 한계(절대점수보다 회귀감지용).
 
 ## 설계 결정과 근거 (면접 대비: 전부 실측 기반)
 - **모델 = gemini-3.1-flash-lite**: 2.5-flash 는 신규 키에서 404. 3.5-flash 는 thinking 탓 첫 토큰 ~20s
