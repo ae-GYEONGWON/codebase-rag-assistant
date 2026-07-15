@@ -22,6 +22,17 @@
     { "q": "옵션 구독 스로틀은 왜 넣었어?", "expected": ["prod/opt_sub_throttle.md", "prod/opt_sub_thin_strike.md"] },
     { "q": "TP/SL 퍼센트는 어떻게 통일했어?", "expected": ["prod/tp_sl_percent.md", "prod/param_selection_overhaul_spec.md"] }
   ],
+  "_comment_code": "코드 인덱싱 이후 추가. 정답 = 실제 구현이 들어 있는 소스 파일.",
+  "in_scope_code": [
+    { "q": "SL 은 코드에서 어떻게 계산돼?", "expected": ["app/analyzer/domain/sl_table.py", "app/analyzer/domain/vix_strategy.py"] },
+    { "q": "apply_vix_sl 함수는 뭘 하는 함수야?", "expected": ["app/analyzer/domain/vix_strategy.py"] },
+    { "q": "zombie recovery 는 코드에서 어떻게 구현돼 있어?", "expected": ["app/broker/broker_main.py"] },
+    { "q": "주문 체결 콜백은 어디서 처리해?", "expected": ["app/broker/chejan.py", "app/broker/broker_main.py"] },
+    { "q": "백테스트 실행 진입점 코드가 어디야?", "expected": ["app/analyzer/runner/backtest_runner.py", "app/analyzer/runner/batch_backtest.py", "scripts/final_backtest.py"] },
+    { "q": "옵션 가격 계산 로직은 어느 파일에 있어?", "expected": ["app/option_strategy/pricing.py", "app/option_strategy/simulator.py"] },
+    { "q": "웹 대시보드 API 라우터는 어떻게 구성돼 있어?", "expected": ["app/web/routers/options.py", "app/web/state_reader.py"] },
+    { "q": "스케줄러는 하루 흐름을 어떻게 돌려?", "expected": ["app/scheduler/daily_scheduler.py"] }
+  ],
   "out_of_scope": [
     "고양이 키우는 법 알려줘",
     "오늘 서울 날씨 어때?",

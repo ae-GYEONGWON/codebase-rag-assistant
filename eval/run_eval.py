@@ -43,8 +43,21 @@ def retrieve_bm25(question: str, k: int) -> List[str]:
 
 
 def retrieve_hybrid(question: str, k: int) -> List[str]:
+    """설정 그대로(리랭커 on/off 는 settings.use_reranker)."""
     docs, _ = search(question, k=k)
     return [d.metadata.get("source", "?") for d in docs]
+
+
+def _without_reranker(fn: Callable[[str, int], List[str]]) -> Callable[[str, int], List[str]]:
+    def wrapped(question: str, k: int) -> List[str]:
+        prev = settings.use_reranker
+        settings.use_reranker = False
+        try:
+            return fn(question, k)
+        finally:
+            settings.use_reranker = prev
+
+    return wrapped
 
 
 def retrieve_rrf_no_mmr(question: str, k: int) -> List[str]:
@@ -80,30 +93,47 @@ def score(retriever: Callable[[str, int], List[str]], cases: List[dict], k: int)
 def main() -> None:
     ap = argparse.ArgumentParser(description="검색 평가")
     ap.add_argument("--k", type=int, default=settings.retrieval_k)
+    ap.add_argument("--rerank", action="store_true", help="리랭커 비교 행 포함(느림, CPU)")
     args = ap.parse_args()
     k = args.k
 
     data = json.loads(QUESTIONS.read_text(encoding="utf-8"))
-    in_scope: List[dict] = data["in_scope"]
+    doc_q: List[dict] = data["in_scope"]
+    code_q: List[dict] = data.get("in_scope_code", [])
     out_scope: List[str] = data["out_of_scope"]
 
     retrievers = {
-        "vector only": retrieve_vector,
-        "bm25 only": retrieve_bm25,
-        "hybrid (RRF)": retrieve_rrf_no_mmr,
-        "hybrid + MMR": retrieve_hybrid,
+        "vector only": _without_reranker(retrieve_vector),
+        "bm25 only": _without_reranker(retrieve_bm25),
+        "hybrid (RRF)": _without_reranker(retrieve_rrf_no_mmr),
+        "hybrid+MMR": _without_reranker(retrieve_hybrid),
     }
+    if args.rerank:
+        # 리랭커를 강제로 켠 변형(설정과 무관하게 비교용)
+        def _with_reranker(question: str, kk: int) -> List[str]:
+            prev = settings.use_reranker
+            settings.use_reranker = True
+            try:
+                return retrieve_hybrid(question, kk)
+            finally:
+                settings.use_reranker = prev
 
-    print(f"\n■ 검색 품질 — 질문 {len(in_scope)}개, k={k}\n")
-    print(f"{'retriever':<16}{'recall@k':>10}{'MRR':>8}   miss")
-    print("-" * 64)
-    results = {}
-    for name, fn in retrievers.items():
-        recall, mrr, misses = score(fn, in_scope, k)
-        results[name] = (recall, mrr)
-        print(f"{name:<16}{recall:>9.0%}{mrr:>8.2f}   {len(misses)}건")
-        for m in misses:
-            print(f"{'':<16}{'':>18}   ✗ {m}")
+        retrievers["hybrid+rerank"] = _with_reranker
+
+    suites = [("문서 질문", doc_q), ("코드 질문", code_q), ("전체", doc_q + code_q)]
+
+    for title, cases in suites:
+        if not cases:
+            continue
+        print(f"\n■ {title} — {len(cases)}문항, k={k}\n")
+        print(f"{'retriever':<16}{'recall@k':>10}{'MRR':>8}   miss")
+        print("-" * 64)
+        for name, fn in retrievers.items():
+            recall, mrr, misses = score(fn, cases, k)
+            print(f"{name:<16}{recall:>9.0%}{mrr:>8.2f}   {len(misses)}건")
+            if title == "전체":
+                for m in misses:
+                    print(f"{'':<16}{'':>18}   ✗ {m}")
 
     # 범위 밖 거절: 프로덕션 게이트(hybrid)만 해당. 나머지는 게이트가 없어 항상 무언가를 반환.
     rejected = sum(1 for q in out_scope if not search(q)[0])

@@ -45,6 +45,17 @@ class Settings(BaseSettings):
     #   0.5~0.7 → recall 90% / 0.8~0.9 → recall 95%(RRF 단독과 동일)면서 출처 다양성 ↑
     mmr_lambda: float = 0.8
 
+    # 리랭커(cross-encoder) — 하이브리드가 좁힌 rerank_candidates 개 후보만 재채점.
+    # ★ 기본 OFF: eval 로 측정한 결과 이 코퍼스에선 하이브리드보다 나빴다.
+    #   - bge-reranker-base: 코드 질문 recall 75%→50% (코드 청크 점수 ~0, 자연어 문서 선호)
+    #   - bge-reranker-v2-m3: 분별력은 낫지만 "…코드에서?" 질문도 문서를 1위로 올리고
+    #     CPU 4.4s/질문으로 데모 지연 과다. 둘 다 RRF 가 이미 뽑은 정답 코드파일을 문서로 뒤집음.
+    #   원인: cross-encoder 가 자연어-자연어 매칭을 자연어-코드보다 선호 → "코드" 의도 유실.
+    #   → 구현·토글은 유지(USE_RERANKER=true 로 실험 가능), 기본은 하이브리드 단독.
+    use_reranker: bool = False
+    reranker_model: str = "BAAI/bge-reranker-base"
+    rerank_candidates: int = 20
+
     # 범위 밖 판정 임계(코사인). 실측 분포로 보정:
     #   범위 안 질문 0.40~0.72 / 범위 밖(날씨·요리·상식) 0.25~0.29
     #   → 0.35 로 두면 잡담은 검색 단계에서 컷. BM25 는 한글 2-gram 특성상

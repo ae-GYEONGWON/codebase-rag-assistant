@@ -1,9 +1,12 @@
 """임베딩 제공자 선택 (openai | hf 로컬)."""
 from __future__ import annotations
 
+from functools import lru_cache
+
 from app.config import settings
 
 
+@lru_cache(maxsize=1)
 def get_embeddings():
     provider = settings.embedding_provider.lower()
 

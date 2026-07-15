@@ -137,7 +137,8 @@ def search(question: str, k: int | None = None) -> Tuple[List[Document], Dict[st
     for rank, idx in enumerate(bm_rank):
         fused[int(idx)] = fused.get(int(idx), 0.0) + 1.0 / (_RRF_K + rank + 1)
 
-    cands = sorted(fused, key=lambda i: -fused[i])[: max(fetch, k)]
+    n_cands = max(settings.rerank_candidates if settings.use_reranker else fetch, k)
+    cands = sorted(fused, key=lambda i: -fused[i])[:n_cands]
 
     # --- 범위 밖 판정: 코사인 단독 게이트 ---
     # BM25 는 게이트로 쓰지 않는다. 한글 2-gram 이 흔한 음절에 걸려 "고양이 키우는 법"
@@ -152,11 +153,25 @@ def search(question: str, k: int | None = None) -> Tuple[List[Document], Dict[st
             "best_bm25": round(best_bm, 2),
         }
 
-    picked = _mmr(cands, embs, fused, k, settings.mmr_lambda)
+    # --- 리랭킹: 후보만 cross-encoder 로 재채점 → MMR 의 적합도 항으로 사용 ---
+    # 리랭커 점수는 로짓이라 음수가 나온다. MMR 이 rel[i]/max 로 정규화하므로 0~1 로 맞춰준다.
+    rel: Dict[int, float] = fused
+    rr_scores: Dict[int, float] = {}
+    if settings.use_reranker:
+        from app.reranker import score as rr_score
+
+        raw = rr_score(question, [docs[i].page_content for i in cands])
+        rr_scores = {i: s for i, s in zip(cands, raw)}
+        lo, hi = min(raw), max(raw)
+        span = (hi - lo) or 1.0
+        rel = {i: (s - lo) / span for i, s in rr_scores.items()}
+
+    picked = _mmr(cands, embs, rel, k, settings.mmr_lambda)
     chosen = [docs[i] for i in picked]
 
     debug = {
         "reason": "hit",
+        "reranked": bool(rr_scores),
         "best_similarity": round(best_sim, 3),
         "best_bm25": round(best_bm, 2),
         "picked": [
@@ -165,6 +180,7 @@ def search(question: str, k: int | None = None) -> Tuple[List[Document], Dict[st
                 "section": docs[i].metadata.get("section", ""),
                 "similarity": round(float(sims[i]), 3),
                 "bm25": round(float(bm_scores[i]), 2),
+                "rerank": round(rr_scores[i], 3) if i in rr_scores else None,
             }
             for i in picked
         ],

@@ -26,6 +26,10 @@ async def lifespan(app: FastAPI):
     from app.retriever import search
 
     search("warmup")
+    if settings.use_reranker:
+        from app.reranker import warmup as rr_warmup
+
+        rr_warmup()
     yield
 
 
