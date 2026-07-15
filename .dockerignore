@@ -1,0 +1,16 @@
+# 이미지에 넣지 않을 것 — chroma_db 는 볼륨 마운트, 나머지는 런타임 불필요
+.venv/
+venv/
+chroma_db/
+data/
+__pycache__/
+**/__pycache__/
+*.pyc
+.git/
+.env
+*.log
+_uv.txt
+docs/
+eval/
+.claude/
+README.md

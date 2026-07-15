@@ -1,0 +1,23 @@
+# 실행: docker compose up --build
+# 사전: 호스트에서 `python -m app.ingest --reset` 로 ./chroma_db 를 만들어 둘 것.
+#       .env 에 GOOGLE_API_KEY 필요(무료 Gemini 키).
+services:
+  rag:
+    build: .
+    image: stock-prod-rag
+    ports:
+      - "8123:8123"
+    env_file:
+      - .env
+    environment:
+      # 컨테이너는 쿼리 서빙 전용 — 재인덱싱하지 않으므로 지식원 경로가 없어도 된다.
+      INDEX_GIT: "false"
+      INDEX_CODE: "false"
+      CHROMA_DIR: /app/chroma_db
+    volumes:
+      - ./chroma_db:/app/chroma_db:ro   # 호스트에서 인덱싱한 벡터DB(읽기전용)
+      - hf_cache:/app/.hf_cache          # 임베딩 모델 캐시(재기동 시 재다운로드 방지)
+    restart: unless-stopped
+
+volumes:
+  hf_cache:
