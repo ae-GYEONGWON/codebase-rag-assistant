@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     code_dirs: str = "D:/stock_prod/app,D:/stock_prod/scripts"
     code_globs: str = "*.py"
 
+    # 지식원 — git 이력. "언제 왜 바뀌었나"를 답하는 축(최신성·폐기 인지).
+    index_git: bool = True
+    git_repos: str = "D:/stock_prod"
+    git_max_commits: int = 300
+
     # 임베딩 (기본: 로컬 무료 hf)
     embedding_provider: str = "hf"             # hf(로컬 무료) | openai
     openai_embedding_model: str = "text-embedding-3-small"
@@ -82,6 +87,10 @@ class Settings(BaseSettings):
     @property
     def code_glob_list(self) -> List[str]:
         return [g.strip() for g in self.code_globs.split(",") if g.strip()]
+
+    @property
+    def git_repo_list(self) -> List[Path]:
+        return [Path(p.strip()) for p in self.git_repos.split(",") if p.strip()]
 
     @property
     def has_gemini(self) -> bool:

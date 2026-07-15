@@ -15,6 +15,7 @@ from langchain_chroma import Chroma
 from app.code_loader import load_code
 from app.config import settings
 from app.embeddings import get_embeddings
+from app.git_loader import load_git
 from app.loader import load_and_split
 
 
@@ -25,7 +26,7 @@ def build_index(reset: bool = False) -> int:
         shutil.rmtree(chroma_path)
         print(f"[ingest] 기존 인덱스 삭제: {chroma_path}")
 
-    docs = load_and_split() + load_code()
+    docs = load_and_split() + load_code() + load_git()
     if not docs:
         raise RuntimeError(
             "인덱싱할 문서가 없습니다. .env 의 KNOWLEDGE_DIRS / FILE_GLOBS / CODE_DIRS 를 확인하세요."
@@ -46,8 +47,10 @@ def build_index(reset: bool = False) -> int:
         print(f"[ingest]   … {min(i + batch, len(docs))}/{len(docs)}")
 
     n_code = sum(1 for d in docs if d.metadata.get("doc_type") == "code")
+    n_commit = sum(1 for d in docs if d.metadata.get("doc_type") == "commit")
+    n_doc = len(docs) - n_code - n_commit
     print(
-        f"[ingest] 완료 — 청크 {len(docs)}개(문서 {len(docs) - n_code} / 코드 {n_code})를 "
+        f"[ingest] 완료 — 청크 {len(docs)}개(문서 {n_doc} / 코드 {n_code} / 커밋 {n_commit})를 "
         f"'{settings.collection_name}' 에 인덱싱"
     )
     return len(docs)
