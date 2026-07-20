@@ -27,6 +27,10 @@ _TOKEN_RE = re.compile(r"[a-zA-Z0-9_]+|[가-힣]+")
 _RRF_K = 60  # RRF 상수(관례값). 상위 순위 간 점수 차를 완만하게 만든다.
 _SYMBOL_SLOTS = 2  # 심볼 정확매칭 코드를 top-k 에 보장할 최대 개수(나머지는 일반 검색).
 
+# 질문에서 ASCII 식별자 토큰을 추출한다. [a-zA-Z0-9_] 만 매칭하므로
+# 한글이 붙어있어도 "RC4025가" → "RC4025" 로 자동 분리된다(\b 불필요).
+_ID_TOKEN_RE = re.compile(r"[a-zA-Z][a-zA-Z0-9_]*")
+
 
 def _tokenize(text: str) -> List[str]:
     """형태소 분석기 없이 쓰는 경량 토크나이저.
@@ -89,18 +93,37 @@ def _symbol_index() -> List[tuple]:
         # 전체 심볼(apply_vix_sl)과 메서드명(BrokerMain.foo → foo) 둘 다 후보
         for cand in {sym, sym.split(".")[-1]}:
             c = cand.lower().lstrip("_")
-            if len(c) >= 5 and c != "module":
+            if c and c != "module":
                 out.append((c, i))
     return out
 
 
 def _symbol_hits(question: str) -> List[int]:
-    """질문에 코드 심볼명이 그대로 들어 있는 코드 청크 인덱스 목록(중복 제거)."""
-    ql = question.lower()
+    """질문에 코드 심볼명이 등장하는 코드 청크 인덱스 목록(중복 제거).
+
+    _ID_TOKEN_RE 로 ASCII 식별자 토큰을 먼저 추출해 한글 조사 오염을 막은 뒤,
+    아래 두 전략으로 후보를 선별한다.
+    ① 어휘 매칭: 토큰이 등록 심볼 vocab 에 정확히 있는 것 (4자 심볼도 포착)
+    ② 패턴 매칭: snake_case(apply_vix_sl) / ALL_CAPS(RC4025) 형태
+       → 길이 휴리스틱 없이 식별자 형태 자체로 판별
+    """
+    index = _symbol_index()
+    vocab = {sym for sym, _ in index}
+
+    candidates: set = set()
+    for tok in _ID_TOKEN_RE.findall(question):
+        tl = tok.lower()
+        if tl in vocab:
+            candidates.add(tl)
+        elif re.fullmatch(r"[a-z][a-z0-9]*(?:_[a-z0-9]+)+", tl):  # snake_case
+            candidates.add(tl)
+        elif re.fullmatch(r"[A-Z][A-Z0-9_]{3,}", tok):  # ALL_CAPS (원본 케이스로 검사)
+            candidates.add(tl)
+
     seen: set = set()
     hits: List[int] = []
-    for sym, i in _symbol_index():
-        if sym in ql and i not in seen:
+    for sym, i in index:
+        if sym in candidates and i not in seen:
             seen.add(i)
             hits.append(i)
     return hits
