@@ -22,7 +22,12 @@ from app.config import settings
 from app.embeddings import get_embeddings
 from app.retriever import _RRF_K, _corpus, _mmr, _tokenize, search
 
-QUESTIONS = Path(__file__).parent / "questions.json"
+# 실제 평가셋(questions.json)은 인덱싱한 코드베이스에 종속이라 git 에 넣지 않는다.
+# 없으면 템플릿(questions.example.json)으로 폴백해 형식만이라도 돌아가게 한다.
+_QDIR = Path(__file__).parent
+QUESTIONS = _QDIR / "questions.json"
+if not QUESTIONS.exists():
+    QUESTIONS = _QDIR / "questions.example.json"
 
 
 def _query_vec(question: str) -> np.ndarray:

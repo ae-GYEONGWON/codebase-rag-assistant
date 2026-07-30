@@ -1,4 +1,4 @@
-# stock_prod RAG 챗봇 — 쿼리 서빙 컨테이너.
+# Codebase RAG 어시스턴트 — 쿼리 서빙 컨테이너.
 # 지식원(문서·코드·git)은 별도 repo(호스트)에 있으므로 인덱싱은 호스트에서 수행하고,
 # 컨테이너는 그 결과인 chroma_db 를 마운트해 검색·응답만 담당한다.
 FROM python:3.13-slim

@@ -1,8 +1,11 @@
-# stock_prod 지식 어시스턴트 (RAG)
+# Codebase RAG 어시스턴트
 
-운영 중인 KOSPI200 선물·옵션 자동매매 시스템(`stock_prod`)의 **문서 · 소스코드 · git 이력**을
-지식원으로 삼아, *"지금 운용 모드가 뭐지?"*, *"apply_vix_sl 함수는 뭘 해?"*, *"SL 캡은 언제 왜 없앴어?"*
-같은 질문에 **근거 + 출처와 함께** 답하는 RAG 챗봇.
+한 코드베이스의 **문서 · 소스코드 · git 이력**을 통합 인덱싱해,
+*"지금 어떤 설정으로 동작하지?"*, *"`apply_retry_policy` 함수는 뭘 해?"*, *"이 상한값은 언제 왜 없앴어?"*
+같은 질문에 **근거 + 출처와 함께** 답하는 RAG 어시스턴트.
+
+> 인덱싱 대상은 `.env`(`KNOWLEDGE_DIRS` / `CODE_DIRS` / `GIT_REPOS`)로 지정한다.
+> 아래 측정 수치는 **운영 중인 실시간 시계열 처리 시스템(비공개)** 을 대상으로 얻은 값이다.
 
 단순 "문서 넣고 질문하는 챗봇"이 아니라, **검색 품질과 답변 충실도를 자체 평가 하네스로 수치화**하고
 그 수치로 설계를 결정한 것이 핵심이다. 전 구간 **무료 스택**(Gemini 무료 티어 + 로컬 임베딩)으로 운영비 0원.
@@ -46,9 +49,9 @@
 ```
 
 ### 검색 파이프라인 (하이브리드)
-- **BM25(어휘) + 벡터(의미)를 RRF 로 융합** — 임베딩은 `RC4025` 같은 희귀 식별자에 약하고,
+- **BM25(어휘) + 벡터(의미)를 RRF 로 융합** — 임베딩은 `ERR7742` 같은 희귀 식별자에 약하고,
   BM25 는 표현이 다른 질문에 약하다. 서로의 약점을 메운다.
-- **심볼 정확 매칭** — 질문에 코드 심볼명(`apply_vix_sl`)이 있으면 그 함수 본문을 top-k 에 보장.
+- **심볼 정확 매칭** — 질문에 코드 심볼명(`apply_retry_policy`)이 있으면 그 함수 본문을 top-k 에 보장.
   한국어 질문 ↔ 영어 코드의 임베딩 유사도 저하를 보완.
 - **범위 밖 게이트** — 코사인 유사도 임계(0.35)로 잡담·무관 질문을 검색 단계에서 거절(환각 차단).
 - **리랭커** — cross-encoder 를 구현했으나 **측정 결과 이 코퍼스에선 해로워 기본 비활성화**
@@ -105,9 +108,9 @@ python -m pytest                   # 순수 로직 + 검색 통합(chroma 있으
 | `GOOGLE_API_KEY` | (필수) | Gemini 무료 키. 없으면 extractive 폴백 |
 | `GEMINI_CHAT_MODEL` | `gemini-3.1-flash-lite` | 생성 모델 |
 | `EMBEDDING_PROVIDER` | `hf` | `hf`(로컬 무료) \| `openai` |
-| `KNOWLEDGE_DIRS` | `D:/stock_prod/.claude/memory` | 문서 지식원(쉼표 구분) |
-| `CODE_DIRS` | `D:/stock_prod/app,...` | 코드 지식원 (`INDEX_CODE=false` 로 끄기) |
-| `GIT_REPOS` | `D:/stock_prod` | git 이력 지식원 (`INDEX_GIT=false` 로 끄기) |
+| `KNOWLEDGE_DIRS` | `/path/to/your/repo/docs` | 문서 지식원(쉼표 구분) |
+| `CODE_DIRS` | `/path/to/your/repo/app,...` | 코드 지식원 (`INDEX_CODE=false` 로 끄기) |
+| `GIT_REPOS` | `/path/to/your/repo` | git 이력 지식원 (`INDEX_GIT=false` 로 끄기) |
 | `USE_RERANKER` | `false` | 리랭커(측정상 비활성 권장) |
 
 > **다른 프로젝트 재사용**: `KNOWLEDGE_DIRS`/`CODE_DIRS`/`GIT_REPOS` 만 바꾸면 어떤 코드베이스에도 붙는다.
@@ -139,7 +142,7 @@ app/
   feedback.py     👍/👎 로그
   main.py         FastAPI 엔드포인트 + 기동 워밍업
 eval/
-  questions.json  평가셋(문서 20 + 코드 8 + 범위밖 6)
+  questions.example.json  평가셋 템플릿(→ questions.json 으로 복사해 대상에 맞게 작성)
   run_eval.py     검색 평가(recall@k·MRR·거절률, 리트리버별 비교)
   faithfulness.py 답변 groundedness(LLM-as-judge)
 tests/            pytest (토크나이저·정규화·config·AST·검색통합)
@@ -150,7 +153,7 @@ docs/
 ---
 
 ### 이력서용 한 줄
-> **운영 중인 자동매매 시스템의 문서·소스코드·git 이력(3,600+ 청크)을 대상으로 한 RAG 어시스턴트 구축** —
+> **운영 중인 실시간 시스템의 문서·소스코드·git 이력(3,600+ 청크)을 대상으로 한 RAG 어시스턴트 구축** —
 > BM25+벡터 하이브리드 검색(RRF)과 코드 심볼 매칭으로 검색 recall 을 벡터 단독 75%→93% 개선,
 > 자체 평가 하네스로 검색 정확도와 답변 충실도(groundedness 0.96)를 수치화. AST 코드 청킹,
 > 범위 밖 질문 거절, 문서·코드 불일치 판별, 토큰 스트리밍 서빙까지 무료 스택(Gemini·Chroma·FastAPI)으로 구현.

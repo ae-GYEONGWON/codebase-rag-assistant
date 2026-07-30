@@ -1,0 +1,27 @@
+{
+  "_comment": "검색 평가용 질문셋 템플릿. 이 파일을 questions.json 으로 복사한 뒤, 인덱싱한 코드베이스에 맞게 질문과 정답 출처를 채우세요. expected = 정답이 들어있는 출처 파일(하나라도 top-k 에 잡히면 hit).",
+  "in_scope": [
+    { "q": "재시도 정책은 어떻게 동작해?", "expected": ["docs/retry_policy.md"] },
+    { "q": "BATCH_DEADLINE 은 어떻게 정해져?", "expected": ["docs/batch_deadline.md"] },
+    { "q": "실행 모드는 몇 가지가 있고 뭐가 달라?", "expected": ["docs/run_modes.md"] },
+    { "q": "orphan recovery 는 언제 도는 거야?", "expected": ["docs/orphan_recovery.md"] },
+    { "q": "ERR7742 오류는 왜 나?", "expected": ["docs/error_codes.md"] }
+  ],
+
+  "_comment_code": "코드 인덱싱을 켰다면(INDEX_CODE=true) 코드 질문도 함께 두면 좋다. 문서만으로는 안 나오는 '실제 구현'을 묻는 축.",
+  "in_scope_code": [
+    { "q": "apply_retry_policy 함수는 뭘 하는 함수야?", "expected": ["app/worker/retry_strategy.py"] },
+    { "q": "orphan recovery 는 코드에서 어디에 구현돼 있어?", "expected": ["app/worker/worker_main.py"] },
+    { "q": "스케줄러의 하루 흐름은 어떻게 돼?", "expected": ["app/scheduler/daily_scheduler.py"] }
+  ],
+
+  "_comment_out": "범위 밖(잡담·무관) 질문 — 검색 게이트가 컷하는지 보는 음성 표본.",
+  "out_of_scope": [
+    "고양이 키우는 법 알려줘",
+    "오늘 날씨 어때?",
+    "김치찌개 맛있게 끓이는 법",
+    "파이썬으로 웹 크롤러 만드는 법 알려줘",
+    "서울에서 가볼 만한 곳 추천해줘",
+    "삼성전자 주가 알려줘"
+  ]
+}

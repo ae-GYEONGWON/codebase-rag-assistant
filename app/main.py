@@ -33,18 +33,19 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="stock_prod RAG 챗봇", version="2.0.0", lifespan=lifespan)
+app = FastAPI(title="Codebase RAG 어시스턴트", version="2.0.0", lifespan=lifespan)
 
 _WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 
 # 지식원 내용을 반영한 시작 질문(칩). 사용자가 "무엇을 물어볼 수 있는지" 감을 잡게 함.
+# ※ 인덱싱한 코드베이스에 맞게 자유롭게 바꾸세요(문서 질문 / 코드 질문을 섞는 것을 권장).
 SUGGESTED_QUESTIONS = [
-    "지금 운용 모드가 뭐야?",
-    "5개 포트폴리오 모드 차이를 표로 정리해줘",
-    "zombie recovery 로직이 뭐야?",
-    "SL 은 어떻게 결정돼? 캡은 있어?",
-    "zombie recovery 는 코드에서 어떻게 구현돼 있어?",
-    "broker hard_end 시각은 어떻게 정해져?",
+    "이 프로젝트는 무엇을 하는 시스템이야?",
+    "주요 컴포넌트 차이를 표로 정리해줘",
+    "orphan recovery 로직이 뭐야?",
+    "재시도 정책은 어떻게 결정돼? 상한은 있어?",
+    "orphan recovery 는 코드에서 어떻게 구현돼 있어?",
+    "BATCH_DEADLINE 은 어떻게 정해져?",
 ]
 
 
@@ -138,4 +139,4 @@ def index() -> str:
     html = _WEB_DIR / "index.html"
     if html.exists():
         return html.read_text(encoding="utf-8")
-    return "<h1>stock_prod RAG</h1><p>POST /chat 로 질문하세요.</p>"
+    return "<h1>Codebase RAG</h1><p>POST /chat 로 질문하세요.</p>"

@@ -25,7 +25,11 @@ from app.config import settings
 from app.rag import _format_context, _llm, _text_of, answer
 from app.retriever import search
 
-QUESTIONS = Path(__file__).parent / "questions.json"
+# 실제 평가셋(questions.json)은 인덱싱한 코드베이스에 종속이라 git 에 넣지 않는다.
+_QDIR = Path(__file__).parent
+QUESTIONS = _QDIR / "questions.json"
+if not QUESTIONS.exists():
+    QUESTIONS = _QDIR / "questions.example.json"
 
 JUDGE_PROMPT = (
     "당신은 RAG 답변의 사실 충실도(groundedness)를 검사하는 엄격한 심사관입니다.\n"

@@ -41,7 +41,7 @@ def _iter_code_files() -> List[Path]:
 
 
 def _display_name(path: Path) -> str:
-    """코드 루트의 **부모** 기준 상대경로 → 'app/broker/broker_main.py' 처럼 보이게."""
+    """코드 루트의 **부모** 기준 상대경로 → 'app/worker/worker_main.py' 처럼 보이게."""
     for root in settings.code_dir_list:
         try:
             rel = path.relative_to(root)

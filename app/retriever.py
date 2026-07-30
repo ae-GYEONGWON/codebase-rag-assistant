@@ -1,8 +1,8 @@
 """하이브리드 검색 — BM25(어휘) + 벡터(의미) → RRF 융합 → MMR 다양화 → 범위 밖 판정.
 
-순수 벡터 검색만 쓰면 `RC4025`, `HARD_END`, `SL_CAP_PERCENT` 같은
+순수 벡터 검색만 쓰면 `ERR7742`, `BATCH_DEADLINE`, `RATE_CAP_PERCENT` 같은
 **희귀 식별자**를 놓친다(임베딩은 의미는 잡아도 정확한 토큰 일치에 약함).
-반대로 BM25 만 쓰면 "지금 어떤 모드로 돌려?" 처럼 표현이 다른 질문을 놓친다.
+반대로 BM25 만 쓰면 "지금 어떤 설정으로 동작해?" 처럼 표현이 다른 질문을 놓친다.
 두 순위를 RRF(Reciprocal Rank Fusion)로 합쳐 서로의 약점을 메운다.
 
 이어서 MMR 로 같은 내용의 청크가 top-k 를 잠식하는 것을 막고,
@@ -22,13 +22,13 @@ from app.config import settings
 from app.embeddings import get_embeddings
 from app.ingest import get_vectorstore
 
-# 영문/숫자/밑줄 토큰(RC4025, HARD_END …) 과 한글 덩어리를 분리
+# 영문/숫자/밑줄 토큰(ERR7742, BATCH_DEADLINE …) 과 한글 덩어리를 분리
 _TOKEN_RE = re.compile(r"[a-zA-Z0-9_]+|[가-힣]+")
 _RRF_K = 60  # RRF 상수(관례값). 상위 순위 간 점수 차를 완만하게 만든다.
 _SYMBOL_SLOTS = 2  # 심볼 정확매칭 코드를 top-k 에 보장할 최대 개수(나머지는 일반 검색).
 
 # 질문에서 ASCII 식별자 토큰을 추출한다. [a-zA-Z0-9_] 만 매칭하므로
-# 한글이 붙어있어도 "RC4025가" → "RC4025" 로 자동 분리된다(\b 불필요).
+# 한글이 붙어있어도 "ERR7742가" → "ERR7742" 로 자동 분리된다(\b 불필요).
 _ID_TOKEN_RE = re.compile(r"[a-zA-Z][a-zA-Z0-9_]*")
 
 
@@ -65,7 +65,7 @@ def _corpus() -> Tuple[List[Document], np.ndarray, BM25Okapi]:
     embs = np.asarray(raw["embeddings"], dtype=np.float32)
     embs /= np.linalg.norm(embs, axis=1, keepdims=True) + 1e-9  # 코사인용 정규화
 
-    # 파일명·섹션명도 BM25 본문에 포함 → "zombie_recovery" 같은 파일명 질의가 걸린다.
+    # 파일명·섹션명도 BM25 본문에 포함 → "orphan_recovery" 같은 파일명 질의가 걸린다.
     bm25 = BM25Okapi(
         [
             _tokenize(
@@ -82,7 +82,7 @@ def _symbol_index() -> List[tuple]:
     """(소문자 심볼명, 청크 인덱스) 목록 — 코드 청크의 함수/메서드명 정확 매칭용.
 
     코드 본문은 영어 식별자뿐이라 한국어 질문과 임베딩 유사도가 낮아 검색에서 밀린다.
-    질문에 심볼명이 그대로 등장하면("apply_vix_sl 함수?") 그 청크를 강제로 끌어올린다.
+    질문에 심볼명이 그대로 등장하면("apply_retry_policy 함수?") 그 청크를 강제로 끌어올린다.
     """
     docs, _, _ = _corpus()
     out = []
@@ -90,7 +90,7 @@ def _symbol_index() -> List[tuple]:
         if d.metadata.get("doc_type") != "code":
             continue
         sym = d.metadata.get("section", "")
-        # 전체 심볼(apply_vix_sl)과 메서드명(BrokerMain.foo → foo) 둘 다 후보
+        # 전체 심볼(apply_retry_policy)과 메서드명(WorkerMain.foo → foo) 둘 다 후보
         for cand in {sym, sym.split(".")[-1]}:
             c = cand.lower().lstrip("_")
             if c and c != "module":
@@ -104,7 +104,7 @@ def _symbol_hits(question: str) -> List[int]:
     _ID_TOKEN_RE 로 ASCII 식별자 토큰을 먼저 추출해 한글 조사 오염을 막은 뒤,
     아래 두 전략으로 후보를 선별한다.
     ① 어휘 매칭: 토큰이 등록 심볼 vocab 에 정확히 있는 것 (4자 심볼도 포착)
-    ② 패턴 매칭: snake_case(apply_vix_sl) / ALL_CAPS(RC4025) 형태
+    ② 패턴 매칭: snake_case(apply_retry_policy) / ALL_CAPS(ERR7742) 형태
        → 길이 휴리스틱 없이 식별자 형태 자체로 판별
     """
     index = _symbol_index()
@@ -195,7 +195,7 @@ def search(question: str, k: int | None = None) -> Tuple[List[Document], Dict[st
     for rank, idx in enumerate(bm_rank):
         fused[int(idx)] = fused.get(int(idx), 0.0) + 1.0 / (_RRF_K + rank + 1)
 
-    # 질문에 코드 심볼명이 그대로 있으면(예 "apply_vix_sl 함수?") 그 청크를 후보에 넣는다.
+    # 질문에 코드 심볼명이 그대로 있으면(예 "apply_retry_policy 함수?") 그 청크를 후보에 넣는다.
     sym_hits = _symbol_hits(question)
 
     n_cands = max(settings.rerank_candidates if settings.use_reranker else fetch, k)
@@ -206,7 +206,7 @@ def search(question: str, k: int | None = None) -> Tuple[List[Document], Dict[st
 
     # --- 범위 밖 판정: 코사인 단독 게이트 ---
     # BM25 는 게이트로 쓰지 않는다. 한글 2-gram 이 흔한 음절에 걸려 "고양이 키우는 법"
-    # 같은 질문도 16+ 를 받기 때문(반면 코사인은 0.25). 식별자 단독 질의(RC4025 등)는
+    # 같은 질문도 16+ 를 받기 때문(반면 코사인은 0.25). 식별자 단독 질의(ERR7742 등)는
     # 코사인이 오히려 0.5+ 라 이 게이트만으로 충분하다. — 실측 보정, config 주석 참고.
     best_sim = float(sims.max())
     best_bm = float(bm_scores.max())
@@ -233,7 +233,7 @@ def search(question: str, k: int | None = None) -> Tuple[List[Document], Dict[st
     picked = _mmr(cands, embs, rel, k, settings.mmr_lambda)
 
     # 심볼 정확매칭 청크를 top-k 에 최대 _SYMBOL_SLOTS 개 보장(융합점수 순). 나머지 슬롯은
-    # 일반 검색 결과 유지 → "hard_end 시각?"(정답=문서)이 코드에 독점당하지 않게.
+    # 일반 검색 결과 유지 → "batch_deadline 시각?"(정답=문서)이 코드에 독점당하지 않게.
     if sym_hits:
         extra = [i for i in sorted(sym_hits, key=lambda i: -fused.get(i, 0.0)) if i not in picked][:_SYMBOL_SLOTS]
         if extra:
