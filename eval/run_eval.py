@@ -13,14 +13,19 @@ from __future__ import annotations
 
 import argparse
 import json
+import time
 from pathlib import Path
 from typing import Callable, Dict, List, Tuple
 
 import numpy as np
 
+from app.agent import _TOOL_K
 from app.config import settings
 from app.embeddings import get_embeddings
 from app.retriever import _RRF_K, _corpus, _mmr, _tokenize, search
+
+# 에이전트가 한 질문에서 보는 최대 청크 수(툴 3축 × 툴당 k). 단발 RAG 의 '예산 맞춤' 비교 기준.
+_TOOL_BUDGET = _TOOL_K * 3
 
 # 실제 평가셋(questions.json)은 인덱싱한 코드베이스에 종속이라 git 에 넣지 않는다.
 # 없으면 템플릿(questions.example.json)으로 폴백해 형식만이라도 돌아가게 한다.
@@ -95,17 +100,116 @@ def score(retriever: Callable[[str, int], List[str]], cases: List[dict], k: int)
     return hits / n, rr / n, misses
 
 
+def score_multihop(sources_of: Callable[[str], List[str]], cases: List[dict]) -> Dict[str, float]:
+    """멀티홉 채점 — hops 는 **AND**. 모든 홉을 채워야 정답.
+
+    단일 홉 질문의 recall 은 'expected 중 하나라도 top-k 에 있으면 hit' 이지만,
+    멀티홉에서 그 기준을 쓰면 한 축만 채운 답도 hit 가 되어 에이전트의 이점이 지워진다.
+    그래서 두 가지를 나눠 본다:
+      hop_coverage — 채운 홉 비율(부분 점수). 왜 틀렸는지 보이게 하는 진단용
+      full        — 모든 홉을 채운 비율. 실제 '답할 수 있었나' 에 해당
+    """
+    total_hops, covered_hops, full = 0, 0, 0
+    for c in cases:
+        got = set(sources_of(c["q"]))
+        hits = [bool(got & set(h["expected"])) for h in c["hops"]]
+        total_hops += len(hits)
+        covered_hops += sum(hits)
+        full += all(hits)
+    n = len(cases) or 1
+    return {
+        "hop_coverage": covered_hops / (total_hops or 1),
+        "full": full / n,
+    }
+
+
+def _missing_axes(sources_of: Callable[[str], List[str]], case: dict) -> List[str]:
+    got = set(sources_of(case["q"]))
+    return [h["axis"] for h in case["hops"] if not (got & set(h["expected"]))]
+
+
+def run_multihop(cases: List[dict], k: int, use_agent: bool) -> None:
+    """멀티홉 비교: 단발 RAG(운영 k) / 단발 RAG(예산 맞춤 k) / 에이전트.
+
+    **예산 맞춤 행이 핵심 통제**다. 에이전트는 툴 3회 × 4청크 = 최대 12청크를 보므로,
+    단발 RAG 를 k=5 로만 비교하면 "에이전트가 그냥 더 많이 봐서 이긴 것" 이 된다.
+    같은 청크 예산을 준 단발 RAG 와 비교해야 '축을 나눈 것' 의 기여가 분리된다.
+    """
+    budget_k = _TOOL_BUDGET
+    print(f"\n■ 멀티홉 — {len(cases)}문항 (홉 AND 조건)\n")
+    print(f"{'retriever':<26}{'홉 커버리지':>12}{'전체정답':>10}{'지연':>9}{'LLM호출':>9}")
+    print("-" * 70)
+
+    rows = [
+        (f"단발 RAG (k={k})", lambda q: [d.metadata.get("source", "?") for d in search(q, k=k)[0]]),
+        (
+            f"단발 RAG (k={budget_k}, 예산맞춤)",
+            lambda q: [d.metadata.get("source", "?") for d in search(q, k=budget_k)[0]],
+        ),
+    ]
+
+    stats: Dict[str, Dict[str, float]] = {}
+    for name, fn in rows:
+        t0 = time.perf_counter()
+        s = score_multihop(fn, cases)
+        elapsed = (time.perf_counter() - t0) / (len(cases) or 1)
+        stats[name] = s
+        print(f"{name:<26}{s['hop_coverage']:>11.0%}{s['full']:>10.0%}{elapsed:>8.1f}s{'-':>9}")
+
+    if use_agent:
+        from app.agent import answer as agent_answer
+
+        cache: Dict[str, Dict] = {}
+
+        def agent_sources(q: str) -> List[str]:
+            if q not in cache:
+                t0 = time.perf_counter()
+                r = agent_answer(q)
+                r["_elapsed"] = time.perf_counter() - t0
+                cache[q] = r
+            return [s["source"] for s in cache[q]["sources"]]
+
+        s = score_multihop(agent_sources, cases)
+        stats["에이전트"] = s
+        lat = sum(r["_elapsed"] for r in cache.values()) / (len(cache) or 1)
+        calls = sum(r.get("llm_calls", 0) for r in cache.values()) / (len(cache) or 1)
+        print(f"{'에이전트':<25}{s['hop_coverage']:>11.0%}{s['full']:>10.0%}{lat:>8.1f}s{calls:>9.1f}")
+
+        print("\n  못 채운 축(에이전트):")
+        for c in cases:
+            miss = _missing_axes(agent_sources, c)
+            if miss:
+                print(f"    ✗ {'/'.join(miss):<12} {c['q'][:44]}")
+
+    print("\n  못 채운 축(단발 RAG, 운영 k):")
+    base = lambda q: [d.metadata.get("source", "?") for d in search(q, k=k)[0]]  # noqa: E731
+    for c in cases:
+        miss = _missing_axes(base, c)
+        if miss:
+            print(f"    ✗ {'/'.join(miss):<12} {c['q'][:44]}")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="검색 평가")
     ap.add_argument("--k", type=int, default=settings.retrieval_k)
     ap.add_argument("--rerank", action="store_true", help="리랭커 비교 행 포함(느림, CPU)")
+    ap.add_argument("--multihop", action="store_true", help="멀티홉 스위트만 실행")
+    ap.add_argument("--agent", action="store_true", help="멀티홉에 에이전트 행 추가(LLM 호출·느림)")
     args = ap.parse_args()
     k = args.k
 
     data = json.loads(QUESTIONS.read_text(encoding="utf-8"))
     doc_q: List[dict] = data["in_scope"]
     code_q: List[dict] = data.get("in_scope_code", [])
+    multi_q: List[dict] = data.get("multihop", [])
     out_scope: List[str] = data["out_of_scope"]
+
+    if args.multihop or args.agent:
+        if not multi_q:
+            print("멀티홉 문항이 없습니다(questions.json 의 multihop).")
+            return
+        run_multihop(multi_q, k, use_agent=args.agent)
+        return
 
     retrievers = {
         "vector only": _without_reranker(retrieve_vector),
