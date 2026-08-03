@@ -69,6 +69,15 @@ class Settings(BaseSettings):
     #     범위 밖에도 16+ 가 나와 게이트로 못 쓰고 순위 매기기에만 쓴다.
     min_similarity: float = 0.35
 
+    # --- 에이전트(툴콜링) 레이어 ---
+    # 단발 RAG 는 "검색 1회 → 답변". 에이전트는 축(문서/코드/커밋)을 골라 여러 번 검색하고
+    # 필요하면 심볼 본문을 다시 읽는다 → 멀티홉 질문("왜 바뀌었고 지금 코드는 어떻게 돼?")에 강함.
+    # 대가는 LLM 호출 수 증가(지연·토큰·무료티어 RPM). 그 트레이드오프를 측정하는 게 v2 목표.
+    use_agent: bool = False       # 기본 OFF — 단발 RAG 가 기존 검증된 경로
+    agent_max_steps: int = 5      # 툴 호출 라운드 상한(무한루프·토큰폭주 방지)
+    # Gemini 무료 티어는 분당 15요청. 에이전트는 한 질문에 3~5회 호출하므로 간격을 둔다.
+    agent_throttle_sec: float = 4.0
+
     # 벡터 DB
     chroma_dir: str = "./chroma_db"
     collection_name: str = "codebase_memory"
