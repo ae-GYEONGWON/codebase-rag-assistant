@@ -6,6 +6,7 @@ langchain-openai>=0.2.0          # (선택) OpenAI 대안
 langchain-chroma>=0.1.4
 chromadb>=0.5.0
 rank-bm25>=0.2.2                 # 하이브리드 검색의 어휘(BM25) 축
+langgraph>=1.0.0                 # 에이전트 루프의 그래프 판(app/agent_graph.py). 수동 루프와 비교 측정용
 
 # --- 로컬 무료 임베딩(기본) ---
 langchain-huggingface>=0.1.0

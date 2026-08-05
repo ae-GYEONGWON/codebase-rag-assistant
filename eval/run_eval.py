@@ -157,27 +157,37 @@ def run_multihop(cases: List[dict], k: int, use_agent: bool) -> None:
         print(f"{name:<26}{s['hop_coverage']:>11.0%}{s['full']:>10.0%}{elapsed:>8.1f}s{'-':>9}")
 
     if use_agent:
-        from app.agent import answer as agent_answer
+        from app.agent import answer as loop_answer
+        from app.agent_graph import answer as graph_answer
 
-        cache: Dict[str, Dict] = {}
+        # 수동 루프 판과 LangGraph 판을 같은 문항·같은 스로틀로 비교한다.
+        # 프레임워크 도입이 정답률을 바꾸는지, 아니면 구조만 바뀌고 결과는 같은지를
+        # 말로 하지 않고 숫자로 확인하기 위한 행.
+        agents = [("에이전트(수동 루프)", loop_answer), ("에이전트(LangGraph)", graph_answer)]
+        last_sources_fn = None
 
-        def agent_sources(q: str) -> List[str]:
-            if q not in cache:
-                t0 = time.perf_counter()
-                r = agent_answer(q)
-                r["_elapsed"] = time.perf_counter() - t0
-                cache[q] = r
-            return [s["source"] for s in cache[q]["sources"]]
+        for label, fn in agents:
+            cache: Dict[str, Dict] = {}
 
-        s = score_multihop(agent_sources, cases)
-        stats["에이전트"] = s
-        lat = sum(r["_elapsed"] for r in cache.values()) / (len(cache) or 1)
-        calls = sum(r.get("llm_calls", 0) for r in cache.values()) / (len(cache) or 1)
-        print(f"{'에이전트':<25}{s['hop_coverage']:>11.0%}{s['full']:>10.0%}{lat:>8.1f}s{calls:>9.1f}")
+            def sources_of(q: str, _fn=fn, _cache=cache) -> List[str]:
+                if q not in _cache:
+                    t0 = time.perf_counter()
+                    r = _fn(q)
+                    r["_elapsed"] = time.perf_counter() - t0
+                    _cache[q] = r
+                return [s["source"] for s in _cache[q]["sources"]]
 
-        print("\n  못 채운 축(에이전트):")
+            s = score_multihop(sources_of, cases)
+            stats[label] = s
+            lat = sum(r["_elapsed"] for r in cache.values()) / (len(cache) or 1)
+            calls = sum(r.get("llm_calls", 0) for r in cache.values()) / (len(cache) or 1)
+            pad = 26 - (len(label) - len(label.encode("ascii", "ignore").decode()))
+            print(f"{label:<{pad}}{s['hop_coverage']:>11.0%}{s['full']:>10.0%}{lat:>8.1f}s{calls:>9.1f}")
+            last_sources_fn = sources_of
+
+        print("\n  못 채운 축(에이전트 LangGraph):")
         for c in cases:
-            miss = _missing_axes(agent_sources, c)
+            miss = _missing_axes(last_sources_fn, c)
             if miss:
                 print(f"    ✗ {'/'.join(miss):<12} {c['q'][:44]}")
 
