@@ -168,8 +168,17 @@ def _snippet(text: str, query: str, width: int = 220) -> str:
     return ("…" if start > 0 else "") + out + ("…" if start + width < len(body) else "")
 
 
-def search(question: str, k: int | None = None) -> Tuple[List[Document], Dict[str, Any]]:
+def search(
+    question: str,
+    k: int | None = None,
+    doc_types: Tuple[str, ...] | None = None,
+) -> Tuple[List[Document], Dict[str, Any]]:
     """질문 → (선택된 청크, 진단정보). 범위 밖이면 빈 리스트.
+
+    doc_types 를 주면 해당 종류(doc|code|commit)만 대상으로 검색한다.
+    단발 RAG 는 None(전체)로 쓰고, 에이전트의 search_docs/search_code/search_commits
+    툴이 축을 하나씩 지정해 호출한다 — 축을 나눠야 "코드에서" 같은 의도가
+    표면 유사도에 밀려 유실되지 않는다(엔지니어링노트: 코드질문 미스 2건의 원인).
 
     진단정보(debug)는 /chat 응답과 평가 하네스에서 검색 품질을 들여다보는 용도.
     """
@@ -178,25 +187,47 @@ def search(question: str, k: int | None = None) -> Tuple[List[Document], Dict[st
     if not docs:
         return [], {"reason": "empty_index"}
 
+    # --- doc_type 필터: 제외 대상 점수를 -1 로 눌러 랭킹·게이트에서 함께 배제 ---
+    allowed: set | None = None
+    if doc_types:
+        allowed = {i for i, d in enumerate(docs) if d.metadata.get("doc_type") in doc_types}
+        if not allowed:
+            return [], {"reason": "empty_filter", "doc_types": list(doc_types)}
+
     qv = np.asarray(get_embeddings().embed_query(question), dtype=np.float32)
     qv /= np.linalg.norm(qv) + 1e-9
 
     sims = embs @ qv  # 코사인 유사도 (−1~1, 실사용 0~1)
     bm_scores = np.asarray(bm25.get_scores(_tokenize(question)), dtype=np.float32)
 
+    if allowed is not None:
+        mask = np.zeros(len(docs), dtype=bool)
+        mask[list(allowed)] = True
+        # 게이트(best_sim)도 필터 후 기준이어야 한다. 전체 최고점을 쓰면 다른 축의
+        # 높은 유사도 때문에 "이 축에는 근거가 없다"를 범위 안으로 오판한다.
+        sims = np.where(mask, sims, -1.0)
+        bm_scores = np.where(mask, bm_scores, -1.0)
+
     fetch = min(settings.fetch_k, len(docs))
     vec_rank = np.argsort(-sims)[:fetch]
     bm_rank = np.argsort(-bm_scores)[:fetch]
 
     # --- RRF 융합: 점수 스케일이 다른 두 랭킹을 '순위'만으로 합친다(정규화 불필요) ---
+    # 허용 집합이 fetch 보다 작으면 -1 로 눌린 청크가 상위에 섞여 들어오므로 여기서 거른다.
     fused: Dict[int, float] = {}
     for rank, idx in enumerate(vec_rank):
+        if allowed is not None and int(idx) not in allowed:
+            continue
         fused[int(idx)] = fused.get(int(idx), 0.0) + 1.0 / (_RRF_K + rank + 1)
     for rank, idx in enumerate(bm_rank):
+        if allowed is not None and int(idx) not in allowed:
+            continue
         fused[int(idx)] = fused.get(int(idx), 0.0) + 1.0 / (_RRF_K + rank + 1)
 
     # 질문에 코드 심볼명이 그대로 있으면(예 "apply_retry_policy 함수?") 그 청크를 후보에 넣는다.
     sym_hits = _symbol_hits(question)
+    if allowed is not None:
+        sym_hits = [i for i in sym_hits if i in allowed]
 
     n_cands = max(settings.rerank_candidates if settings.use_reranker else fetch, k)
     cands = sorted(fused, key=lambda i: -fused[i])[:n_cands]
@@ -259,6 +290,33 @@ def search(question: str, k: int | None = None) -> Tuple[List[Document], Dict[st
         ],
     }
     return chosen, debug
+
+
+def get_symbol(name: str, limit: int = 3) -> List[Document]:
+    """심볼명으로 코드 청크 본문을 직접 꺼낸다(검색 랭킹을 거치지 않음).
+
+    에이전트의 `read_symbol` 툴용. 검색은 "무엇을 하는 코드인가"에 답하지만,
+    후속 질문("그 함수 내부에서 뭘 호출해?")은 **본문 전체**가 필요하다.
+    유사도 랭킹에 맡기면 같은 심볼을 다시 못 뽑을 수 있어 정확매칭 경로를 따로 둔다.
+    """
+    docs, _, _ = _corpus()
+    want = name.lower().lstrip("_")
+    exact, partial = [], []
+    for sym, i in _symbol_index():
+        if sym == want:
+            exact.append(i)
+        elif want and want in sym:
+            partial.append(i)
+
+    seen: set = set()
+    out: List[Document] = []
+    for i in exact + partial:
+        if i not in seen:
+            seen.add(i)
+            out.append(docs[i])
+        if len(out) >= limit:
+            break
+    return out
 
 
 def snippets_for(docs: List[Document], question: str) -> List[Dict[str, str]]:

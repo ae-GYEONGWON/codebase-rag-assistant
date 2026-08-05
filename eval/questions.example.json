@@ -15,6 +15,25 @@
     { "q": "스케줄러의 하루 흐름은 어떻게 돼?", "expected": ["app/scheduler/daily_scheduler.py"] }
   ],
 
+  "_comment_multihop": "멀티홉 — 한 축(문서/코드/커밋)의 근거만으로는 답이 안 되는 질문. hops 는 AND 조건이라 모든 홉을 채워야 정답으로 친다. 단발 RAG 는 top-k 가 한 축에 쏠려 1홉만 채우는 경향이 있고, 툴콜링 에이전트는 축별로 따로 검색하므로 여기서 둘이 갈린다. ★라벨은 반드시 원본(소스 grep · git log)에서 만들 것 — 평가 대상인 검색기의 출력으로 라벨을 만들면 순환이 된다. axis 는 doc|code|commit, 커밋 출처 형식은 'git:<short-hash>'.",
+  "multihop": [
+    {
+      "q": "재시도 정책이 왜 필요했고, 지금 코드에서는 어떻게 구현돼 있어?",
+      "hops": [
+        { "axis": "doc", "expected": ["docs/retry_policy.md"] },
+        { "axis": "code", "expected": ["app/worker/retry_strategy.py"] }
+      ]
+    },
+    {
+      "q": "orphan recovery 를 왜 넣었고, 언제 들어갔고, 지금 코드에선 어떻게 동작해?",
+      "hops": [
+        { "axis": "doc", "expected": ["docs/orphan_recovery.md"] },
+        { "axis": "commit", "expected": ["git:1a2b3c4"] },
+        { "axis": "code", "expected": ["app/worker/worker_main.py"] }
+      ]
+    }
+  ],
+
   "_comment_out": "범위 밖(잡담·무관) 질문 — 검색 게이트가 컷하는지 보는 음성 표본.",
   "out_of_scope": [
     "고양이 키우는 법 알려줘",
