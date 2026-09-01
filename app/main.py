@@ -14,6 +14,7 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
 
 from app.config import settings
+from app.profiles import active_profile
 
 
 @asynccontextmanager
@@ -82,7 +83,8 @@ def health() -> dict:
         "embedding_provider": settings.embedding_provider,
         "llm_provider": settings.active_llm,
         "configured_llm": settings.llm_provider,
-        "collection": settings.collection_name,
+        "corpus_profile": active_profile().name,
+        "collection": active_profile().collection_name,
     }
 
 

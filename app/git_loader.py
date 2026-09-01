@@ -16,7 +16,7 @@ from typing import List
 
 from langchain_core.documents import Document
 
-from app.config import settings
+from app.profiles import active_profile
 
 # 커밋 사이 구분자(메시지에 나올 리 없는 문자열)
 _SEP = "\x1e===COMMIT===\x1e"
@@ -92,9 +92,10 @@ def _load_repo(repo: Path, limit: int) -> List[Document]:
 
 
 def load_git() -> List[Document]:
-    if not settings.index_git:
+    prof = active_profile()
+    if not prof.index_git:
         return []
     docs: List[Document] = []
-    for repo in settings.git_repo_list:
-        docs.extend(_load_repo(repo, settings.git_max_commits))
+    for repo in prof.git_repos:
+        docs.extend(_load_repo(repo, prof.git_max_commits))
     return docs

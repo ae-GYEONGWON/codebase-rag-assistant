@@ -18,37 +18,23 @@ from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from app.config import settings
+from app.profiles import active_profile
 
 _SKIP_DIRS = {"__pycache__", ".venv", "venv", ".git", "node_modules", "build", "dist"}
 
 
 def _iter_code_files() -> List[Path]:
-    seen: set[Path] = set()
-    files: List[Path] = []
-    for root in settings.code_dir_list:
-        if not root.exists():
-            print(f"[code] 경고: 경로 없음 → {root}")
-            continue
-        for pattern in settings.code_glob_list:
-            for path in root.rglob(pattern):
-                if not path.is_file() or path in seen:
-                    continue
-                if any(part in _SKIP_DIRS for part in path.parts):
-                    continue
-                seen.add(path)
-                files.append(path)
-    return sorted(files)
+    """활성 프로필의 코드 지식원에서 파일 경로를 수집."""
+    prof = active_profile()
+    if not prof.index_code:
+        return []
+    return prof.code.list_files(prof.code_globs)
 
 
 def _display_name(path: Path) -> str:
-    """코드 루트의 **부모** 기준 상대경로 → 'app/worker/worker_main.py' 처럼 보이게."""
-    for root in settings.code_dir_list:
-        try:
-            rel = path.relative_to(root)
-        except ValueError:
-            continue
-        return (Path(root.name) / rel).as_posix()
-    return path.name
+    """'app/worker/worker_main.py' 처럼 최상위 패키지명을 남긴 상대경로(프로필이 결정)."""
+    prof = active_profile()
+    return prof.code.display_name(path) if prof.index_code else path.name
 
 
 def _segments(tree: ast.Module, src_lines: List[str]) -> Iterator[Tuple[str, str]]:
@@ -86,7 +72,7 @@ def _segments(tree: ast.Module, src_lines: List[str]) -> Iterator[Tuple[str, str
 
 def load_code() -> List[Document]:
     """소스코드 전체를 읽어 청크 리스트로 반환. 문법 오류 파일은 건너뛴다."""
-    if not settings.index_code:
+    if not active_profile().index_code:
         return []
 
     splitter = RecursiveCharacterTextSplitter(
@@ -130,4 +116,4 @@ def load_code() -> List[Document]:
 
 
 def list_code_sources() -> List[str]:
-    return [_display_name(p) for p in _iter_code_files()] if settings.index_code else []
+    return [_display_name(p) for p in _iter_code_files()]

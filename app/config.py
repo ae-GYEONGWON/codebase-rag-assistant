@@ -14,7 +14,14 @@ class Settings(BaseSettings):
     google_api_key: str = ""     # Gemini (무료 티어) — https://aistudio.google.com/apikey
     openai_api_key: str = ""     # (선택) OpenAI 를 쓸 경우에만
 
-    # 지식원 — 문서 (.env 의 KNOWLEDGE_DIRS 로 대상 코드베이스를 지정)
+    # --- 코퍼스 프로필 ---
+    # 어떤 지식원을 인덱싱할지 한 덩어리로 고른다(app/profiles.py).
+    #   demo    = 이 저장소 자기 자신(git 추적 파일). 어느 PC·CI 에서든 동일 → 기본값.
+    #   private = 아래 KNOWLEDGE_DIRS/CODE_DIRS/GIT_REPOS 로 지정한 외부 코드베이스.
+    # ※ 기본을 demo 로 둬야 clone 직후 아무 설정 없이 인덱싱·평가가 돌아간다.
+    corpus_profile: str = "demo"
+
+    # 지식원 — 문서 (private 프로필 전용 입력)
     knowledge_dirs: str = "/path/to/your/repo/docs"
     file_globs: str = "*.md"
 
