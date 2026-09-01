@@ -11,15 +11,20 @@ recall 0% 가 나오고, 그 0% 의 원인을 검색 품질로 오해하게 된�
 
 ```json
 {
-  "in_scope":       [{"q": "...", "expect_sources": ["a.md", "b.md"]}],
-  "in_scope_code":  [{"q": "...", "expect_sources": ["app/x.py"]}],
-  "multihop":       [{"q": "...", "expect_axes": {"doc": [...], "code": [...]}}],
+  "in_scope":       [{"q": "...", "expected": ["a.md", "b.md"], "origin": "manual"}],
+  "in_scope_code":  [{"q": "...", "expected": ["app/x.py"]}],
+  "multihop":       [{"q": "...", "hops": [{"axis": "doc",  "expected": [...]},
+                                            {"axis": "code", "expected": [...]}]}],
   "out_of_scope":   ["오늘 날씨 어때?"]
 }
 ```
 
-`expect_sources` 는 **OR** 채점(하나만 맞으면 정답), `multihop` 의 `expect_axes` 는
-축별 **AND** 채점(모든 축을 채워야 정답)이다.
+`expected` 는 **OR** 채점(하나라도 top-k 에 잡히면 hit), `multihop` 의 `hops` 는
+축별 **AND** 채점(모든 홉을 채워야 정답)이다. `axis` 는 `doc|code|commit`,
+커밋 출처 형식은 `git:<short-hash>`.
+
+★ 라벨은 **원본**(소스 grep · git log)에서 만든다. 평가 대상인 검색기의 출력으로
+라벨을 만들면 순환이 되어 점수가 자기 자신을 증명하게 된다.
 
 ## 라벨 출처(origin)
 

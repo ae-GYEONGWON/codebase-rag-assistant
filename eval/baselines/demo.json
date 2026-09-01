@@ -1,0 +1,145 @@
+{
+  "profile": "demo",
+  "collection": "corpus_demo",
+  "k": 5,
+  "git_sha": "20f685a",
+  "created_at": "2026-09-01 06:39:33Z",
+  "corpus": {
+    "doc": 45,
+    "code": 211,
+    "commit": 29
+  },
+  "dataset": {
+    "path": "questions.demo.json",
+    "counts": {
+      "in_scope": 12,
+      "in_scope_code": 8,
+      "multihop": 4,
+      "out_of_scope": 6
+    },
+    "origins": {
+      "manual": 30
+    }
+  },
+  "suites": [
+    {
+      "title": "문서 질문",
+      "n": 12,
+      "rows": [
+        {
+          "name": "vector only",
+          "recall": 0.9166666666666666,
+          "mrr": 0.5625,
+          "misses": [
+            "MMR 다양성 계수를 1.0 으로 정한 근거가 뭐야?"
+          ]
+        },
+        {
+          "name": "bm25 only",
+          "recall": 1.0,
+          "mrr": 0.861111111111111,
+          "misses": []
+        },
+        {
+          "name": "hybrid RRF",
+          "recall": 1.0,
+          "mrr": 0.8819444444444443,
+          "misses": []
+        },
+        {
+          "name": "운영 파이프라인",
+          "recall": 1.0,
+          "mrr": 0.7847222222222222,
+          "misses": []
+        }
+      ]
+    },
+    {
+      "title": "코드 질문",
+      "n": 8,
+      "rows": [
+        {
+          "name": "vector only",
+          "recall": 0.75,
+          "mrr": 0.6875,
+          "misses": [
+            "RRF 융합은 코드에서 어떻게 구현돼 있어?",
+            "groundedness 를 판정하는 프롬프트는 어디 있어?"
+          ]
+        },
+        {
+          "name": "bm25 only",
+          "recall": 0.75,
+          "mrr": 0.6041666666666667,
+          "misses": [
+            "RRF 융합은 코드에서 어떻게 구현돼 있어?",
+            "git 커밋을 청크로 만드는 코드는 어디야?"
+          ]
+        },
+        {
+          "name": "hybrid RRF",
+          "recall": 0.75,
+          "mrr": 0.6041666666666667,
+          "misses": [
+            "RRF 융합은 코드에서 어떻게 구현돼 있어?",
+            "groundedness 를 판정하는 프롬프트는 어디 있어?"
+          ]
+        },
+        {
+          "name": "운영 파이프라인",
+          "recall": 0.75,
+          "mrr": 0.625,
+          "misses": [
+            "RRF 융합은 코드에서 어떻게 구현돼 있어?",
+            "groundedness 를 판정하는 프롬프트는 어디 있어?"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "전체",
+      "n": 20,
+      "rows": [
+        {
+          "name": "vector only",
+          "recall": 0.85,
+          "mrr": 0.6125,
+          "misses": [
+            "MMR 다양성 계수를 1.0 으로 정한 근거가 뭐야?",
+            "RRF 융합은 코드에서 어떻게 구현돼 있어?",
+            "groundedness 를 판정하는 프롬프트는 어디 있어?"
+          ]
+        },
+        {
+          "name": "bm25 only",
+          "recall": 0.9,
+          "mrr": 0.7583333333333333,
+          "misses": [
+            "RRF 융합은 코드에서 어떻게 구현돼 있어?",
+            "git 커밋을 청크로 만드는 코드는 어디야?"
+          ]
+        },
+        {
+          "name": "hybrid RRF",
+          "recall": 0.9,
+          "mrr": 0.7708333333333333,
+          "misses": [
+            "RRF 융합은 코드에서 어떻게 구현돼 있어?",
+            "groundedness 를 판정하는 프롬프트는 어디 있어?"
+          ]
+        },
+        {
+          "name": "운영 파이프라인",
+          "recall": 0.9,
+          "mrr": 0.7208333333333333,
+          "misses": [
+            "RRF 융합은 코드에서 어떻게 구현돼 있어?",
+            "groundedness 를 판정하는 프롬프트는 어디 있어?"
+          ]
+        }
+      ]
+    }
+  ],
+  "out_of_scope_total": 6,
+  "out_of_scope_rejected": 6
+}

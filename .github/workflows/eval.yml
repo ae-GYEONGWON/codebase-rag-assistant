@@ -1,0 +1,96 @@
+# 검색 평가 회귀 게이트
+#
+# 이 워크플로가 하는 일: demo 코퍼스(= 이 저장소 자기 자신)를 인덱싱하고 평가를 돌려,
+# `eval/baselines/demo.json` 대비 **운영 파이프라인 recall·MRR·범위밖 거절률**이 떨어지면 실패시킨다.
+#
+# demo 프로필이라 외부 코드베이스도 API 키도 필요 없다. 코퍼스가 git 추적 파일로 정의돼 있어
+# 러너에서도 로컬과 같은 집합이 만들어진다(→ docs/engineering-notes.md #16).
+#
+# ⚠️ 알려진 한계 — baseline 은 만든 플랫폼에 묶인다.
+#   임베딩 계산이 OS·BLAS 구현에 따라 마지막 자리에서 갈리고, 동점 청크의 순서가 뒤집히면
+#   recall 이 한 문항 단위로 움직인다. 문항이 20개면 한 문항 = 5% 라 허용치(1%)를 넘긴다.
+#   → **baseline 은 이 워크플로가 만든 것을 쓴다.** 로컬(Windows)에서 만든 baseline 으로 처음
+#     돌리면 실패할 수 있고, 그때는 아티팩트로 올라온 `demo.json` 을 baseline 으로 커밋하면 된다.
+#     (workflow_dispatch 에 baseline 재생성 모드를 두었다.)
+
+name: eval
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**.md']
+  pull_request:
+    paths-ignore: ['**.md']
+  workflow_dispatch:
+    inputs:
+      save_baseline:
+        description: '이번 실행 결과를 baseline 으로 저장(아티팩트로 받아 커밋할 것)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: eval-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  retrieval-eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CORPUS_PROFILE: demo
+      PYTHONIOENCODING: utf-8
+      # LLM 은 쓰지 않는다(검색 평가는 순수 검색 경로). 키가 없으면 extractive 로 폴백.
+      ANONYMIZED_TELEMETRY: 'False'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # ★ git 이력이 지식원의 한 축이다. 얕은 클론이면 커밋 청크가 비어 코퍼스가 달라진다.
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: 의존성 설치 (torch 는 CPU 휠로)
+        run: |
+          python -m pip install --upgrade pip
+          # 기본 인덱스는 CUDA 빌드(2GB+)를 끌고 온다 — CPU 휠을 먼저 고정해 설치 시간을 줄인다.
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements.txt
+
+      - name: 임베딩 모델 캐시
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-${{ hashFiles('requirements.txt') }}-ko-sroberta
+
+      - name: 단위 테스트
+        run: python -m pytest -q
+
+      - name: demo 코퍼스 인덱싱
+        run: python -m app.ingest --profile demo --reset
+
+      - name: 평가 + 회귀 게이트
+        id: gate
+        run: |
+          if [ "${{ inputs.save_baseline }}" = "true" ]; then
+            python -m eval.run_eval --profile demo --report --save-baseline
+          else
+            python -m eval.run_eval --profile demo --gate
+          fi
+
+      - name: 리포트 아티팩트 업로드
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-report-${{ github.sha }}
+          path: |
+            eval/reports/
+            eval/baselines/
+          retention-days: 30
+
+      - name: 리포트를 잡 요약에 붙이기
+        if: always()
+        run: cat eval/reports/demo.md >> "$GITHUB_STEP_SUMMARY" || true
