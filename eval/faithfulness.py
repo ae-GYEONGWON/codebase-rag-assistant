@@ -26,6 +26,8 @@ from app.profiles import available_profiles, use_profile
 from app.rag import _format_context, _llm, _text_of, answer
 from app.retriever import search
 from eval.datasets import load_questions
+from eval import llm as L
+from eval import report as rp
 
 
 
@@ -64,12 +66,16 @@ def _call(fn: Callable[[], Any]) -> Any:
     return fn()
 
 
-def _judge(question: str, context: str, ans: str) -> Dict[str, Any]:
+def _judge(question: str, context: str, ans: str, spec=None) -> Dict[str, Any]:
+    """판정 모델은 **주입받는다** - 생성기와 다른 모델로 갈아끼울 수 있어야 하기 때문이다.
+
+    같은 모델이 답을 만들고 채점하면 자기 답에 후해진다(self-enhancement bias).
+    표준 완화책이 모델 분리이고, 그 차이를 수치화하는 것이 이 인자의 존재 이유다.
+    """
+    spec = spec or L.generator_spec()
     if settings.active_llm == "extractive":
         return {"score": None, "unsupported": [], "note": "LLM 미연결(extractive)"}
-    raw = _text_of(
-        _call(lambda: _llm().invoke(JUDGE_PROMPT.format(context=context[:12000], answer=ans))).content
-    )
+    raw = L.ask(spec, JUDGE_PROMPT.format(context=context[:12000], answer=ans))
     txt = raw.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
     try:
         obj = json.loads(txt)
@@ -81,6 +87,11 @@ def _judge(question: str, context: str, ans: str) -> Dict[str, Any]:
 def main() -> None:
     ap = argparse.ArgumentParser(description="답변 groundedness 평가")
     ap.add_argument("--n", type=int, default=0, help="앞 N개만(0=전체)")
+    ap.add_argument("--questions", type=Path, default=None, help="평가셋 파일 경로(기본: 프로필 것)")
+    ap.add_argument("--judge-provider", default=None, choices=["gemini", "openai"],
+                    help="판정 모델 provider(기본: 생성기와 동일 = self-judge)")
+    ap.add_argument("--judge-model", default=None, help="판정 모델 이름")
+    ap.add_argument("--label", default="", help="리포트 파일명 꼬리표(예: self / cross)")
     ap.add_argument(
         "--profile",
         choices=available_profiles(),
@@ -90,7 +101,7 @@ def main() -> None:
     if args.profile:
         use_profile(args.profile)
 
-    qs = load_questions()
+    qs = load_questions(args.questions)
     print(f"[eval] {qs.summary()}")
     cases: List[dict] = qs.in_scope + qs.in_scope_code
     if args.n:
@@ -99,19 +110,39 @@ def main() -> None:
     # 범위 밖 질문 하나를 섞어 '거절도 충실한 답'으로 채점되는지 확인
     oos = qs.out_of_scope[0]
 
-    print(f"\n■ 답변 groundedness — {len(cases)}문항 + 범위밖 1 (judge={settings.active_llm})\n")
+    gen_spec = L.generator_spec()
+    if args.judge_provider:
+        judge_spec = L.ModelSpec(args.judge_provider,
+                                 args.judge_model or settings.gemini_chat_model, "판정기")
+    elif args.judge_model:
+        judge_spec = L.ModelSpec(gen_spec.provider, args.judge_model, "판정기")
+    else:
+        judge_spec = L.ModelSpec(gen_spec.provider, gen_spec.model, "판정기(self)")
+    self_judge = (judge_spec.provider, judge_spec.model) == (gen_spec.provider, gen_spec.model)
+
+    print(f"\n= 답변 groundedness - {len(cases)}문항 + 범위밖 1")
+    print(f"   생성 {gen_spec.provider}:{gen_spec.model} · 판정 {judge_spec.provider}:{judge_spec.model}"
+          f"  -> {'self-judge(편향 있음)' if self_judge else 'cross-judge'}\n")
     print(f"{'score':>6}  {'환각':>4}  질문")
     print("-" * 70)
 
     scored: List[float] = []
+    records: List[dict] = []
     for c in cases + [{"q": oos, "expected": []}]:
         q = c["q"]
         result = _call(lambda: answer(q))
         docs, _ = search(q)
         # 생성기가 본 것과 동일한 근거(파일명·섹션 헤더 포함)를 judge 에도 준다.
         context = _format_context(docs) if docs else ""
-        verdict = _judge(q, context, result["answer"])
+        verdict = _judge(q, context, result["answer"], judge_spec)
         s = verdict.get("score")
+        records.append({
+            "q": q, "expected": c.get("expected", []),
+            "answer": result["answer"],
+            "contexts": [d.page_content for d in docs],
+            "sources": [d.metadata.get("source") for d in docs],
+            "score": s, "unsupported": verdict.get("unsupported", []),
+        })
         if s is not None:
             scored.append(s)
         n_unsup = len(verdict.get("unsupported", []))
@@ -120,9 +151,26 @@ def main() -> None:
         for u in verdict.get("unsupported", [])[:2]:
             print(f"{'':>14}↳ {u[:70]}")
 
-    if scored:
-        avg = sum(scored) / len(scored)
+    avg = sum(scored) / len(scored) if scored else None
+    if avg is not None:
         print(f"\n평균 groundedness = {avg:.3f}  (n={len(scored)}, 1.0=환각 0)")
+        if self_judge:
+            print("  [주의] self-judge - 생성·판정이 같은 모델이라 자기 답에 후할 수 있다(절대값으로 쓰지 말 것).")
+
+    stem = f"faithfulness-{args.label}" if args.label else "faithfulness"
+    out = rp.REPORT_DIR / f"{stem}.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps({
+        "generator": f"{gen_spec.provider}:{gen_spec.model}",
+        "judge": f"{judge_spec.provider}:{judge_spec.model}",
+        "self_judge": self_judge,
+        "profile": qs.profile,
+        "questions": qs.path.name,
+        "mean_score": avg,
+        "n": len(scored),
+        "records": records,
+    }, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"[report] 저장: {out}   (RAGAS 대조·cross-judge 비교의 입력)")
     print()
 
 

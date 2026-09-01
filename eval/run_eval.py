@@ -208,6 +208,9 @@ def main() -> None:
         choices=available_profiles(),
         help="코퍼스 프로필(기본: .env 의 CORPUS_PROFILE). 인덱스·평가셋이 함께 바뀐다.",
     )
+    ap.add_argument("--questions", type=Path, default=None,
+                    help="평가셋 파일 경로(기본: 프로필의 평가셋). 합성셋 측정에 쓴다")
+    ap.add_argument("--label", default="", help="리포트 파일명에 붙일 꼬리표(예: synthetic)")
     ap.add_argument("--report", action="store_true",
                     help="결과를 eval/reports/<profile>.{json,md} 로 저장")
     ap.add_argument("--gate", action="store_true",
@@ -219,10 +222,11 @@ def main() -> None:
         use_profile(args.profile)
     k = args.k
 
-    qs = load_questions()
+    qs = load_questions(args.questions)
     print(f"[eval] {qs.summary()}")
     doc_q: List[dict] = qs.in_scope
     code_q: List[dict] = qs.in_scope_code
+    commit_q: List[dict] = qs.in_scope_commit
     multi_q: List[dict] = qs.multihop
     out_scope: List[str] = qs.out_of_scope
 
@@ -256,7 +260,10 @@ def main() -> None:
 
         retrievers["hybrid+rerank"] = _with_reranker
 
-    suites = [("문서 질문", doc_q), ("코드 질문", code_q), ("전체", doc_q + code_q)]
+    suites = [("문서 질문", doc_q), ("코드 질문", code_q)]
+    if commit_q:
+        suites.append(("커밋 질문", commit_q))
+    suites.append(("전체", doc_q + code_q + commit_q))
 
     docs_all, _, _ = _corpus()
     corpus_stats: Dict[str, int] = {}
@@ -294,20 +301,26 @@ def main() -> None:
 
     # 범위 밖 거절: 프로덕션 게이트(hybrid)만 해당. 나머지는 게이트가 없어 항상 무언가를 반환.
     rejected = sum(1 for q in out_scope if not search(q)[0])
-    print(f"\n■ 범위 밖 거절 — {rejected}/{len(out_scope)} ({rejected/len(out_scope):.0%})  "
-          f"[임계 cos ≥ {settings.min_similarity}]")
-    for q in out_scope:
-        docs, dbg = search(q)
-        mark = "컷" if not docs else "통과(!)"
-        print(f"   {mark:<6} cos={dbg.get('best_similarity', 0):.3f}  {q}")
-    print()
+    if out_scope:
+        print(f"\n■ 범위 밖 거절 — {rejected}/{len(out_scope)} ({rejected/len(out_scope):.0%})  "
+              f"[임계 cos ≥ {settings.min_similarity}]")
+        for q in out_scope:
+            docs, dbg = search(q)
+            mark = "컷" if not docs else "통과(!)"
+            print(f"   {mark:<6} cos={dbg.get('best_similarity', 0):.3f}  {q}")
+        print()
+    if not out_scope:
+        # 합성셋에는 범위 밖 문항이 없다 - 없는 것을 0% 로 적으면 리포트가 거짓말을 한다.
+        print("")
+        print("[범위 밖 거절] 문항 없음 - 이 평가셋에는 음성 표본이 없다(수기 골든셋으로 측정할 것)")
 
     report.out_of_scope_total = len(out_scope)
     report.out_of_scope_rejected = rejected
 
     if args.report or args.gate or args.save_baseline:
-        jp = report.write_json(rp.REPORT_DIR / f"{report.profile}.json")
-        mp = report.write_markdown(rp.REPORT_DIR / f"{report.profile}.md")
+        stem = f"{report.profile}-{args.label}" if args.label else report.profile
+        jp = report.write_json(rp.REPORT_DIR / f"{stem}.json")
+        mp = report.write_markdown(rp.REPORT_DIR / f"{stem}.md")
         print(f"[report] 저장: {jp}  ·  {mp}")
 
     if args.save_baseline:

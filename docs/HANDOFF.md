@@ -71,6 +71,17 @@ demo 를 `git ls-files` 기반으로 정의한 이유는 노트 #16 참조 — *
 
 범위 밖 거절 5/6 · 답변 groundedness(LLM-as-judge) 0.962.
 
+### 합성 평가셋 측정 (258문항 · 같은 고정 코퍼스)
+
+| 평가셋 | 문항 | 전체 recall@5 | 문서 | 코드 | 커밋 |
+|---|---:|---:|---:|---:|---:|
+| 수기 골든셋 | 20 | 85% | 92% | 75% | *(문항 없음)* |
+| **합성셋** | **258** | **79%** | 82% | 82% | **69%** |
+
+어휘 중복률 중앙값 0.16(베껴 쓴 질문 0건). 라벨 출처 `synthetic` 258.
+**이 79% 는 아직 오차 막대가 없다** — 거짓 오답(같은 답이 다른 파일에도 있는 경우) 비중을
+수동 검수로 재기 전까지는 하한으로만 읽을 것.
+
 ### eval 프로필 — 회귀 게이트 기준 (N=324 청크 @ `eval-corpus-v1`)
 
 | retriever | 전체 recall@5 | MRR | 문서 12 / 코드 8 |
@@ -120,10 +131,20 @@ ANN 전환 임계는 **N ≈ 10만** (지연이 아니라 메모리가 먼저 �
 - [x] **0-7** 평가 코퍼스를 태그로 고정(`eval` 프로필 · `GitSnapshotSource`) — 노트 #18.
       첫 CI 실행이 실패해서 드러난 결함: demo 는 저장소 자기 자신이라 커밋마다 코퍼스가 바뀐다
 - [x] **0-6** 평가표 행 이름 정정 — 노트 #17 (심볼 슬롯을 MMR 의 공으로 읽고 있었다)
-- [ ] **0-2** 합성 평가셋 200~500 문항 생성 + 수동 검수 서브셋 + **합성 vs 수동 라벨 불일치율**
-      · RAGAS 병행 대조 (`eval/faithfulness.py` 는 RAGAS faithfulness 의 수기 재구현이다)
+- [~] **0-2** 합성 평가셋 — **258문항 생성 완료**(`eval/generate.py`, 원본 청크 기반·검색기 미사용).
+      전체 recall 85%(수기 20) → **79%(합성 258)**, 커밋 축 69% 로 최약점 발견 → 노트 #19.
+      남은 것: ① 49문항 **수동 검수**(`eval/verification/worksheet.md` 생성됨 — 사람이 채울 차례)
+      ② RAGAS 대조(격리 환경 `.venv-ragas` 구축 완료, `eval/ragas_score.py` 준비됨)
 - [ ] **0-3** cross-judge 도입 — 생성 모델과 판정 모델을 분리해 **self vs cross 편차 수치화**
       (self-enhancement bias 의 표준 완화책)
+
+### 지금 사람이 해야 할 일 (Day 4 입력)
+
+```bash
+# 1) 워크시트를 열어 49문항의 verdict 를 채운다 (ok / elsewhere / wrong / unclear)
+#    eval/verification/worksheet.md
+python -m eval.verify score --profile eval      # 2) 불일치율 계산 + 검수본 저장
+```
 
 ### Phase 0 에서 나온 다음 과제
 

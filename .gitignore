@@ -32,3 +32,7 @@ eval/baselines/*
 
 # 평가용 코퍼스 스냅샷 캐시(ref 로부터 재생성 가능)
 .eval_corpus/
+
+# RAGAS 대조용 격리 환경(주 환경의 langchain 버전을 갈아치우므로 분리)
+.venv-ragas/
+eval/_gen.log
