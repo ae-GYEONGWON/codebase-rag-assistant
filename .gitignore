@@ -20,3 +20,11 @@ README-비공개번들.txt
 # 평가셋은 인덱싱한 코드베이스에 종속(질문·정답 경로에 대상 프로젝트 정보가 담김).
 # 공개 repo 에는 형식만 담은 questions.example.json 을 둔다.
 eval/questions.json
+
+# 평가 산출물(매 실행마다 갱신)
+eval/reports/
+
+# baseline 은 기록이라 추적하되, **demo 것만** 추적한다.
+# private baseline 에는 미스 문항 텍스트·컬렉션명 등 대상 코드베이스 정보가 그대로 들어간다.
+eval/baselines/*
+!eval/baselines/demo.json

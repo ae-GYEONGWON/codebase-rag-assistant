@@ -1,0 +1,75 @@
+{
+  "_comment": "demo 프로필(이 저장소 자기 자신) 골든셋. git 추적 파일이라 어느 PC·CI 에서도 동일하다. 라벨은 원본 문서·소스를 읽고 수기로 작성(origin=manual) — 검색기 출력으로 만들면 순환이 된다. 합성 문항은 Phase 0-2 에서 origin=synthetic 으로 추가된다.",
+  "_baseline": "이 셋은 사람이 낸 문제라 자가 라벨 편향을 그대로 갖는다. 그 편향의 크기를 재는 것이 Phase 0-2·0-3 의 목적이며, 여기 점수를 절대 성능으로 읽으면 안 된다.",
+
+  "in_scope": [
+    { "q": "cross-encoder 리랭커를 왜 기본으로 껐어?", "expected": ["docs/engineering-notes.md"], "origin": "manual" },
+    { "q": "MMR 다양성 계수를 1.0 으로 정한 근거가 뭐야?", "expected": ["docs/engineering-notes.md"], "origin": "manual" },
+    { "q": "Gemini 응답이 파트 배열로 와서 깨졌던 문제는 어떻게 해결했어?", "expected": ["docs/engineering-notes.md"], "origin": "manual" },
+    { "q": "평가 하네스가 타임아웃 나던 원인이 뭐였어?", "expected": ["docs/engineering-notes.md"], "origin": "manual" },
+    { "q": "코드를 고정 길이가 아니라 AST 로 자르는 이유가 뭐야?", "expected": ["docs/engineering-notes.md"], "origin": "manual" },
+    { "q": "LLM 심사관의 self-judge 편향은 어떻게 다뤘어?", "expected": ["docs/engineering-notes.md"], "origin": "manual" },
+    { "q": "ANN 으로 전환해야 하는 청크 수 임계는 얼마야?", "expected": ["docs/engineering-notes.md", "docs/HANDOFF.md"], "origin": "manual" },
+    { "q": "demo 프로필과 private 프로필은 뭐가 달라?", "expected": ["README.md", "docs/HANDOFF.md"], "origin": "manual" },
+    { "q": "설치하고 처음 실행하려면 어떤 명령을 쳐야 해?", "expected": ["README.md", "docs/HANDOFF.md"], "origin": "manual" },
+    { "q": "API 엔드포인트는 뭐가 있어?", "expected": ["README.md"], "origin": "manual" },
+    { "q": "지금 알려진 한계로 뭘 인정하고 있어?", "expected": ["docs/HANDOFF.md", "README.md"], "origin": "manual" },
+    { "q": "앞으로 남은 작업 로드맵이 어떻게 돼?", "expected": ["docs/HANDOFF.md"], "origin": "manual" }
+  ],
+
+  "in_scope_code": [
+    { "q": "RRF 융합은 코드에서 어떻게 구현돼 있어?", "expected": ["app/retriever.py"], "origin": "manual" },
+    { "q": "git 추적 파일만 코퍼스로 삼는 코드는 어디 있어?", "expected": ["app/fs_utils.py"], "origin": "manual" },
+    { "q": "코퍼스 프로필을 등록하는 데코레이터는 어디에 있어?", "expected": ["app/profiles.py"], "origin": "manual" },
+    { "q": "파이썬 소스를 함수·클래스 단위로 쪼개는 코드는?", "expected": ["app/code_loader.py"], "origin": "manual" },
+    { "q": "임베딩 제공자를 고르는 코드는 어디야?", "expected": ["app/embeddings.py"], "origin": "manual" },
+    { "q": "groundedness 를 판정하는 프롬프트는 어디 있어?", "expected": ["eval/faithfulness.py"], "origin": "manual" },
+    { "q": "git 커밋을 청크로 만드는 코드는 어디야?", "expected": ["app/git_loader.py"], "origin": "manual" },
+    { "q": "LangGraph 상태 그래프는 코드에서 어떻게 구성돼 있어?", "expected": ["app/agent_graph.py"], "origin": "manual" }
+  ],
+
+  "multihop": [
+    {
+      "q": "리랭커를 왜 껐고, 코드에는 지금 어떤 형태로 남아 있어?",
+      "hops": [
+        { "axis": "doc", "expected": ["docs/engineering-notes.md"] },
+        { "axis": "code", "expected": ["app/reranker.py"] }
+      ],
+      "origin": "manual"
+    },
+    {
+      "q": "코퍼스 프로필은 왜 도입했고, 언제 들어갔고, 코드에선 어떻게 동작해?",
+      "hops": [
+        { "axis": "doc", "expected": ["docs/engineering-notes.md", "docs/HANDOFF.md"] },
+        { "axis": "commit", "expected": ["git:3751c9b"] },
+        { "axis": "code", "expected": ["app/profiles.py"] }
+      ],
+      "origin": "manual"
+    },
+    {
+      "q": "MMR 람다를 1.0 으로 정한 이유와, 그 값이 코드 어디에 반영돼 있는지 알려줘",
+      "hops": [
+        { "axis": "doc", "expected": ["docs/engineering-notes.md"] },
+        { "axis": "code", "expected": ["app/config.py"] }
+      ],
+      "origin": "manual"
+    },
+    {
+      "q": "전수매칭 검색이 왜 의도된 선택이고, 코드에서 실제로 어디가 그 부분이야?",
+      "hops": [
+        { "axis": "doc", "expected": ["docs/engineering-notes.md"] },
+        { "axis": "code", "expected": ["app/retriever.py"] }
+      ],
+      "origin": "manual"
+    }
+  ],
+
+  "out_of_scope": [
+    "고양이 키우는 법 알려줘",
+    "오늘 서울 날씨 어때?",
+    "김치찌개 맛있게 끓이는 법",
+    "대한민국 대통령이 누구야?",
+    "여행 가기 좋은 곳 추천해줘",
+    "삼성전자 주가 얼마야?"
+  ]
+}

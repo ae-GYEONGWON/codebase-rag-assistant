@@ -23,6 +23,7 @@ from app.agent import _TOOL_K
 from app.config import settings
 from app.profiles import active_profile, available_profiles, use_profile
 from eval.datasets import load_questions
+from eval import report as rp
 from app.embeddings import get_embeddings
 from app.retriever import _RRF_K, _corpus, _mmr, _tokenize, search
 
@@ -207,6 +208,12 @@ def main() -> None:
         choices=available_profiles(),
         help="코퍼스 프로필(기본: .env 의 CORPUS_PROFILE). 인덱스·평가셋이 함께 바뀐다.",
     )
+    ap.add_argument("--report", action="store_true",
+                    help="결과를 eval/reports/<profile>.{json,md} 로 저장")
+    ap.add_argument("--gate", action="store_true",
+                    help="eval/baselines/<profile>.json 과 비교해 회귀면 exit 1 (CI 용)")
+    ap.add_argument("--save-baseline", action="store_true",
+                    help="이번 결과를 baseline 으로 저장(의도한 변화일 때만)")
     args = ap.parse_args()
     if args.profile:
         use_profile(args.profile)
@@ -226,11 +233,16 @@ def main() -> None:
         run_multihop(multi_q, k, use_agent=args.agent)
         return
 
+    # ★행 이름 주의(2026-09-01 정정): 마지막 행은 'MMR 의 기여'가 아니라 **운영 파이프라인 전체**다.
+    #   mmr_lambda=1.0 이면 MMR 은 순위를 바꾸지 않는다(no-op) — 적합도 최대를 순서대로 고르므로
+    #   순수 RRF 순위와 같다. 따라서 'hybrid RRF' 와의 차이는 MMR 이 아니라
+    #   **심볼 슬롯**(질문 속 ASCII 식별자와 정확매칭된 코드 청크를 top-k 에 강제 삽입)과 범위밖 게이트다.
+    #   예전 이름('hybrid+MMR')은 그 차이를 MMR 의 공으로 읽히게 해 잘못된 결론을 부른다.
     retrievers = {
         "vector only": _without_reranker(retrieve_vector),
         "bm25 only": _without_reranker(retrieve_bm25),
-        "hybrid (RRF)": _without_reranker(retrieve_rrf_no_mmr),
-        "hybrid+MMR": _without_reranker(retrieve_hybrid),
+        "hybrid RRF": _without_reranker(retrieve_rrf_no_mmr),
+        "운영 파이프라인": _without_reranker(retrieve_hybrid),
     }
     if args.rerank:
         # 리랭커를 강제로 켠 변형(설정과 무관하게 비교용)
@@ -246,14 +258,35 @@ def main() -> None:
 
     suites = [("문서 질문", doc_q), ("코드 질문", code_q), ("전체", doc_q + code_q)]
 
+    docs_all, _, _ = _corpus()
+    corpus_stats: Dict[str, int] = {}
+    for d in docs_all:
+        t = d.metadata.get("doc_type", "?")
+        corpus_stats[t] = corpus_stats.get(t, 0) + 1
+
+    report = rp.new_report(
+        profile=active_profile().name,
+        collection=active_profile().collection_name,
+        k=k,
+        corpus=corpus_stats,
+        dataset={"path": qs.path.name, "counts": {
+            "in_scope": len(qs.in_scope), "in_scope_code": len(qs.in_scope_code),
+            "multihop": len(qs.multihop), "out_of_scope": len(qs.out_of_scope)},
+            "origins": qs.origin_counts()},
+    )
+
     for title, cases in suites:
         if not cases:
             continue
+        suite = rp.Suite(title=title, n=len(cases))
+        report.suites.append(suite)
         print(f"\n■ {title} — {len(cases)}문항, k={k}\n")
+        print("   (운영 파이프라인 = RRF + 심볼슬롯 + MMR(lambda=1.0 -> no-op) + 범위밖 게이트)")
         print(f"{'retriever':<16}{'recall@k':>10}{'MRR':>8}   miss")
         print("-" * 64)
         for name, fn in retrievers.items():
             recall, mrr, misses = score(fn, cases, k)
+            suite.rows.append(rp.RetrieverRow(name=name, recall=recall, mrr=mrr, misses=misses))
             print(f"{name:<16}{recall:>9.0%}{mrr:>8.2f}   {len(misses)}건")
             if title == "전체":
                 for m in misses:
@@ -268,6 +301,31 @@ def main() -> None:
         mark = "컷" if not docs else "통과(!)"
         print(f"   {mark:<6} cos={dbg.get('best_similarity', 0):.3f}  {q}")
     print()
+
+    report.out_of_scope_total = len(out_scope)
+    report.out_of_scope_rejected = rejected
+
+    if args.report or args.gate or args.save_baseline:
+        jp = report.write_json(rp.REPORT_DIR / f"{report.profile}.json")
+        mp = report.write_markdown(rp.REPORT_DIR / f"{report.profile}.md")
+        print(f"[report] 저장: {jp}  ·  {mp}")
+
+    if args.save_baseline:
+        bp = report.write_json(rp.BASELINE_DIR / f"{report.profile}.json")
+        print(f"[baseline] 갱신: {bp}")
+
+    if args.gate:
+        bp = rp.BASELINE_DIR / f"{report.profile}.json"
+        if not bp.exists():
+            print(f"[gate] baseline 없음({bp}) — --save-baseline 으로 먼저 만드세요.")
+            raise SystemExit(1)
+        problems = rp.compare(rp.load(bp), report)
+        if problems:
+            print("[gate] ✗ 회귀 감지")
+            for p in problems:
+                print(f"   - {p}")
+            raise SystemExit(1)
+        print("[gate] ✓ baseline 대비 회귀 없음")
 
 
 if __name__ == "__main__":
