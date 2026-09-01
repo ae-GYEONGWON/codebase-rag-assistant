@@ -106,34 +106,59 @@ def _llm():
     raise RuntimeError("LLM provider 가 extractive 인데 _llm() 이 호출됨")
 
 
-def _messages(question: str, docs: List[Document], dev_mode: bool = False):
+def _messages(question: str, docs: List[Document], dev_mode: bool = False, turns=None):
+    """생성용 메시지. **검색은 재작성된 질의로, 생성은 원문 대화로** 한다.
+
+    검색기는 지시대명사를 못 풀지만 생성 모델은 앞 대화를 주면 자연스럽게 답한다 —
+    둘의 요구가 달라 입력을 나눈다(app/conversation.py).
+    """
     from langchain_core.messages import HumanMessage, SystemMessage
 
     system = SYSTEM_PROMPT + (_DEV_ON if dev_mode else _DEV_OFF)
-    return [
-        SystemMessage(content=system),
-        HumanMessage(content=f"[근거]\n{_format_context(docs)}\n\n[질문]\n{question}"),
-    ]
+    msgs = [SystemMessage(content=system)]
+    if turns:
+        from app.conversation import to_messages
 
+        note = ("[대화 맥락] 아래에 이전 대화가 이어집니다. 후속 질문의 지시대명사는 "
+                "그 맥락으로 해석하되, **답변 근거는 반드시 이번 [근거] 안에서만** 찾으세요.")
+        msgs[0] = SystemMessage(content=system + chr(10) + chr(10) + note)
+        msgs += to_messages(turns)
+    msgs.append(HumanMessage(content=f"[근거]\n{_format_context(docs)}\n\n[질문]\n{question}"))
+    return msgs
 
-def answer(question: str, dev_mode: bool = False) -> Dict[str, Any]:
-    """질문 → {answer, sources, mode, retrieval} (비스트리밍)."""
-    docs, debug = search(question)
+def answer(question: str, dev_mode: bool = False, history=None) -> Dict[str, Any]:
+    """질문 → {answer, sources, mode, retrieval, rewrite} (비스트리밍)."""
+    from app.conversation import parse_history, rewrite_query
+
+    turns = parse_history(history)
+    query, rw = rewrite_query(question, turns)
+
+    docs, debug = search(query)
     if not docs:
-        return {"answer": OUT_OF_SCOPE, "sources": [], "mode": "no_hit", "retrieval": debug}
+        return {"answer": OUT_OF_SCOPE, "sources": [], "mode": "no_hit",
+                "retrieval": debug, "rewrite": rw}
 
-    sources = snippets_for(docs, question)  # 순서 = 프롬프트의 [문서 N] = 답변의 [n]
+    sources = snippets_for(docs, query)  # 순서 = 프롬프트의 [문서 N] = 답변의 [n]
     provider = settings.active_llm
     if provider == "extractive":
-        return {"answer": _extractive_text(docs), "sources": sources, "mode": "extractive", "retrieval": debug}
+        return {"answer": _extractive_text(docs), "sources": sources, "mode": "extractive",
+                "retrieval": debug, "rewrite": rw}
 
-    resp = _llm().invoke(_messages(question, docs, dev_mode))
-    return {"answer": _text_of(resp.content), "sources": sources, "mode": provider, "retrieval": debug}
+    resp = _llm().invoke(_messages(question, docs, dev_mode, turns))
+    return {"answer": _text_of(resp.content), "sources": sources, "mode": provider,
+            "retrieval": debug, "rewrite": rw}
 
 
-def stream_answer(question: str, dev_mode: bool = False) -> Iterator[Dict[str, Any]]:
-    """질문 → 이벤트 스트림. 각 이벤트: {type: sources|token|done|error, ...}."""
-    docs, debug = search(question)
+def stream_answer(question: str, dev_mode: bool = False, history=None) -> Iterator[Dict[str, Any]]:
+    """질문 → 이벤트 스트림. 각 이벤트: {type: rewrite|sources|token|done|error, ...}."""
+    from app.conversation import parse_history, rewrite_query
+
+    turns = parse_history(history)
+    query, rw = rewrite_query(question, turns)
+    # 무엇으로 검색했는지 먼저 알린다 — 답이 나오기 전에 보여야 사용자가 맥락을 잡는다.
+    yield {"type": "rewrite", **rw}
+
+    docs, debug = search(query)
 
     if not docs:
         yield {"type": "sources", "sources": []}
@@ -141,7 +166,7 @@ def stream_answer(question: str, dev_mode: bool = False) -> Iterator[Dict[str, A
         yield {"type": "done", "mode": "no_hit", "retrieval": debug}
         return
 
-    yield {"type": "sources", "sources": snippets_for(docs, question)}
+    yield {"type": "sources", "sources": snippets_for(docs, query)}
 
     provider = settings.active_llm
     if provider == "extractive":
@@ -150,7 +175,7 @@ def stream_answer(question: str, dev_mode: bool = False) -> Iterator[Dict[str, A
         return
 
     try:
-        for chunk in _llm().stream(_messages(question, docs, dev_mode)):
+        for chunk in _llm().stream(_messages(question, docs, dev_mode, turns)):
             piece = _text_of(chunk.content)
             if piece:
                 yield {"type": "token", "text": piece}

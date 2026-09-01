@@ -105,15 +105,26 @@ class DirSource:
         return f"DirSource({', '.join(str(r) for r in self.roots)})"
 
 
+def _excluded(rel: str, prefixes: Sequence[str]) -> bool:
+    """저장소 기준 상대경로 접두사로 제외.
+
+    ⚠️ 폴더 **이름**으로 전역 제외하지 않는다 — 대상 코드베이스에 같은 이름의 폴더가 있으면
+    지식이 통째로 사라진다(engineering-notes #16 에서 `.claude` 로 실제로 겪었다).
+    """
+    return any(rel == p.rstrip("/") or rel.startswith(p) for p in prefixes)
+
+
 class GitTrackedSource:
     """``git ls-files`` 가 반환하는 **추적 파일**만 코퍼스로 삼는다.
 
     ``subdirs`` 를 주면 repo 안에서 그 하위 경로로 한 번 더 좁힌다.
     """
 
-    def __init__(self, repo_root: Path, subdirs: Sequence[str] = ()) -> None:
+    def __init__(self, repo_root: Path, subdirs: Sequence[str] = (),
+                 exclude: Sequence[str] = ()) -> None:
         self.repo_root = Path(repo_root).resolve()
         self.subdirs = tuple(subdirs)
+        self.exclude = tuple(exclude)
 
     def _tracked(self) -> List[Path]:
         out = subprocess.run(
@@ -138,7 +149,7 @@ class GitTrackedSource:
                 rel == s or rel.startswith(s.rstrip("/") + "/") for s in self.subdirs
             ):
                 continue
-            if _is_skipped(path):
+            if _is_skipped(path) or _excluded(rel, self.exclude):
                 continue
             if not any(fnmatch.fnmatch(path.name, g) for g in globs):
                 continue
@@ -174,10 +185,12 @@ class GitSnapshotSource:
     **같은 ref 면 언제나 같은 코퍼스**다.
     """
 
-    def __init__(self, repo_root: Path, ref: str, cache_root: Path) -> None:
+    def __init__(self, repo_root: Path, ref: str, cache_root: Path,
+                 exclude: Sequence[str] = ()) -> None:
         self.repo_root = Path(repo_root).resolve()
         self.ref = ref
         self.cache_root = Path(cache_root)
+        self.exclude = tuple(exclude)
         self._dir: Optional[Path] = None
 
     # --- 스냅샷 준비 ---
@@ -223,7 +236,11 @@ class GitSnapshotSource:
 
     # --- FileSource 규격 ---
     def list_files(self, globs: Sequence[str]) -> List[Path]:
-        return DirSource([self.materialize()]).list_files(globs)
+        root = self.materialize()
+        files = DirSource([root]).list_files(globs)
+        if not self.exclude:
+            return files
+        return [f for f in files if not _excluded(f.relative_to(root).as_posix(), self.exclude)]
 
     def display_name(self, path: Path) -> str:
         """스냅샷 경로를 지우고 저장소 기준 상대경로로 되돌린다.
