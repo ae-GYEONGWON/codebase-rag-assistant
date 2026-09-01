@@ -84,3 +84,35 @@ def test_gittrackedsource_는_git_아닌_경로에서_명확히_실패한다(tmp
     with pytest.raises(RuntimeError) as e:
         GitTrackedSource(tmp_path).list_files(["*.py"])
     assert "demo" in str(e.value)  # 원인과 해결을 같이 알려줄 것
+
+
+def test_eval_프로필은_고정_스냅샷을_쓴다():
+    """회귀 게이트용 코퍼스는 워킹트리가 아니라 ref 스냅샷이어야 한다(engineering-notes #18)."""
+    from app.fs_utils import GitSnapshotSource
+
+    prof = build_profile("eval")
+    assert isinstance(prof.docs, GitSnapshotSource)
+    assert prof.git_ref == prof.docs.ref
+    # demo(워킹트리)와 컬렉션이 겹치면 두 코퍼스가 섞인다
+    assert prof.collection_name != build_profile("demo").collection_name
+
+
+def test_eval_스냅샷은_워킹트리_수정에_영향받지_않는다(tmp_path: Path):
+    """이 테스트가 이 설계의 전부다 — 코퍼스가 움직이면 회귀 판정이 성립하지 않는다."""
+    prof = build_profile("eval")
+    snap_dir = prof.docs.materialize()
+    target = REPO_ROOT / "README.md"
+    snap_copy = snap_dir / "README.md"
+    assert snap_copy.exists()
+    # 스냅샷 파일은 워킹트리 파일과 다른 실체다(같은 경로를 가리키지 않는다)
+    assert snap_copy.resolve() != target.resolve()
+
+
+def test_알수없는_ref_는_해결방법까지_알려준다():
+    from app.fs_utils import GitSnapshotSource
+    from app.profiles import SNAPSHOT_CACHE
+
+    src = GitSnapshotSource(REPO_ROOT, "존재하지-않는-태그", SNAPSHOT_CACHE)
+    with pytest.raises(RuntimeError) as e:
+        src.list_files(["*.md"])
+    assert "git tag" in str(e.value)

@@ -1,12 +1,15 @@
 # 검색 평가 회귀 게이트
 #
-# 이 워크플로가 하는 일: demo 코퍼스(= 이 저장소 자기 자신)를 인덱싱하고 평가를 돌려,
-# `eval/baselines/demo.json` 대비 **운영 파이프라인 recall·MRR·범위밖 거절률**이 떨어지면 실패시킨다.
+# 이 워크플로가 하는 일: `eval` 프로필(= 태그 `eval-corpus-v1` 시점으로 **고정된** 저장소 스냅샷)을
+# 인덱싱하고 평가를 돌려, `eval/baselines/eval.json` 대비 **운영 파이프라인 recall·MRR·범위밖
+# 거절률**이 떨어지면 실패시킨다. 외부 코드베이스도 API 키도 필요 없다.
 #
-# demo 프로필이라 외부 코드베이스도 API 키도 필요 없다. 코퍼스가 git 추적 파일로 정의돼 있어
-# 러너에서도 로컬과 같은 집합이 만들어진다(→ docs/engineering-notes.md #16).
+# ★ demo 가 아니라 eval 프로필을 쓰는 이유 — demo 는 워킹트리를 보므로 **커밋할 때마다 코퍼스가
+#   커진다.** 그러면 점수 변화가 '검색 코드가 나빠져서'인지 '문서를 한 편 더 써서'인지 구분되지
+#   않는다(실제로 그렇게 게이트가 오탐했다 → docs/engineering-notes.md #18).
+#   평가 코퍼스를 갱신하려면 새 태그를 만들고 baseline 을 다시 생성한다 — 둘 다 명시적 행위여야 한다.
 #
-# ⚠️ 알려진 한계 — baseline 은 만든 플랫폼에 묶인다.
+# ⚠️ 남은 한계 — baseline 은 만든 플랫폼에 묶인다.
 #   임베딩 계산이 OS·BLAS 구현에 따라 마지막 자리에서 갈리고, 동점 청크의 순서가 뒤집히면
 #   recall 이 한 문항 단위로 움직인다. 문항이 20개면 한 문항 = 5% 라 허용치(1%)를 넘긴다.
 #   → **baseline 은 이 워크플로가 만든 것을 쓴다.** 로컬(Windows)에서 만든 baseline 으로 처음
@@ -37,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      CORPUS_PROFILE: demo
+      CORPUS_PROFILE: eval
       PYTHONIOENCODING: utf-8
       # LLM 은 쓰지 않는다(검색 평가는 순수 검색 경로). 키가 없으면 extractive 로 폴백.
       ANONYMIZED_TELEMETRY: 'False'
@@ -69,16 +72,16 @@ jobs:
       - name: 단위 테스트
         run: python -m pytest -q
 
-      - name: demo 코퍼스 인덱싱
-        run: python -m app.ingest --profile demo --reset
+      - name: 고정 코퍼스 인덱싱 (eval-corpus-v1 스냅샷)
+        run: python -m app.ingest --profile eval --reset
 
       - name: 평가 + 회귀 게이트
         id: gate
         run: |
           if [ "${{ inputs.save_baseline }}" = "true" ]; then
-            python -m eval.run_eval --profile demo --report --save-baseline
+            python -m eval.run_eval --profile eval --report --save-baseline
           else
-            python -m eval.run_eval --profile demo --gate
+            python -m eval.run_eval --profile eval --gate
           fi
 
       - name: 리포트 아티팩트 업로드
@@ -93,4 +96,4 @@ jobs:
 
       - name: 리포트를 잡 요약에 붙이기
         if: always()
-        run: cat eval/reports/demo.md >> "$GITHUB_STEP_SUMMARY" || true
+        run: cat eval/reports/eval.md >> "$GITHUB_STEP_SUMMARY" || true

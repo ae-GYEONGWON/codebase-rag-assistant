@@ -40,7 +40,8 @@ uvicorn app.main:app --port 8123
 
 | 프로필 | 지식원 | 컬렉션 | 평가셋 | 용도 |
 |---|---|---|---|---|
-| `demo` (기본) | **이 저장소 자기 자신** (`git ls-files`) | `corpus_demo` | `eval/questions.demo.json` (추적) | 공개 데모 · CI · 다른 PC |
+| `demo` (기본) | **이 저장소 자기 자신** (`git ls-files`, 워킹트리) | `corpus_demo` | `eval/questions.demo.json` (추적) | 공개 데모 · 다른 PC |
+| `eval` | 저장소 스냅샷 **@ `eval-corpus-v1`** (`git archive`) | `corpus_eval_…` | 같음 | **CI 회귀 게이트** |
 | `private` | `.env` 의 `KNOWLEDGE_DIRS`/`CODE_DIRS`/`GIT_REPOS` | `.env` 의 `COLLECTION_NAME` | `eval/questions.json` (git 제외) | 규모 있는 실제 코드베이스 측정 |
 
 ```bash
@@ -70,7 +71,17 @@ demo 를 `git ls-files` 기반으로 정의한 이유는 노트 #16 참조 — *
 
 범위 밖 거절 5/6 · 답변 groundedness(LLM-as-judge) 0.962.
 
-### demo 프로필 (N=285 청크 · 문서 45 / 코드 211 / 커밋 29)
+### eval 프로필 — 회귀 게이트 기준 (N=324 청크 @ `eval-corpus-v1`)
+
+| retriever | 전체 recall@5 | MRR | 문서 12 / 코드 8 |
+|---|---:|---:|---|
+| **운영 파이프라인** | **85%** | 0.71 | 92% / 75% |
+
+범위 밖 거절 **6/6**. baseline = `eval/baselines/eval.json`.
+코퍼스가 `eval-corpus-v1` 태그로 고정돼 있어 커밋을 해도 이 숫자는 움직이지 않는다.
+**코퍼스를 갱신하려면 새 태그 + baseline 재생성**(둘 다 명시적 행위여야 한다 → 노트 #18).
+
+### demo 프로필 — 라이브 데모용 (N=285 청크 시점 측정 · 문서 45 / 코드 211 / 커밋 29)
 
 골든셋 `eval/questions.demo.json` — 문서 12 · 코드 8 · 멀티홉 4 · 범위밖 6 (전부 `origin: manual`).
 
@@ -81,7 +92,7 @@ demo 를 `git ls-files` 기반으로 정의한 이유는 노트 #16 참조 — *
 | hybrid RRF | 90% | 0.77 | 100% / 75% |
 | **운영 파이프라인** | **90%** | 0.72 | 100% / 75% |
 
-범위 밖 거절 **6/6**. baseline = `eval/baselines/demo.json` (CI 회귀 게이트 기준).
+범위 밖 거절 **6/6**. demo 는 워킹트리를 보므로 커밋마다 코퍼스가 커진다 — **게이트에는 쓰지 않는다**.
 
 ⚠️ **private 의 93% 와 직접 비교하지 말 것.** 코퍼스 크기(285 vs 3,619)도 문항 수(20 vs 28)도
 다르고, demo 는 문서축이 3개 파일뿐이라 사실상 코드·커밋 축 평가에 가깝다.
@@ -105,7 +116,9 @@ ANN 전환 임계는 **N ≈ 10만** (지연이 아니라 메모리가 먼저 �
 - [x] **0-4** 노트 #15 — 브루트포스 전수매칭은 의도된 선택 + ANN 전환 임계 측정
 - [x] **0-5** 코퍼스 프로필 분리 (demo/private) — 노트 #16
 - [x] **0-1** CI 회귀 게이트 — `eval/report.py`(JSON+Markdown 산출·baseline 비교) +
-      `.github/workflows/eval.yml`. demo 골든셋 20문항 작성, 게이트 로직은 `tests/test_report.py` 로 고정
+      `.github/workflows/eval.yml`. 골든셋 20문항, 게이트 로직은 `tests/test_report.py` 로 고정
+- [x] **0-7** 평가 코퍼스를 태그로 고정(`eval` 프로필 · `GitSnapshotSource`) — 노트 #18.
+      첫 CI 실행이 실패해서 드러난 결함: demo 는 저장소 자기 자신이라 커밋마다 코퍼스가 바뀐다
 - [x] **0-6** 평가표 행 이름 정정 — 노트 #17 (심볼 슬롯을 MMR 의 공으로 읽고 있었다)
 - [ ] **0-2** 합성 평가셋 200~500 문항 생성 + 수동 검수 서브셋 + **합성 vs 수동 라벨 불일치율**
       · RAGAS 병행 대조 (`eval/faithfulness.py` 는 RAGAS faithfulness 의 수기 재구현이다)

@@ -21,6 +21,11 @@ class Settings(BaseSettings):
     # ※ 기본을 demo 로 둬야 clone 직후 아무 설정 없이 인덱싱·평가가 돌아간다.
     corpus_profile: str = "demo"
 
+    # 평가(회귀 게이트)용 코퍼스는 **태그로 고정**한다. 자기 자신을 지식원으로 삼는 demo 는
+    # 커밋할 때마다 코퍼스가 바뀌어, 점수 변화가 코드 탓인지 문서 탓인지 구분이 안 된다.
+    # (engineering-notes #18) → `eval` 프로필이 이 ref 시점 스냅샷을 인덱싱한다.
+    eval_corpus_ref: str = "eval-corpus-v1"
+
     # 지식원 — 문서 (private 프로필 전용 입력)
     knowledge_dirs: str = "/path/to/your/repo/docs"
     file_globs: str = "*.md"
