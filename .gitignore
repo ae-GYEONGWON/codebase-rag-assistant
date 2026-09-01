@@ -36,3 +36,6 @@ eval/baselines/*
 # RAGAS 대조용 격리 환경(주 환경의 langchain 버전을 갈아치우므로 분리)
 .venv-ragas/
 eval/_gen.log
+
+# 감사 로그(재생성 가능)
+eval/_audit.log
