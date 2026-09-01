@@ -1,0 +1,14 @@
+# 평가 전용 의존성 — **주 환경에 설치하지 말 것.**
+#
+# ragas 는 langchain-core·langgraph 버전을 바꿔 설치한다. 평가 도구가 서비스 런타임을
+# 오염시키면 안 되므로 별도 가상환경에 격리한다.
+#
+#   python -m venv .venv-ragas
+#   .venv-ragas/Scripts/python -m pip install -r requirements-eval.txt
+#   .venv-ragas/Scripts/python eval/ragas_score.py --in eval/reports/faithfulness-self.json --n 10
+#
+# langchain-community 는 0.4 부터 chat_models.vertexai 를 제거했는데 ragas 0.4.3 이 그걸
+# 임포트한다 → 0.3 대로 고정해야 import 가 통과한다(실제로 밟은 함정).
+ragas>=0.4,<0.5
+langchain-community<0.4
+langchain-google-genai>=2.0.0

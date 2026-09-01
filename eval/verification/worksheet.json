@@ -1,0 +1,545 @@
+{
+  "seed": 20260903,
+  "n": 49,
+  "items": [
+    {
+      "q": "faithfulness.py의 main 함수에서 평가 점수를 계산할 때 어떤 과정을 거쳐서 최종 평균값을 도출해?",
+      "expected": [
+        "eval/faithfulness.py"
+      ],
+      "origin": "synthetic",
+      "axis": "code",
+      "chunk_index": 200,
+      "lex_overlap": 0.138,
+      "_bucket": "in_scope_code"
+    },
+    {
+      "q": "사용자가 특정 함수 이름을 언급하면서 검색하면, 결과에 해당 코드 블록이 우선적으로 노출되도록 설계되어 있나요?",
+      "expected": [
+        "tests/test_retrieval.py"
+      ],
+      "origin": "synthetic",
+      "axis": "code",
+      "chunk_index": 281,
+      "lex_overlap": 0.048,
+      "_bucket": "in_scope_code"
+    },
+    {
+      "q": "부동소수점 오차 때문에 리포트 검증이 실패하는 문제를 어떻게 방지하고 있어?",
+      "expected": [
+        "tests/test_report.py"
+      ],
+      "origin": "synthetic",
+      "axis": "code",
+      "chunk_index": 268,
+      "lex_overlap": 0.2,
+      "_bucket": "in_scope_code"
+    },
+    {
+      "q": "app/agent_graph.py를 구현하면서 왜 기본 제공되는 ToolNode를 사용하지 않고 별도로 노드를 구성했나요?",
+      "expected": [
+        "git:b2515af"
+      ],
+      "origin": "synthetic",
+      "axis": "commit",
+      "chunk_index": 298,
+      "lex_overlap": 0.281,
+      "_bucket": "in_scope_commit"
+    },
+    {
+      "q": "검색 기능 테스트를 돌리려면 로컬 환경에 어떤 데이터가 미리 준비되어 있어야 해?",
+      "expected": [
+        "tests/test_retrieval.py"
+      ],
+      "origin": "synthetic",
+      "axis": "code",
+      "chunk_index": 276,
+      "lex_overlap": 0.296,
+      "_bucket": "in_scope_code"
+    },
+    {
+      "q": "현재 시스템에서 브루트포스 방식 대신 ANN으로 검색 전략을 바꿔야 하는 데이터 규모 기준이 어떻게 돼?",
+      "expected": [
+        "docs/engineering-notes.md"
+      ],
+      "origin": "synthetic",
+      "axis": "doc",
+      "chunk_index": 16,
+      "lex_overlap": 0.242,
+      "_bucket": "in_scope"
+    },
+    {
+      "q": "docker-compose.yml을 활용해서 쿼리 서빙 환경을 구성할 때 인덱싱 데이터는 어떻게 관리해야 해?",
+      "expected": [
+        "git:ad07a2f"
+      ],
+      "origin": "synthetic",
+      "axis": "commit",
+      "chunk_index": 309,
+      "lex_overlap": 0.276,
+      "_bucket": "in_scope_commit"
+    },
+    {
+      "q": "최근에 첫 질문 응답 속도가 너무 느렸는데, main.py에서 어떤 조치를 취해서 개선한 거야?",
+      "expected": [
+        "git:96c61e1"
+      ],
+      "origin": "synthetic",
+      "axis": "commit",
+      "chunk_index": 322,
+      "lex_overlap": 0.111,
+      "_bucket": "in_scope_commit"
+    },
+    {
+      "q": "사용자가 질문했을 때 검색 결과가 하나도 없으면 응답이 어떤 식으로 처리돼?",
+      "expected": [
+        "app/rag.py"
+      ],
+      "origin": "synthetic",
+      "axis": "code",
+      "chunk_index": 164,
+      "lex_overlap": 0.036,
+      "_bucket": "in_scope_code"
+    },
+    {
+      "q": "866a012 커밋에서 적용된 변경 사항은 구체적으로 어떤 목적을 가지고 있어?",
+      "expected": [
+        "git:866a012"
+      ],
+      "origin": "synthetic",
+      "axis": "commit",
+      "chunk_index": 293,
+      "lex_overlap": 0.08,
+      "_bucket": "in_scope_commit"
+    },
+    {
+      "q": "회귀 테스트에서 게이트가 제대로 작동하는지 확인하는 이유는 뭐야?",
+      "expected": [
+        "tests/test_report.py"
+      ],
+      "origin": "synthetic",
+      "axis": "code",
+      "chunk_index": 264,
+      "lex_overlap": 0.36,
+      "_bucket": "in_scope_code"
+    },
+    {
+      "q": "기존의 단발성 RAG 방식이 복합적인 질문을 처리할 때 겪던 한계가 뭐야?",
+      "expected": [
+        "git:d870c7e"
+      ],
+      "origin": "synthetic",
+      "axis": "commit",
+      "chunk_index": 301,
+      "lex_overlap": 0.16,
+      "_bucket": "in_scope_commit"
+    },
+    {
+      "q": "임베딩 모델을 허깅페이스로 설정했는데, 필요한 라이브러리가 설치되지 않았을 때 어떤 에러가 발생해?",
+      "expected": [
+        "app/embeddings.py"
+      ],
+      "origin": "synthetic",
+      "axis": "code",
+      "chunk_index": 97,
+      "lex_overlap": 0.05,
+      "_bucket": "in_scope_code"
+    },
+    {
+      "q": "데이터셋에 포함된 문항들이 어떤 경로로 생성되었는지 비율을 확인하려면 어떤 메서드를 써야 해?",
+      "expected": [
+        "eval/datasets.py"
+      ],
+      "origin": "synthetic",
+      "axis": "code",
+      "chunk_index": 191,
+      "lex_overlap": 0.029,
+      "_bucket": "in_scope_code"
+    },
+    {
+      "q": "test_function_is_own_chunk 함수에서는 소스 코드가 의도한 대로 쪼개졌는지 어떻게 판단하고 있어?",
+      "expected": [
+        "tests/test_code_loader.py"
+      ],
+      "origin": "synthetic",
+      "axis": "code",
+      "chunk_index": 244,
+      "lex_overlap": 0.188,
+      "_bucket": "in_scope_code"
+    },
+    {
+      "q": "토크나이저가 언더바가 포함된 단어를 처리할 때 어떤 방식으로 색인을 생성하는지 궁금해.",
+      "expected": [
+        "tests/test_tokenizer.py"
+      ],
+      "origin": "synthetic",
+      "axis": "code",
+      "chunk_index": 290,
+      "lex_overlap": 0.057,
+      "_bucket": "in_scope_code"
+    },
+    {
+      "q": "우리 시스템에서 마크다운 문서를 불러올 때 섹션별로 출처를 명확하게 구분하는 방식이 뭐야?",
+      "expected": [
+        "app/loader.py"
+      ],
+      "origin": "synthetic",
+      "axis": "code",
+      "chunk_index": 127,
+      "lex_overlap": 0.057,
+      "_bucket": "in_scope_code"
+    },
+    {
+      "q": "QuestionSet 객체의 요약 정보를 출력하면 어떤 항목들이 표시되는지 알려줄 수 있어?",
+      "expected": [
+        "eval/datasets.py"
+      ],
+      "origin": "synthetic",
+      "axis": "code",
+      "chunk_index": 192,
+      "lex_overlap": 0.038,
+      "_bucket": "in_scope_code"
+    },
+    {
+      "q": "eval/faithfulness.py에서 LLM이 답변의 정확성을 판단할 때 어떤 전략을 써서 편향을 줄이고 있어?",
+      "expected": [
+        "git:c94d9c8"
+      ],
+      "origin": "synthetic",
+      "axis": "commit",
+      "chunk_index": 314,
+      "lex_overlap": 0.37,
+      "_bucket": "in_scope_commit"
+    },
+    {
+      "q": "우리 프로젝트에서 환경 변수를 불러올 때 어떤 라이브러리를 사용하고 있어?",
+      "expected": [
+        "app/config.py"
+      ],
+      "origin": "synthetic",
+      "axis": "code",
+      "chunk_index": 82,
+      "lex_overlap": 0.038,
+      "_bucket": "in_scope_code"
+    },
+    {
+      "q": "app/reranker.py에서 설명하는 리랭킹 방식이 기존의 임베딩 기반 검색과 비교했을 때 어떤 차이점이 있어?",
+      "expected": [
+        "app/reranker.py"
+      ],
+      "origin": "synthetic",
+      "axis": "code",
+      "chunk_index": 166,
+      "lex_overlap": 0.294,
+      "_bucket": "in_scope_code"
+    },
+    {
+      "q": "RAG 시스템에서 검색 단계가 성공했음에도 불구하고 답변이 부정확해지는 문제를 어떻게 진단하고 있어?",
+      "expected": [
+        "eval/faithfulness.py"
+      ],
+      "origin": "synthetic",
+      "axis": "code",
+      "chunk_index": 195,
+      "lex_overlap": 0.179,
+      "_bucket": "in_scope_code"
+    },
+    {
+      "q": "검색된 문서들을 LLM에 전달하기 전에 어떤 형식으로 묶어서 보여주는 거야?",
+      "expected": [
+        "app/rag.py"
+      ],
+      "origin": "synthetic",
+      "axis": "code",
+      "chunk_index": 159,
+      "lex_overlap": 0.038,
+      "_bucket": "in_scope_code"
+    },
+    {
+      "q": "검색 결과로 반환되는 문서 리스트는 어떤 기준으로 정렬되어서 나오게 되는 거야?",
+      "expected": [
+        "eval/run_eval.py"
+      ],
+      "origin": "synthetic",
+      "axis": "code",
+      "chunk_index": 222,
+      "lex_overlap": 0.0,
+      "_bucket": "in_scope_code"
+    },
+    {
+      "q": "특정 모델을 사용할 수 있는지 확인하려면 문서만 믿지 말고 어떻게 검증하는 게 좋아?",
+      "expected": [
+        "docs/engineering-notes.md"
+      ],
+      "origin": "synthetic",
+      "axis": "doc",
+      "chunk_index": 2,
+      "lex_overlap": 0.214,
+      "_bucket": "in_scope"
+    },
+    {
+      "q": "이번 업데이트에서 Gemini 무료 버전을 연동하면서 채팅 응답을 실시간으로 보여주기 위해 어떤 기술적 변화가 있었나요?",
+      "expected": [
+        "git:477ecb5"
+      ],
+      "origin": "synthetic",
+      "axis": "commit",
+      "chunk_index": 323,
+      "lex_overlap": 0.095,
+      "_bucket": "in_scope_commit"
+    },
+    {
+      "q": "test_module_head_captured 테스트 케이스는 어떤 의도로 작성된 거야?",
+      "expected": [
+        "tests/test_code_loader.py"
+      ],
+      "origin": "synthetic",
+      "axis": "code",
+      "chunk_index": 243,
+      "lex_overlap": 0.25,
+      "_bucket": "in_scope_code"
+    },
+    {
+      "q": "현재 데모 버전에서 대화 맥락을 기억하지 못하는 문제를 해결하려면 어떤 기능을 구현해야 해?",
+      "expected": [
+        "docs/HANDOFF.md"
+      ],
+      "origin": "synthetic",
+      "axis": "doc",
+      "chunk_index": 31,
+      "lex_overlap": 0.061,
+      "_bucket": "in_scope"
+    },
+    {
+      "q": "애플리케이션이 처음 실행될 때 모델을 미리 불러오는 이유가 뭐야?",
+      "expected": [
+        "app/main.py"
+      ],
+      "origin": "synthetic",
+      "axis": "code",
+      "chunk_index": 134,
+      "lex_overlap": 0.087,
+      "_bucket": "in_scope_code"
+    },
+    {
+      "q": "eval/report.py에서 수행하는 비교 로직은 구체적으로 어떤 지표들의 변화를 감시하고 있어?",
+      "expected": [
+        "git:ec842a5"
+      ],
+      "origin": "synthetic",
+      "axis": "commit",
+      "chunk_index": 294,
+      "lex_overlap": 0.233,
+      "_bucket": "in_scope_commit"
+    },
+    {
+      "q": "이번에 작성된 엔지니어링 노트에는 어떤 기술적 고민들이 담겨 있어?",
+      "expected": [
+        "git:9055ba9"
+      ],
+      "origin": "synthetic",
+      "axis": "commit",
+      "chunk_index": 310,
+      "lex_overlap": 0.24,
+      "_bucket": "in_scope_commit"
+    },
+    {
+      "q": "RATE_CAP 설정처럼 문서와 코드가 일치하지 않는 상황을 마주하면 어떻게 대응하는 게 좋아?",
+      "expected": [
+        "docs/engineering-notes.md"
+      ],
+      "origin": "synthetic",
+      "axis": "doc",
+      "chunk_index": 11,
+      "lex_overlap": 0.333,
+      "_bucket": "in_scope"
+    },
+    {
+      "q": "현재 설정된 프로필에서 평가용 질문 데이터가 저장된 위치를 가져오려면 어떤 함수를 호출해야 해?",
+      "expected": [
+        "eval/datasets.py"
+      ],
+      "origin": "synthetic",
+      "axis": "code",
+      "chunk_index": 193,
+      "lex_overlap": 0.083,
+      "_bucket": "in_scope_code"
+    },
+    {
+      "q": "현재 데이터셋에 포함된 문서나 코드, 멀티홉 질문이 각각 몇 개씩 있는지 확인하려면 어떤 메서드를 호출해야 해?",
+      "expected": [
+        "eval/datasets.py"
+      ],
+      "origin": "synthetic",
+      "axis": "code",
+      "chunk_index": 192,
+      "lex_overlap": 0.132,
+      "_bucket": "in_scope_code"
+    },
+    {
+      "q": "에이전트가 작업을 수행하면서 참고한 문서 조각들을 어떤 방식으로 관리하고 있어?",
+      "expected": [
+        "app/agent_graph.py"
+      ],
+      "origin": "synthetic",
+      "axis": "code",
+      "chunk_index": 64,
+      "lex_overlap": 0.032,
+      "_bucket": "in_scope_code"
+    },
+    {
+      "q": "app/agent_graph.py의 answer 함수에서 예외가 발생했을 때 에러 메시지는 어떻게 구성돼?",
+      "expected": [
+        "app/agent_graph.py"
+      ],
+      "origin": "synthetic",
+      "axis": "code",
+      "chunk_index": 73,
+      "lex_overlap": 0.214,
+      "_bucket": "in_scope_code"
+    },
+    {
+      "q": "현재 활성화된 프로필 설정에 따라 파일 경로를 보여주는 방식이 어떻게 달라져?",
+      "expected": [
+        "app/code_loader.py"
+      ],
+      "origin": "synthetic",
+      "axis": "code",
+      "chunk_index": 76,
+      "lex_overlap": 0.138,
+      "_bucket": "in_scope_code"
+    },
+    {
+      "q": "평가 결과를 마크다운 형식으로 변환할 때 어떤 정보들이 상단에 요약되어 표시돼?",
+      "expected": [
+        "eval/report.py"
+      ],
+      "origin": "synthetic",
+      "axis": "code",
+      "chunk_index": 212,
+      "lex_overlap": 0.033,
+      "_bucket": "in_scope_code"
+    },
+    {
+      "q": "_display_name 함수는 어떤 기준으로 파일의 이름을 반환하는 거야?",
+      "expected": [
+        "app/code_loader.py"
+      ],
+      "origin": "synthetic",
+      "axis": "code",
+      "chunk_index": 76,
+      "lex_overlap": 0.182,
+      "_bucket": "in_scope_code"
+    },
+    {
+      "q": "이번에 메인 브랜치로 에이전트 관련 코드를 합친 이유가 뭐야?",
+      "expected": [
+        "git:8d40e5a"
+      ],
+      "origin": "synthetic",
+      "axis": "commit",
+      "chunk_index": 299,
+      "lex_overlap": 0.333,
+      "_bucket": "in_scope_commit"
+    },
+    {
+      "q": "reranker에서 사용하는 모델의 최대 토큰 제한은 어느 정도로 설정되어 있나요?",
+      "expected": [
+        "app/reranker.py"
+      ],
+      "origin": "synthetic",
+      "axis": "code",
+      "chunk_index": 167,
+      "lex_overlap": 0.08,
+      "_bucket": "in_scope_code"
+    },
+    {
+      "q": "test_out_of_scope_rejected 테스트 케이스는 검색 엔진이 관련 없는 질의를 받았을 때 어떤 상태를 반환하는지 확인하는 거야?",
+      "expected": [
+        "tests/test_retrieval.py"
+      ],
+      "origin": "synthetic",
+      "axis": "code",
+      "chunk_index": 279,
+      "lex_overlap": 0.184,
+      "_bucket": "in_scope_code"
+    },
+    {
+      "q": "코드 로더가 특정 함수를 올바르게 분할했는지 확인하는 테스트는 어떤 로직으로 검증해?",
+      "expected": [
+        "tests/test_code_loader.py"
+      ],
+      "origin": "synthetic",
+      "axis": "code",
+      "chunk_index": 244,
+      "lex_overlap": 0.0,
+      "_bucket": "in_scope_code"
+    },
+    {
+      "q": "_mmr 함수에서 적합도 점수를 계산할 때 왜 코사인 유사도 대신 RRF 융합 점수를 사용하는 거야?",
+      "expected": [
+        "app/retriever.py"
+      ],
+      "origin": "synthetic",
+      "axis": "code",
+      "chunk_index": 177,
+      "lex_overlap": 0.517,
+      "_bucket": "in_scope_code"
+    },
+    {
+      "q": "리포트를 마크다운으로 변환했을 때, 운영 데이터와 코퍼스 정보가 제대로 포함되는지 확인하려면 어떤 테스트 코드를 보면 돼?",
+      "expected": [
+        "tests/test_report.py"
+      ],
+      "origin": "synthetic",
+      "axis": "code",
+      "chunk_index": 275,
+      "lex_overlap": 0.065,
+      "_bucket": "in_scope_code"
+    },
+    {
+      "q": "데이터를 인덱싱할 때 코드 파일이랑 커밋 로그가 각각 몇 개씩 포함됐는지 어떻게 확인할 수 있어?",
+      "expected": [
+        "app/ingest.py"
+      ],
+      "origin": "synthetic",
+      "axis": "code",
+      "chunk_index": 125,
+      "lex_overlap": 0.161,
+      "_bucket": "in_scope_code"
+    },
+    {
+      "q": "무료 사용자를 위한 요청 제한 정책이 어떻게 구현되어 있는지 궁금해.",
+      "expected": [
+        "app/agent.py"
+      ],
+      "origin": "synthetic",
+      "axis": "code",
+      "chunk_index": 56,
+      "lex_overlap": 0.083,
+      "_bucket": "in_scope_code"
+    },
+    {
+      "q": "test_snake_case_split 테스트 케이스는 검색 성능을 확인하기 위해 어떤 검증 과정을 거치고 있어?",
+      "expected": [
+        "tests/test_tokenizer.py"
+      ],
+      "origin": "synthetic",
+      "axis": "code",
+      "chunk_index": 290,
+      "lex_overlap": 0.167,
+      "_bucket": "in_scope_code"
+    },
+    {
+      "q": "app/profiles.py의 register 데코레이터는 내부적으로 빌더를 어떻게 관리하고 있어?",
+      "expected": [
+        "app/profiles.py"
+      ],
+      "origin": "synthetic",
+      "axis": "code",
+      "chunk_index": 148,
+      "lex_overlap": 0.346,
+      "_bucket": "in_scope_code"
+    }
+  ]
+}

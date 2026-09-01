@@ -35,7 +35,7 @@ recall 0% 가 나오고, 그 0% 의 원인을 검색 품질로 오해하게 된�
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List
 
@@ -60,15 +60,18 @@ class QuestionSet:
     in_scope_code: List[dict]
     multihop: List[dict]
     out_of_scope: List[str]
+    # 커밋 축("언제 왜 바뀌었나")은 문서·코드와 성격이 달라 따로 센다.
+    in_scope_commit: List[dict] = field(default_factory=list)
 
     @property
     def n_total(self) -> int:
-        return len(self.in_scope) + len(self.in_scope_code) + len(self.multihop) + len(self.out_of_scope)
+        return (len(self.in_scope) + len(self.in_scope_code) + len(self.in_scope_commit)
+                + len(self.multihop) + len(self.out_of_scope))
 
     def origin_counts(self) -> Dict[str, int]:
         """라벨 출처별 문항 수 — 자가 라벨 비중을 리포트에 남기기 위한 것."""
         counts: Dict[str, int] = {}
-        for case in [*self.in_scope, *self.in_scope_code, *self.multihop]:
+        for case in [*self.in_scope, *self.in_scope_code, *self.in_scope_commit, *self.multihop]:
             key = case.get("origin", ORIGIN_MANUAL)
             counts[key] = counts.get(key, 0) + 1
         if self.out_of_scope:
@@ -79,8 +82,8 @@ class QuestionSet:
         origins = ", ".join(f"{k} {v}" for k, v in self.origin_counts().items())
         return (
             f"[{self.profile}] {self.path.name}: 문서 {len(self.in_scope)} · "
-            f"코드 {len(self.in_scope_code)} · 멀티홉 {len(self.multihop)} · "
-            f"범위밖 {len(self.out_of_scope)} (라벨: {origins})"
+            f"코드 {len(self.in_scope_code)} · 커밋 {len(self.in_scope_commit)} · "
+            f"멀티홉 {len(self.multihop)} · 범위밖 {len(self.out_of_scope)} (라벨: {origins})"
         )
 
 
@@ -98,6 +101,7 @@ def load_questions(path: Path | None = None) -> QuestionSet:
         profile=active_profile().name,
         in_scope=data.get("in_scope", []),
         in_scope_code=data.get("in_scope_code", []),
+        in_scope_commit=data.get("in_scope_commit", []),
         multihop=data.get("multihop", []),
         out_of_scope=data.get("out_of_scope", []),
     )
