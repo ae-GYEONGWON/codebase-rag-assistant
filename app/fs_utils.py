@@ -17,9 +17,11 @@
 from __future__ import annotations
 
 import fnmatch
+import shutil
 import subprocess
+import zipfile
 from pathlib import Path
-from typing import Iterable, List, Protocol, Sequence, Tuple
+from typing import Iterable, List, Optional, Protocol, Sequence, Tuple
 
 # 코퍼스에서 항상 제외 — 가상환경·캐시·산출물. 여기 없으면 .venv 안의 수천 개
 # 서드파티 .md/.py 가 코퍼스로 딸려 들어온다(폴더 walk 방식의 실제 함정).
@@ -155,3 +157,83 @@ class GitTrackedSource:
     def __repr__(self) -> str:
         scope = f", subdirs={list(self.subdirs)}" if self.subdirs else ""
         return f"GitTrackedSource({self.repo_root}{scope})"
+
+
+class GitSnapshotSource:
+    """특정 커밋/태그 시점의 저장소를 **스냅샷으로 굳혀** 코퍼스로 삼는다.
+
+    ★ 왜 필요한가 — 회귀 게이트가 성립하려면 코퍼스가 움직이면 안 된다.
+
+    demo 코퍼스는 이 저장소 자기 자신이라, **커밋할 때마다 코퍼스가 바뀐다.**
+    그러면 평가 점수의 변화가 '검색 코드가 나빠져서'인지 '문서를 한 편 더 써서'인지
+    구분할 수 없다. 실제로 엔지니어링 노트를 한 편 추가했더니 그 주제를 묻는 문항이
+    검색에서 밀려 recall 이 떨어졌다(→ engineering-notes #18).
+
+    그래서 평가용 코퍼스는 태그로 고정한다. `git archive <ref>` 로 그 시점 파일들을
+    캐시 디렉터리에 풀어놓고 그 위에서 인덱싱하므로, 워킹트리가 아무리 바뀌어도
+    **같은 ref 면 언제나 같은 코퍼스**다.
+    """
+
+    def __init__(self, repo_root: Path, ref: str, cache_root: Path) -> None:
+        self.repo_root = Path(repo_root).resolve()
+        self.ref = ref
+        self.cache_root = Path(cache_root)
+        self._dir: Optional[Path] = None
+
+    # --- 스냅샷 준비 ---
+    def _resolve(self) -> str:
+        out = subprocess.run(
+            ["git", "-C", str(self.repo_root), "rev-parse", "--verify", f"{self.ref}^{{commit}}"],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+        )
+        if out.returncode != 0:
+            raise RuntimeError(
+                f"평가용 코퍼스 ref 를 찾을 수 없습니다: {self.ref!r}\n"
+                f"  → 태그를 만드세요: git tag {self.ref} <커밋>\n"
+                f"  (평가 코퍼스는 고정돼야 합니다 — engineering-notes #18)"
+            )
+        return out.stdout.strip()
+
+    def materialize(self) -> Path:
+        """ref 시점 파일들을 캐시에 풀고 그 경로를 반환(이미 있으면 재사용)."""
+        if self._dir is not None:
+            return self._dir
+        sha = self._resolve()
+        target = self.cache_root / sha[:12]
+        marker = target / ".snapshot_ok"
+        if not marker.exists():
+            if target.exists():
+                shutil.rmtree(target, ignore_errors=True)
+            target.mkdir(parents=True, exist_ok=True)
+            archive = target.with_suffix(".zip")
+            out = subprocess.run(
+                ["git", "-C", str(self.repo_root), "archive", "--format=zip",
+                 "-o", str(archive), sha],
+                capture_output=True, text=True, encoding="utf-8", errors="replace",
+            )
+            if out.returncode != 0:
+                raise RuntimeError(f"git archive 실패: {out.stderr.strip()[:200]}")
+            with zipfile.ZipFile(archive) as z:
+                z.extractall(target)
+            archive.unlink(missing_ok=True)
+            marker.write_text(sha, encoding="utf-8")
+            print(f"[fs] 평가 코퍼스 스냅샷 생성: {self.ref} → {sha[:12]}")
+        self._dir = target
+        return target
+
+    # --- FileSource 규격 ---
+    def list_files(self, globs: Sequence[str]) -> List[Path]:
+        return DirSource([self.materialize()]).list_files(globs)
+
+    def display_name(self, path: Path) -> str:
+        """스냅샷 경로를 지우고 저장소 기준 상대경로로 되돌린다.
+
+        정답 라벨(`app/retriever.py` 등)이 스냅샷 경로에 오염되면 안 되므로 반드시 필요하다.
+        """
+        try:
+            return path.relative_to(self.materialize()).as_posix()
+        except ValueError:
+            return path.name
+
+    def __repr__(self) -> str:
+        return f"GitSnapshotSource({self.repo_root} @ {self.ref})"

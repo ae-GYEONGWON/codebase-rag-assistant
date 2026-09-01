@@ -34,13 +34,16 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
 from app.config import Settings, settings
-from app.fs_utils import DirSource, FileSource, GitTrackedSource
+from app.fs_utils import DirSource, FileSource, GitSnapshotSource, GitTrackedSource
 
 # 이 저장소의 루트(app/ 의 부모). demo 프로필의 기준점.
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 # 평가셋 위치도 프로필에 딸린 자원이다(질문·정답 경로가 코퍼스에 종속되므로).
 EVAL_DIR = REPO_ROOT / "eval"
+
+# 평가용 코퍼스 스냅샷 캐시(git 제외). ref 당 한 벌.
+SNAPSHOT_CACHE = REPO_ROOT / ".eval_corpus"
 
 
 @dataclass(frozen=True)
@@ -63,6 +66,9 @@ class CorpusProfile:
     chroma_dir: str
 
     eval_questions: Path
+
+    # 코퍼스를 고정할 ref(eval 프로필). 나머지 프로필은 워킹트리 기준이라 HEAD.
+    git_ref: str = "HEAD"
 
     # --- 파생 ---
     @property
@@ -123,6 +129,34 @@ def _demo(cfg: Settings) -> CorpusProfile:
         git_repos=(REPO_ROOT,) if cfg.index_git else (),
         git_max_commits=cfg.git_max_commits,
         collection_name="corpus_demo",
+        chroma_dir=cfg.chroma_dir,
+        eval_questions=EVAL_DIR / "questions.demo.json",
+    )
+
+
+@register("eval")
+def _eval(cfg: Settings) -> CorpusProfile:
+    """★회귀 게이트 전용 — 저장소를 **태그 시점으로 고정한** 스냅샷.
+
+    demo 는 워킹트리를 보므로 커밋할 때마다 코퍼스가 커진다. 그 위에서 회귀를 재면
+    "검색이 나빠졌다"와 "문서를 한 편 더 썼다"가 구분되지 않는다(engineering-notes #18).
+    평가는 움직이지 않는 코퍼스 위에서만 의미가 있으므로 여기서 ref 를 못 박는다.
+
+    코퍼스를 의도적으로 갱신하려면 태그를 옮기고 baseline 을 다시 만든다 — 그 두 동작이
+    **명시적이어야** 한다는 것이 이 프로필의 존재 이유다.
+    """
+    snap = GitSnapshotSource(REPO_ROOT, cfg.eval_corpus_ref, SNAPSHOT_CACHE)
+    return CorpusProfile(
+        name="eval",
+        description=f"저장소 스냅샷 @ {cfg.eval_corpus_ref} — 회귀 게이트용 고정 코퍼스.",
+        docs=snap,
+        doc_globs=("*.md",),
+        code=snap if cfg.index_code else None,
+        code_globs=("*.py",),
+        git_repos=(REPO_ROOT,) if cfg.index_git else (),
+        git_max_commits=cfg.git_max_commits,
+        git_ref=cfg.eval_corpus_ref,
+        collection_name=f"corpus_eval_{cfg.eval_corpus_ref.replace('.', '_').replace('/', '_')}",
         chroma_dir=cfg.chroma_dir,
         eval_questions=EVAL_DIR / "questions.demo.json",
     )

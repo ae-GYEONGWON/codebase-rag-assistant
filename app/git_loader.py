@@ -36,7 +36,7 @@ def _git(repo: Path, *args: str) -> str:
     return out.stdout
 
 
-def _load_repo(repo: Path, limit: int) -> List[Document]:
+def _load_repo(repo: Path, limit: int, ref: str = "HEAD") -> List[Document]:
     if not (repo / ".git").exists():
         print(f"[git] 경고: git 저장소 아님 → {repo}")
         return []
@@ -46,6 +46,7 @@ def _load_repo(repo: Path, limit: int) -> List[Document]:
     raw = _git(
         repo,
         "log",
+        ref,
         f"--max-count={limit}",
         "--date=short",
         f"--pretty=format:{fmt}",
@@ -97,5 +98,5 @@ def load_git() -> List[Document]:
         return []
     docs: List[Document] = []
     for repo in prof.git_repos:
-        docs.extend(_load_repo(repo, prof.git_max_commits))
+        docs.extend(_load_repo(repo, prof.git_max_commits, prof.git_ref))
     return docs

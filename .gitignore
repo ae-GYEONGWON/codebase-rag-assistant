@@ -28,3 +28,7 @@ eval/reports/
 # private baseline 에는 미스 문항 텍스트·컬렉션명 등 대상 코드베이스 정보가 그대로 들어간다.
 eval/baselines/*
 !eval/baselines/demo.json
+!eval/baselines/eval.json
+
+# 평가용 코퍼스 스냅샷 캐시(ref 로부터 재생성 가능)
+.eval_corpus/

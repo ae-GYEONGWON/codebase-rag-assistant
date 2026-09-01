@@ -110,7 +110,8 @@ python -m pytest                   # 순수 로직 + 검색 통합(chroma 있으
 
 | 프로필 | 지식원 | 컬렉션 | 평가셋 |
 |---|---|---|---|
-| `demo` (기본) | **이 저장소 자기 자신** — `git ls-files` 추적 파일 | `corpus_demo` | `eval/questions.demo.json` |
+| `demo` (기본) | **이 저장소 자기 자신** — `git ls-files` 추적 파일(워킹트리) | `corpus_demo` | `eval/questions.demo.json` |
+| `eval` | 저장소 스냅샷 **@ 태그 `eval-corpus-v1`** — `git archive` 로 고정 | `corpus_eval_…` | 같음 |
 | `private` | `.env` 의 `KNOWLEDGE_DIRS`/`CODE_DIRS`/`GIT_REPOS` | `.env` 의 `COLLECTION_NAME` | `eval/questions.json` |
 
 ```bash
@@ -124,6 +125,10 @@ python -m eval.run_eval --profile private        # 인덱스와 평가셋이 함
 demo 코퍼스를 폴더 walk 가 아니라 **git 추적 파일**로 정의한 것은 측정 재현성 때문이다 —
 로컬에만 있는 파일이 섞이면 같은 코드인데 PC·CI 마다 청크 수와 recall 이 달라진다
 (→ [engineering-notes #16](docs/engineering-notes.md)).
+
+**CI 회귀 게이트는 `demo` 가 아니라 `eval` 프로필을 쓴다.** demo 는 워킹트리를 보므로
+커밋할 때마다 코퍼스가 커져, 점수 변화가 코드 탓인지 문서 탓인지 구분되지 않는다
+(→ [engineering-notes #18](docs/engineering-notes.md)).
 
 새 축(로그·티켓 등)은 `app/profiles.py` 에 `@register` 함수 하나만 추가하면 된다.
 
@@ -160,7 +165,7 @@ demo 코퍼스를 폴더 walk 가 아니라 **git 추적 파일**로 정의한 �
 ```
 app/
   profiles.py     ★코퍼스 프로필(demo|private) — 지식원·컬렉션·평가셋 한 벌
-  fs_utils.py     지식원 파일 열거 전략(폴더 walk | git 추적 파일)
+  fs_utils.py     지식원 파일 열거 전략(폴더 walk | git 추적 파일 | ref 스냅샷)
   loader.py       .md → 헤더 인지 청크
   code_loader.py  .py → AST 함수/클래스 청크 + 컨텍스트 헤더
   git_loader.py   git log → 커밋 청크(날짜 메타)
@@ -173,12 +178,15 @@ app/
   main.py         FastAPI 엔드포인트 + 기동 워밍업
 eval/
   datasets.py     평가셋 로딩(프로필별) + 라벨 출처(manual|synthetic) 집계
+  report.py       ★평가 결과 JSON/Markdown 산출 + baseline 대비 회귀 판정(CI 게이트)
+  questions.demo.json     골든셋 20문항(수기 라벨) — demo·eval 프로필 공용
+  baselines/      회귀 게이트 기준선(demo·eval 만 추적)
   questions.example.json  평가셋 템플릿(→ questions.json 으로 복사해 대상에 맞게 작성)
   run_eval.py     검색 평가(recall@k·MRR·거절률, 리트리버별 비교)
   faithfulness.py 답변 groundedness(LLM-as-judge)
 tests/            pytest (토크나이저·정규화·config·AST·검색통합)
 docs/
-  engineering-notes.md  구현 중 마주친 문제 16건
+  engineering-notes.md  구현 중 마주친 문제 18건
   HANDOFF.md            작업 현황·로드맵(여러 PC 에서 이어서 개발)
 ```
 
