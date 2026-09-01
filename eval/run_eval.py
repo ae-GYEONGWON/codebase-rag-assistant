@@ -21,18 +21,15 @@ import numpy as np
 
 from app.agent import _TOOL_K
 from app.config import settings
+from app.profiles import active_profile, available_profiles, use_profile
+from eval.datasets import load_questions
 from app.embeddings import get_embeddings
 from app.retriever import _RRF_K, _corpus, _mmr, _tokenize, search
 
 # 에이전트가 한 질문에서 보는 최대 청크 수(툴 3축 × 툴당 k). 단발 RAG 의 '예산 맞춤' 비교 기준.
 _TOOL_BUDGET = _TOOL_K * 3
 
-# 실제 평가셋(questions.json)은 인덱싱한 코드베이스에 종속이라 git 에 넣지 않는다.
-# 없으면 템플릿(questions.example.json)으로 폴백해 형식만이라도 돌아가게 한다.
-_QDIR = Path(__file__).parent
-QUESTIONS = _QDIR / "questions.json"
-if not QUESTIONS.exists():
-    QUESTIONS = _QDIR / "questions.example.json"
+
 
 
 def _query_vec(question: str) -> np.ndarray:
@@ -205,14 +202,22 @@ def main() -> None:
     ap.add_argument("--rerank", action="store_true", help="리랭커 비교 행 포함(느림, CPU)")
     ap.add_argument("--multihop", action="store_true", help="멀티홉 스위트만 실행")
     ap.add_argument("--agent", action="store_true", help="멀티홉에 에이전트 행 추가(LLM 호출·느림)")
+    ap.add_argument(
+        "--profile",
+        choices=available_profiles(),
+        help="코퍼스 프로필(기본: .env 의 CORPUS_PROFILE). 인덱스·평가셋이 함께 바뀐다.",
+    )
     args = ap.parse_args()
+    if args.profile:
+        use_profile(args.profile)
     k = args.k
 
-    data = json.loads(QUESTIONS.read_text(encoding="utf-8"))
-    doc_q: List[dict] = data["in_scope"]
-    code_q: List[dict] = data.get("in_scope_code", [])
-    multi_q: List[dict] = data.get("multihop", [])
-    out_scope: List[str] = data["out_of_scope"]
+    qs = load_questions()
+    print(f"[eval] {qs.summary()}")
+    doc_q: List[dict] = qs.in_scope
+    code_q: List[dict] = qs.in_scope_code
+    multi_q: List[dict] = qs.multihop
+    out_scope: List[str] = qs.out_of_scope
 
     if args.multihop or args.agent:
         if not multi_q:

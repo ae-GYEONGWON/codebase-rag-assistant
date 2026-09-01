@@ -15,24 +15,17 @@ from langchain_text_splitters import (
 )
 
 from app.config import settings
+from app.profiles import active_profile
 
 _HEADERS = [("#", "h1"), ("##", "h2"), ("###", "h3")]
 
 
 def _iter_files() -> List[Path]:
-    """설정된 폴더들에서 glob 에 맞는 파일 경로를 중복 없이 수집."""
-    seen: set[Path] = set()
-    files: List[Path] = []
-    for root in settings.knowledge_dir_list:
-        if not root.exists():
-            print(f"[loader] 경고: 경로 없음 → {root}")
-            continue
-        for pattern in settings.glob_list:
-            for path in root.rglob(pattern):
-                if path.is_file() and path not in seen:
-                    seen.add(path)
-                    files.append(path)
-    return sorted(files)
+    """활성 프로필의 문서 지식원에서 파일 경로를 수집."""
+    prof = active_profile()
+    if not prof.index_docs:
+        return []
+    return prof.docs.list_files(prof.doc_globs)
 
 
 def list_sources() -> List[str]:
@@ -86,10 +79,6 @@ def load_and_split() -> List[Document]:
 
 
 def _display_name(path: Path) -> str:
-    """지식원 루트 기준 상대경로(없으면 파일명)로 표시용 이름 생성."""
-    for root in settings.knowledge_dir_list:
-        try:
-            return path.relative_to(root).as_posix()
-        except ValueError:
-            continue
-    return path.name
+    """지식원 기준 상대경로(없으면 파일명)로 표시용 이름 생성."""
+    prof = active_profile()
+    return prof.docs.display_name(path) if prof.index_docs else path.name

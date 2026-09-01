@@ -10,9 +10,9 @@ from pathlib import Path
 
 import pytest
 
-from app.config import settings
+from app.profiles import active_profile
 
-_HAS_INDEX = Path(settings.chroma_dir).exists()
+_HAS_INDEX = Path(active_profile().chroma_dir).exists()
 pytestmark = pytest.mark.skipif(not _HAS_INDEX, reason="chroma_db 인덱스 없음")
 
 

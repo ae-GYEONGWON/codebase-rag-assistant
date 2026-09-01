@@ -79,9 +79,12 @@ pip install -r requirements.txt
 copy .env.example .env              # bash: cp .env.example .env
 # .env 의 GOOGLE_API_KEY 에 무료 키 입력 → https://aistudio.google.com/apikey
 
-python -m app.ingest --reset               # 지식원(문서+코드+git) → 벡터 DB 인덱싱
+python -m app.ingest                        # 지식원(문서+코드+git) → 벡터 DB 인덱싱
 uvicorn app.main:app --port 8123           # http://127.0.0.1:8123
 ```
+
+기본 프로필이 `demo`(이 저장소 자기 자신)라 **clone 직후 경로 설정 없이 바로 동작한다.**
+다른 코드베이스를 붙이려면 아래 [코퍼스 프로필](#코퍼스-프로필) 참조.
 
 > **비용 0원**: 임베딩은 로컬, 생성은 Gemini 무료 티어(결제수단 미등록 시 과금 불가).
 > 키 없이도 `extractive` 모드로 동작.
@@ -101,10 +104,34 @@ python -m pytest                   # 순수 로직 + 검색 통합(chroma 있으
 
 ---
 
+## 코퍼스 프로필
+
+"무엇을 인덱싱하는가"는 `app/profiles.py` 의 **프로필**이 결정한다. 프로필 = (지식원 · 컬렉션 · 평가셋) 한 벌.
+
+| 프로필 | 지식원 | 컬렉션 | 평가셋 |
+|---|---|---|---|
+| `demo` (기본) | **이 저장소 자기 자신** — `git ls-files` 추적 파일 | `corpus_demo` | `eval/questions.demo.json` |
+| `private` | `.env` 의 `KNOWLEDGE_DIRS`/`CODE_DIRS`/`GIT_REPOS` | `.env` 의 `COLLECTION_NAME` | `eval/questions.json` |
+
+```bash
+python -m app.ingest    --profile demo --reset   # 프로필 지정 인덱싱
+python -m eval.run_eval --profile private        # 인덱스와 평가셋이 함께 전환된다
+```
+
+두 프로필은 같은 `chroma_db/` 안에서 **컬렉션 이름으로 분리**되어 공존한다(전환에 재인덱싱 불필요).
+`--reset` 은 해당 프로필의 컬렉션만 지운다.
+
+demo 코퍼스를 폴더 walk 가 아니라 **git 추적 파일**로 정의한 것은 측정 재현성 때문이다 —
+로컬에만 있는 파일이 섞이면 같은 코드인데 PC·CI 마다 청크 수와 recall 이 달라진다
+(→ [engineering-notes #16](docs/engineering-notes.md)).
+
+새 축(로그·티켓 등)은 `app/profiles.py` 에 `@register` 함수 하나만 추가하면 된다.
+
 ## 설정 (`.env`)
 
 | 키 | 기본값 | 설명 |
 |---|---|---|
+| `CORPUS_PROFILE` | `demo` | 인덱싱 대상 프로필 — `demo` \| `private` |
 | `GOOGLE_API_KEY` | (필수) | Gemini 무료 키. 없으면 extractive 폴백 |
 | `GEMINI_CHAT_MODEL` | `gemini-3.1-flash-lite` | 생성 모델 |
 | `EMBEDDING_PROVIDER` | `hf` | `hf`(로컬 무료) \| `openai` |
@@ -113,7 +140,8 @@ python -m pytest                   # 순수 로직 + 검색 통합(chroma 있으
 | `GIT_REPOS` | `/path/to/your/repo` | git 이력 지식원 (`INDEX_GIT=false` 로 끄기) |
 | `USE_RERANKER` | `false` | 리랭커(측정상 비활성 권장) |
 
-> **다른 프로젝트 재사용**: `KNOWLEDGE_DIRS`/`CODE_DIRS`/`GIT_REPOS` 만 바꾸면 어떤 코드베이스에도 붙는다.
+> **다른 프로젝트 재사용**: `CORPUS_PROFILE=private` 로 두고 `KNOWLEDGE_DIRS`/`CODE_DIRS`/`GIT_REPOS` 만
+> 바꾸면 어떤 코드베이스에도 붙는다.
 > 지식원이 바뀌면 재인덱싱(`python -m app.ingest --reset`).
 
 ## API
@@ -131,6 +159,8 @@ python -m pytest                   # 순수 로직 + 검색 통합(chroma 있으
 
 ```
 app/
+  profiles.py     ★코퍼스 프로필(demo|private) — 지식원·컬렉션·평가셋 한 벌
+  fs_utils.py     지식원 파일 열거 전략(폴더 walk | git 추적 파일)
   loader.py       .md → 헤더 인지 청크
   code_loader.py  .py → AST 함수/클래스 청크 + 컨텍스트 헤더
   git_loader.py   git log → 커밋 청크(날짜 메타)
@@ -142,12 +172,14 @@ app/
   feedback.py     👍/👎 로그
   main.py         FastAPI 엔드포인트 + 기동 워밍업
 eval/
+  datasets.py     평가셋 로딩(프로필별) + 라벨 출처(manual|synthetic) 집계
   questions.example.json  평가셋 템플릿(→ questions.json 으로 복사해 대상에 맞게 작성)
   run_eval.py     검색 평가(recall@k·MRR·거절률, 리트리버별 비교)
   faithfulness.py 답변 groundedness(LLM-as-judge)
 tests/            pytest (토크나이저·정규화·config·AST·검색통합)
 docs/
-  engineering-notes.md  구현 중 마주친 문제 14건
+  engineering-notes.md  구현 중 마주친 문제 16건
+  HANDOFF.md            작업 현황·로드맵(여러 PC 에서 이어서 개발)
 ```
 
 ---
