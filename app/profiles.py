@@ -39,6 +39,12 @@ from app.fs_utils import DirSource, FileSource, GitSnapshotSource, GitTrackedSou
 # 이 저장소의 루트(app/ 의 부모). demo 프로필의 기준점.
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
+# 이 저장소를 코퍼스로 쓸 때(demo·eval) 제외할 경로.
+# 평가 산출물은 지식원이 아니라 **이 시스템이 만들어 낸 결과물**이다. 코퍼스에 넣으면
+# "평가 결과를 검색해서 평가 결과를 설명하는" 자기참조가 생기고, 문항 텍스트가 코퍼스에
+# 섞여 recall 이 부풀 수도 있다(평가셋 질문이 코퍼스 안에 있게 되므로).
+SELF_CORPUS_EXCLUDE = ("eval/verification/", "eval/reports/", "eval/baselines/")
+
 # 평가셋 위치도 프로필에 딸린 자원이다(질문·정답 경로가 코퍼스에 종속되므로).
 EVAL_DIR = REPO_ROOT / "eval"
 
@@ -69,6 +75,10 @@ class CorpusProfile:
 
     # 코퍼스를 고정할 ref(eval 프로필). 나머지 프로필은 워킹트리 기준이라 HEAD.
     git_ref: str = "HEAD"
+
+    # 시작 화면의 추천 질문. **코퍼스에 실제로 답이 있는 것만** 넣는다 —
+    # 클릭했는데 "찾을 수 없습니다"가 나오면 데모가 그 자리에서 끝난다.
+    suggestions: Tuple[str, ...] = ()
 
     # --- 파생 ---
     @property
@@ -118,7 +128,7 @@ def _demo(cfg: Settings) -> CorpusProfile:
     면접·데모에서 유리한 성질: 면접관이 답변을 `docs/engineering-notes.md` 와
     직접 대조해 **검증할 수 있다**. 규모 자랑이 아니라 동작 시연이 데모의 목적이다.
     """
-    tracked = GitTrackedSource(REPO_ROOT)
+    tracked = GitTrackedSource(REPO_ROOT, exclude=SELF_CORPUS_EXCLUDE)
     return CorpusProfile(
         name="demo",
         description="이 저장소 자기 자신(git 추적 파일). 공개 데모·CI 용, 유출 위험 0.",
@@ -131,6 +141,14 @@ def _demo(cfg: Settings) -> CorpusProfile:
         collection_name="corpus_demo",
         chroma_dir=cfg.chroma_dir,
         eval_questions=EVAL_DIR / "questions.demo.json",
+        suggestions=(
+            "이 프로젝트는 무엇을 하는 시스템이야?",
+            "하이브리드 검색은 왜 쓰고 얼마나 좋아졌어?",
+            "리랭커를 왜 기본으로 껐어?",
+            "평가 코퍼스를 태그로 고정한 이유가 뭐야?",
+            "브루트포스 검색에서 ANN 으로 언제 바꿔야 해?",
+            "코퍼스 프로필은 코드에서 어떻게 구현돼 있어?",
+        ),
     )
 
 
@@ -145,7 +163,8 @@ def _eval(cfg: Settings) -> CorpusProfile:
     코퍼스를 의도적으로 갱신하려면 태그를 옮기고 baseline 을 다시 만든다 — 그 두 동작이
     **명시적이어야** 한다는 것이 이 프로필의 존재 이유다.
     """
-    snap = GitSnapshotSource(REPO_ROOT, cfg.eval_corpus_ref, SNAPSHOT_CACHE)
+    snap = GitSnapshotSource(REPO_ROOT, cfg.eval_corpus_ref, SNAPSHOT_CACHE,
+                             exclude=SELF_CORPUS_EXCLUDE)
     return CorpusProfile(
         name="eval",
         description=f"저장소 스냅샷 @ {cfg.eval_corpus_ref} — 회귀 게이트용 고정 코퍼스.",
@@ -159,6 +178,14 @@ def _eval(cfg: Settings) -> CorpusProfile:
         collection_name=f"corpus_eval_{cfg.eval_corpus_ref.replace('.', '_').replace('/', '_')}",
         chroma_dir=cfg.chroma_dir,
         eval_questions=EVAL_DIR / "questions.demo.json",
+        suggestions=(
+            "이 프로젝트는 무엇을 하는 시스템이야?",
+            "하이브리드 검색은 왜 쓰고 얼마나 좋아졌어?",
+            "리랭커를 왜 기본으로 껐어?",
+            "평가 코퍼스를 태그로 고정한 이유가 뭐야?",
+            "브루트포스 검색에서 ANN 으로 언제 바꿔야 해?",
+            "코퍼스 프로필은 코드에서 어떻게 구현돼 있어?",
+        ),
     )
 
 

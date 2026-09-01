@@ -40,19 +40,26 @@ _WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 
 # 지식원 내용을 반영한 시작 질문(칩). 사용자가 "무엇을 물어볼 수 있는지" 감을 잡게 함.
 # ※ 인덱싱한 코드베이스에 맞게 자유롭게 바꾸세요(문서 질문 / 코드 질문을 섞는 것을 권장).
-SUGGESTED_QUESTIONS = [
+# 프로필이 추천 질문을 갖고 있지 않을 때만 쓰는 범용 폴백.
+# ★추천 질문은 코퍼스에 실제로 답이 있어야 한다 — 클릭했는데 못 찾으면 데모가 거기서 끝난다.
+FALLBACK_QUESTIONS = [
     "이 프로젝트는 무엇을 하는 시스템이야?",
     "주요 컴포넌트 차이를 표로 정리해줘",
-    "orphan recovery 로직이 뭐야?",
-    "재시도 정책은 어떻게 결정돼? 상한은 있어?",
-    "orphan recovery 는 코드에서 어떻게 구현돼 있어?",
-    "BATCH_DEADLINE 은 어떻게 정해져?",
+    "설정값은 어디서 바꿔?",
+    "최근에 가장 크게 바뀐 부분이 뭐야?",
 ]
+
+
+class HistoryTurn(BaseModel):
+    role: str                # user | assistant
+    content: str
 
 
 class ChatRequest(BaseModel):
     question: str
     dev_mode: bool = False   # True 면 답변에 코드 본문을 ``` 블록으로 인용
+    # 멀티턴 — 직전 대화. 후속 질문("그건 왜?")을 독립형으로 재작성해 검색한다.
+    history: list[HistoryTurn] = []
 
 
 class Source(BaseModel):
@@ -67,6 +74,7 @@ class ChatResponse(BaseModel):
     sources: list[Source]
     mode: str
     retrieval: dict = {}   # 검색 진단(유사도·BM25·선택된 청크) — 데모에서 근거를 보여주는 용도
+    rewrite: dict = {}     # 질의 재작성 결과(멀티턴). 무엇으로 검색했는지 UI 에 노출한다
 
 
 class FeedbackRequest(BaseModel):
@@ -100,7 +108,7 @@ def topics() -> dict:
         "count": len(files),
         "files": files,
         "code_count": len(code),
-        "suggestions": SUGGESTED_QUESTIONS,
+        "suggestions": list(active_profile().suggestions) or FALLBACK_QUESTIONS,
         "llm": settings.active_llm,
     }
 
@@ -109,7 +117,8 @@ def topics() -> dict:
 def chat(req: ChatRequest) -> ChatResponse:
     from app.rag import answer
 
-    return ChatResponse(**answer(req.question.strip(), dev_mode=req.dev_mode))
+    return ChatResponse(**answer(req.question.strip(), dev_mode=req.dev_mode,
+                                 history=[t.model_dump() for t in req.history]))
 
 
 @app.post("/chat/stream")
@@ -119,9 +128,10 @@ def chat_stream(req: ChatRequest) -> StreamingResponse:
 
     question = req.question.strip()
     dev_mode = req.dev_mode
+    history = [t.model_dump() for t in req.history]
 
     def gen():
-        for ev in stream_answer(question, dev_mode=dev_mode):
+        for ev in stream_answer(question, dev_mode=dev_mode, history=history):
             yield json.dumps(ev, ensure_ascii=False) + "\n"
 
     return StreamingResponse(gen(), media_type="application/x-ndjson; charset=utf-8")
