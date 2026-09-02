@@ -132,7 +132,8 @@ def audit(qs, k: int, spec: L.ModelSpec, limit: Optional[int],
 
     n_cases = len(cases) or 1
     n_judged = len(results)
-    # 표본으로만 판정했으므로 전체 miss 로 외삽한다 — 판정한 것만 세면 과소평가가 된다.
+    # 표본만 판정했으므로 그 비율을 전체 miss 에 적용한다.
+    # 판정한 것만 세면 나머지 miss 를 전부 '진짜 오답'으로 치는 셈이라 과소평가가 된다.
     fn_share_of_miss = (false_neg / n_judged) if n_judged else 0.0
     fn_rate = fn_share_of_miss * n_miss_total / n_cases
     return {
@@ -184,7 +185,8 @@ def main() -> None:
     ap.add_argument("--model", default=DEFAULT_AUDIT_MODEL, help="감사용 판정 모델(생성기와 달라야 함)")
     ap.add_argument("--limit", type=int, default=None, help="감사할 miss 수 상한")
     ap.add_argument("--sample", type=int, default=None,
-                    help="miss 중 무작위 표본 N건만 판정(무료 티어 일일 쿼터 대응). 결과는 전체로 외삽")
+                    help="miss 중 무작위 표본 N건만 판정(무료 티어 일일 쿼터 대응). "
+                         "표본에서 나온 비율을 전체 miss 에 적용해 계산한다")
     ap.add_argument("--seed", type=int, default=20260904)
     ap.add_argument("--apply", action="store_true", help="확인된 추가 정답을 평가셋에 반영")
     args = ap.parse_args()
@@ -204,7 +206,7 @@ def main() -> None:
     print(f"   원래 recall@{k}        {res['raw_recall']:.1%}")
     print(f"   판정한 miss           {res['n_judged']}/{res['n_miss_total']}건 (표본)")
     print(f"   그중 거짓 오답         {res['n_false_negative']}건 = miss 의 {res['fn_share_of_miss']:.1%}")
-    print(f"   거짓 오답률(전체 외삽)  {res['false_negative_rate']:.1%}")
+    print(f"   거짓 오답률(전체 적용)  {res['false_negative_rate']:.1%}")
     print(f"   보정 recall@{k}        {res['corrected_recall']:.1%}  (추정)")
     print("\n   ※ 감사는 검색기가 가져온 것만 후보로 보므로 이 값은 **하한**이다.")
     print("   ※ 절차상 recall 을 올리는 방향으로만 작동한다 — 원래 값과 함께 인용할 것.")
