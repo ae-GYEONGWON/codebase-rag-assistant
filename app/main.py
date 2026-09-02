@@ -19,10 +19,30 @@ from app.profiles import active_profile
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """기동 시 임베딩 모델·Chroma 를 미리 적재(워밍업).
+    """기동 시 첫 질문에 붙는 지연 로딩을 미리 끝낸다.
 
-    지연 로딩이면 첫 질문이 ~18초 걸린다(HF 모델 로드). 미리 데워두면 1~2초.
-    BM25 인덱스 구축도 여기서 함께 끝난다.
+    지연 로딩이면 첫 질문이 ~18초 걸린다(HF 임베딩 모델 로드). 미리 데워두면 1~2초.
+
+    ## 무엇을 데우는가 — 재서 정한 것이지 짐작이 아니다
+
+        검색(임베딩 모델 + Chroma + BM25 인덱스)   5.3s
+        LLM 클라이언트 **객체 생성**               2.1s   ← 이것도 첫 질문에 붙고 있었다
+        LLM 첫 호출 vs 둘째 호출의 차이            0.25s
+
+    검색만 데우던 때 첫 질문 3.5s / 둘째 1.7s 였다. 그 차이의 대부분이 **LLM 객체 생성**이다
+    (`langchain_google_genai` 임포트 + 구글 클라이언트 초기화). 이건 API 호출이 아니라
+    **순수 객체 생성**이라 쿼터를 쓰지 않고 미리 만들 수 있다.
+
+    ## 데우지 않는 것 — 실제 LLM 호출
+
+    첫 호출과 둘째 호출의 차이(TLS 연결 수립 등)는 0.25s 뿐인데, 그걸 없애려면 기동할 때마다
+    Gemini 요청을 하나 태워야 한다. 무료 티어에서 서버를 재시작할 때마다 쿼터를 깎는 대가로는
+    비싸다 → **하지 않는다.**
+
+    ## 실패해도 서버는 뜬다
+
+    워밍업은 최적화지 필수 경로가 아니다. 여기서 예외가 나 서버가 안 뜨면 최적화하려다
+    서비스를 죽이는 것이다 → 잡아서 로그만 남기고 계속 간다.
     """
     from app.retriever import search
 
@@ -31,6 +51,21 @@ async def lifespan(app: FastAPI):
         from app.reranker import warmup as rr_warmup
 
         rr_warmup()
+
+    if settings.active_llm != "extractive":
+        try:
+            from app.rag import _llm
+
+            _llm()                      # lru_cache 에 올려 둔다(호출은 하지 않는다)
+            # 라우터가 켜져 있으면 첫 멀티홉 질문에서 에이전트용 클라이언트가 또 만들어진다.
+            # 툴 바인딩까지 포함해 더 비싸므로 같이 데운다.
+            if settings.use_router or settings.use_agent:
+                from app.agent import _llm_with_tools
+
+                _llm_with_tools()
+        except Exception as e:  # noqa: BLE001 — 워밍업 실패가 기동을 막으면 안 된다
+            print(f"[warmup] LLM 클라이언트 준비 실패({type(e).__name__}) — "
+                  "첫 질문이 2초쯤 느려질 수 있습니다: {e}".format(e=e))
     yield
 
 
