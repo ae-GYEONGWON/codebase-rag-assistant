@@ -44,6 +44,7 @@ REPORTS = EVAL_DIR / "reports"
 PUBLISHED = EVAL_DIR / "published"
 SUMMARY = PUBLISHED / "summary.json"
 DECISIONS = PUBLISHED / "decisions.json"
+STORY = PUBLISHED / "story.json"
 
 
 def _load(name: str) -> Optional[dict]:
@@ -251,8 +252,22 @@ def build() -> dict:
                    "워킹트리를 보므로 커밋마다 커진다. 게이트에는 쓰지 않는다."),
     ) if r]
 
+    story: dict = {}
+    if STORY.exists():
+        story = json.loads(STORY.read_text(encoding="utf-8"))
+        # 장이 참조하는 판단 제목이 실제로 있는지 확인한다. 오타 하나로 카드가
+        # 조용히 사라지면, 그 판단은 화면에서 없었던 일이 된다.
+        titles = {d["title"] for d in decisions}
+        for ch in story.get("chapters", []):
+            unknown = [t for t in ch.get("decisions", []) if t not in titles]
+            if unknown:
+                print(f"[publish] 경고 — {ch['n']}장이 없는 판단을 참조: {unknown}")
+    else:
+        print(f"[publish] 경고 — {STORY.name} 이 없습니다(서사 없이 표만 나갑니다)")
+
     return {
         "generated_at": datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds"),
+        "story": story,
         "git_sha": _git_sha(),
         "retrieval": retrieval,
         # 평범한 문항과 적대적 문항, **둘 다** 싣는다. 하나만 보이면 이야기가 성립하지 않는다 —

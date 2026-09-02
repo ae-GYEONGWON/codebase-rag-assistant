@@ -184,6 +184,63 @@ details.more > summary::before{content:"▸"; font-size:10px; transition:transfo
 details.more[open] > summary::before{transform:rotate(90deg)}
 details.more > summary:hover{text-decoration:underline}
 
+/* --- 도입 --------------------------------------------------------------- */
+.intro{
+  background:var(--c-surface); border:1px solid var(--c-border);
+  border-radius:var(--r-lg); padding:var(--s-5); margin-bottom:var(--s-5);
+}
+.intro p{margin:0 0 var(--s-3); max-width:66ch}
+.intro p:last-child{margin-bottom:0}
+.intro .thesis{
+  border-left:3px solid var(--c-accent); padding-left:var(--s-3);
+  color:var(--c-text); font-weight:500;
+}
+.intro .muted{color:var(--c-text-dim); font-size:14px}
+
+/* --- 장(章) ------------------------------------------------------------- */
+.chapter{margin-top:var(--s-6); padding-top:var(--s-5); border-top:1px solid var(--c-border)}
+.chapter:first-of-type{border-top:0}
+.ch-head{display:flex; gap:var(--s-3); align-items:baseline; margin-bottom:var(--s-4)}
+.ch-num{
+  flex:0 0 auto; font-family:var(--font-mono); font-size:12px; font-weight:700;
+  color:var(--c-accent); background:var(--c-accent-sub);
+  border-radius:var(--r-full); padding:3px 10px; letter-spacing:.02em;
+}
+.ch-head h2{margin:0; font-size:20px}
+
+/* 문제 → 한 일 → 잰 값 → 정한 것.
+   ★ 문제를 맨 위에 둔다. 무슨 문제였는지 모르면 측정값을 읽을 수 없다. */
+.beats{display:grid; gap:var(--s-3); max-width:74ch}
+.beat{display:grid; grid-template-columns:76px 1fr; gap:var(--s-3); align-items:start}
+.beat > .k{
+  font-size:11px; font-weight:700; letter-spacing:.03em; padding-top:4px;
+  color:var(--c-text-mute); text-align:right; white-space:nowrap;
+}
+.beat > .v{margin:0; line-height:1.7}
+.beat.problem > .k{color:var(--c-warn)}
+.beat.problem > .v{
+  background:var(--c-warn-bg); border-radius:var(--r-md); padding:10px 12px;
+  border:1px solid color-mix(in srgb, var(--c-warn) 20%, transparent);
+}
+.beat.decided > .k{color:var(--c-ok)}
+.beat.decided > .v{font-weight:500}
+.beat .v b{color:var(--c-text)}
+.ch-aside{
+  margin-top:var(--s-3); font-size:13px; color:var(--c-text-dim);
+  border-left:2px solid var(--c-border); padding-left:var(--s-3); max-width:74ch;
+}
+.ch-evidence{margin-top:var(--s-4)}
+.ch-decisions{margin-top:var(--s-4)}
+.ch-decisions > .lead{font-size:12.5px; color:var(--c-text-mute); margin:0 0 var(--s-2)}
+
+.closing{
+  margin-top:var(--s-6); padding:var(--s-5); border-radius:var(--r-lg);
+  background:var(--c-accent-sub); border:1px solid color-mix(in srgb, var(--c-accent) 22%, transparent);
+}
+.closing h2{margin:0 0 var(--s-3)}
+.closing p{margin:0 0 var(--s-3); max-width:70ch; line-height:1.75}
+.closing p:last-child{margin-bottom:0}
+
 /* 최상단 요약 — 30초 훑는 사람이 보는 것은 사실상 이 줄뿐이다 */
 .hero{
   display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
@@ -199,10 +256,10 @@ details.more > summary:hover{text-decoration:underline}
 <div class="wrap">
   <div class="top">
     <div>
-      <h1>측정 결과</h1>
+      <h1>만들고, 재고, 다시 잰 기록</h1>
       <p class="lede">
-        이 프로젝트에서 실제로 시간을 쓴 곳은 챗봇이 아니라 <b>평가 체계</b>다.
-        아래는 그 결과이고, <b>기각한 판단</b>을 채택한 것과 나란히 싣는다.
+        숫자가 나올 때마다 그 숫자를 의심하고 한 단계씩 더 파고든 과정입니다.
+        <b>제 진단이 틀렸던 두 번</b>도 지우지 않고 남겼습니다.
       </p>
     </div>
     <a class="back" href="/">← 데모로</a>
@@ -236,9 +293,9 @@ const el = (tag, cls, html) => {
 };
 
 /* 검색 평가 — 리트리버 비교표. '운영 파이프라인' 행을 강조해 무엇이 실제 경로인지 보인다. */
-function renderRetrieval(list) {
+function renderRetrieval(list, bare) {
   const sec = el('section');
-  sec.innerHTML =
+  sec.innerHTML = bare ? '' :
     '<h2>검색 정확도<span class="num">recall@5 · MRR</span></h2>' +
     '<p class="sub">같은 문항을 검색 방식만 바꿔 돌린 결과다. ' +
     '<b>코퍼스와 문항 수가 다르면 서로 비교하지 않는다</b> — 아래 네 벌은 각각 다른 조건이다.</p>' +
@@ -301,9 +358,9 @@ function renderRetrieval(list) {
 /* 채점자 패널 — 이 프로젝트에서 가장 중요한 표. 평균이 아니라 '합의'를 봐야 한다.
    ★ 용어는 '채점자' 하나로 통일한다. 같은 것을 '판정기'와 '채점자'로 번갈아 부르면
       읽는 사람이 둘이 다른 것인 줄 안다 — 어려운 단어보다 이 쪽이 더 해롭다. */
-function renderJudges(j, hard) {
+function renderJudges(j, hard, bare) {
   const sec = el('section');
-  sec.innerHTML =
+  sec.innerHTML = bare ? '' :
     '<h2>LLM 채점자를 검증했다<span class="num">평가자 자체를 잰다</span></h2>' +
     '<p class="sub">답변이 근거에 충실한지를 LLM 에게 채점시킨다(LLM-as-judge). ' +
     '그 <b>채점자를 믿을 수 있는지</b>를 확인하려고, 답변과 근거를 ' +
@@ -370,7 +427,7 @@ function renderJudges(j, hard) {
 }
 
 /* 적대적 평가 — 지표를 바꾸고 나서야 변별했다는 것을 보이는 자리. 실패 사례를 숨기지 않는다. */
-function renderHard(h) {
+function renderHard(h, bare) {
   const sec = el('section');
   // 덫 이름을 영어 그대로 두면(absent/partial/superseded) 처음 보는 사람은 못 읽는다.
   const kname = {absent: '없는 것을 물음', partial: '절반만 근거 있음',
@@ -379,7 +436,7 @@ function renderHard(h) {
                  superseded: '바뀌기 전 값이 튀어나오기 쉽다'};
   const right = {absent: '없다고 밝혀야 통과', partial: '있는 쪽만 답해야 통과',
                  superseded: '현재 값을 답해야 통과'};
-  sec.innerHTML =
+  sec.innerHTML = bare ? '' :
     '<h2>환각을 유도하고, 행동으로 채점했다<span class="num">' + h.n + '문항</span></h2>' +
     '<p class="sub">답이 <b>없거나 절반만 있는</b> 질문을 일부러 만들어, 시스템이 ' +
     '지어내는지 봤다. 덫 종류마다 <b>통과 조건을 따로</b> 뒀다 — 위의 groundedness 로 재면 ' +
@@ -423,9 +480,9 @@ function renderHard(h) {
 }
 
 /* ANN 임계 — 브루트포스가 의도된 선택임을 수치로. 합성/실측을 나눈 이유도 함께. */
-function renderAnn(a) {
+function renderAnn(a, bare) {
   const sec = el('section');
-  sec.innerHTML =
+  sec.innerHTML = bare ? '' :
     '<h2>브루트포스는 언제까지 버티나<span class="num">전환 임계 실측</span></h2>' +
     '<p class="sub">벡터 검색을 <b>전수 매칭</b>(모든 문서와 하나하나 비교)으로 한다. ' +
     '보통은 근사 검색(ANN)을 쓰는데, 그게 게으름이 아니라 선택임을 N 을 키워 가며 쟀다.</p>' +
@@ -491,28 +548,112 @@ function renderDecisions(list) {
     '<b>Decision</b> 그래서 내린 결정. 맨 아래 링크는 그 판단이 기록된 ' +
     '엔지니어링 노트 또는 커밋이다.</p>';
 
-  list.forEach(d => {
-    const rejected = d.verdict.includes('기각');
-    const card = el('div', 'card dec ' + (rejected ? 'reject' : 'adopt'));
-    card.innerHTML =
-      `<div class="dec-head"><h3>${esc(d.title)}</h3>` +
-      `<span class="pill ${rejected ? 'warn' : 'ok'}">${esc(d.verdict)}</span></div>` +
-      `<dl>` +
-      `<dt>Measured</dt><dd class="mono">${esc(d.measured)}</dd>` +
-      `<dt>Why</dt><dd>${mdLite(d.why)}</dd>` +
-      `<dt>Decision</dt><dd>${mdLite(d.action)}</dd>` +
-      `</dl>` +
-      // 근거는 번호가 아니라 **제목**으로 보여주고 원문으로 링크한다.
-      // '노트 #7' 은 처음 보는 사람에게 아무 뜻도 없는 기호다.
-      ((d.notes && d.notes.length)
-        ? `<div class="src">` + d.notes.map(n =>
-            `<a class="src-link" href="${esc(n.url)}" target="_blank" rel="noopener">` +
-            `<span class="tag">${esc(n.label)}</span>` +
-            `<span class="ttl">${esc(n.title)}</span></a>`).join('') + `</div>`
-        : '');
-    sec.appendChild(card);
-  });
+  list.forEach(d => sec.appendChild(decisionCard(d)));
   return sec;
+}
+
+/* 판단 카드 하나. 순서가 중요하다 — **Problem 을 맨 위에** 둔다.
+   무슨 문제였는지 모르는 채로 측정값을 먼저 보면 "이걸 왜 쟀지?" 를 스스로 채워야 한다. */
+function decisionCard(d) {
+  const rejected = d.verdict.includes('기각');
+  const card = el('div', 'card dec ' + (rejected ? 'reject' : 'adopt'));
+  card.innerHTML =
+    `<div class="dec-head"><h3>${esc(d.title)}</h3>` +
+    `<span class="pill ${rejected ? 'warn' : 'ok'}">${esc(d.verdict)}</span></div>` +
+    `<dl>` +
+    (d.problem ? `<dt>Problem</dt><dd>${mdLite(d.problem)}</dd>` : '') +
+    `<dt>Measured</dt><dd class="mono">${esc(d.measured)}</dd>` +
+    `<dt>Why</dt><dd>${mdLite(d.why)}</dd>` +
+    `<dt>Decision</dt><dd>${mdLite(d.action)}</dd>` +
+    `</dl>` +
+    // 근거는 번호가 아니라 **제목**으로 보여주고 원문으로 링크한다.
+    // '노트 #7' 은 처음 보는 사람에게 아무 뜻도 없는 기호다.
+    ((d.notes && d.notes.length)
+      ? `<div class="src">` + d.notes.map(n =>
+          `<a class="src-link" href="${esc(n.url)}" target="_blank" rel="noopener">` +
+          `<span class="tag">${esc(n.label)}</span>` +
+          `<span class="ttl">${esc(n.title)}</span></a>`).join('') + `</div>`
+      : '');
+  return card;
+}
+
+/* 장이 참조하는 근거를 무엇으로 그릴지. 표를 뒤로 몰지 않고 **그 장 안에** 붙인다. */
+const EVIDENCE = {
+  private:          d => pickRetrieval(d, 'private'),
+  'eval-synthetic': d => pickRetrieval(d, 'eval-synthetic'),
+  judges:           d => (d.judges || d.judges_hard) ? renderJudges(d.judges, d.judges_hard, true) : null,
+  hard:             d => d.hard ? renderHard(d.hard, true) : null,
+  ann:              d => d.ann ? renderAnn(d.ann, true) : null,
+};
+
+function pickRetrieval(d, key) {
+  const one = (d.retrieval || []).filter(r => r.key === key);
+  return one.length ? renderRetrieval(one, true) : null;
+}
+
+/* 도입 — 이게 무엇인지 어려운 말 없이. 이걸 안 두면 숫자부터 보게 된다. */
+function renderIntro(intro) {
+  const box = el('section', 'intro');
+  box.innerHTML =
+    `<p>${mdLite(intro.what)}</p>` +
+    `<p class="muted">${mdLite(intro.example)}</p>` +
+    `<p>${mdLite(intro.twist)}</p>` +
+    `<p class="thesis">${mdLite(intro.thesis)}</p>`;
+  return box;
+}
+
+/* 장 하나 — 문제 → 한 일 → 잰 값 → 정한 것, 그리고 그 자리에 근거를 붙인다. */
+function renderChapter(ch, data) {
+  const sec = el('section', 'chapter');
+  sec.innerHTML =
+    `<div class="ch-head"><span class="ch-num">${ch.n}장</span>` +
+    `<h2>${esc(ch.title)}</h2></div>`;
+
+  const beats = el('div', 'beats');
+  const beat = (cls, key, text) => {
+    if (!text) return;
+    const b = el('div', 'beat ' + cls);
+    // 줄바꿈은 문단으로 — 한 덩어리로 붙으면 '그런데' 이후가 안 보인다.
+    b.innerHTML = `<div class="k">${esc(key)}</div><div class="v">` +
+      String(text).split('\n').map(t => `<p style="margin:0 0 6px">${mdLite(t)}</p>`).join('') +
+      `</div>`;
+    beats.appendChild(b);
+  };
+  beat('problem', '무슨 문제', ch.problem);
+  beat('did', '한 일', ch.did);
+  beat('measured', '잰 값', ch.measured);
+  beat('decided', '정한 것', ch.decided);
+  sec.appendChild(beats);
+
+  if (ch.aside) sec.appendChild(el('div', 'ch-aside', mdLite(ch.aside)));
+
+  // 근거를 이 자리에 붙인다. 뒤로 몰면 서술에서 떨어져 나간다.
+  const ev = EVIDENCE[ch.evidence];
+  if (ev) {
+    const box = el('div', 'ch-evidence');
+    const node = ev(data);
+    if (node) box.appendChild(node);
+    sec.appendChild(box);
+  }
+
+  const picked = (ch.decisions || [])
+    .map(t => (data.decisions || []).find(d => d.title === t))
+    .filter(Boolean);
+  if (picked.length) {
+    const box = el('div', 'ch-decisions');
+    box.appendChild(el('p', 'lead',
+      '이 장에서 붙였다가 <b>재 보고 정한</b> 것 ' + picked.length + '건'));
+    picked.forEach(d => box.appendChild(decisionCard(d)));
+    sec.appendChild(box);
+  }
+  return sec;
+}
+
+function renderClosing(c) {
+  const box = el('section', 'closing');
+  box.innerHTML = `<h2>${esc(c.title)}</h2>` +
+    String(c.body).split('\n\n').map(t => `<p>${mdLite(t)}</p>`).join('');
+  return box;
 }
 
 /* 최상단 요약 — 이 페이지에서 딱 한 줄만 읽는다면 이것이어야 한다. */
@@ -578,14 +719,29 @@ async function main() {
 
   root.innerHTML = '';
 
-  // 순서는 '강한 것부터'다. 처음에는 검색 표(58행)를 맨 위에 뒀는데, 그러면 이 페이지의
-  // 결론부인 '기각 판단'이 스크롤 맨 아래로 밀린다 — 30초 훑는 사람에게는 없는 것과 같다.
+  // 순서 = 이야기 순서. 사실을 종류별로 모아 두면 각 조각은 맞는데 **왜 그 순서인지**가
+  // 없어서, 읽는 사람이 흐름을 스스로 만들어야 한다.
+  const story = d.story || {};
+  if (story.intro) root.appendChild(renderIntro(story.intro));
   root.appendChild(renderHero(d));
-  if (d.decisions && d.decisions.length) root.appendChild(renderDecisions(d.decisions));
-  if (d.judges || d.judges_hard) root.appendChild(renderJudges(d.judges, d.judges_hard));
-  if (d.hard) root.appendChild(renderHard(d.hard));
-  if (d.retrieval && d.retrieval.length) root.appendChild(renderRetrieval(d.retrieval));
-  if (d.ann) root.appendChild(renderAnn(d.ann));
+
+  const chapters = story.chapters || [];
+  chapters.forEach(ch => root.appendChild(renderChapter(ch, d)));
+  if (story.closing) root.appendChild(renderClosing(story.closing));
+
+  // 장에서 다루지 않은 나머지는 뒤에 모아 둔다 — 조용히 사라지면 안 된다.
+  const shown = new Set(chapters.flatMap(c => c.decisions || []));
+  const rest = (d.decisions || []).filter(x => !shown.has(x.title));
+  if (rest.length) root.appendChild(renderDecisions(rest));
+
+  const usedEv = new Set(chapters.map(c => c.evidence).filter(Boolean));
+  const restRet = (d.retrieval || []).filter(r => !usedEv.has(r.key));
+  if (restRet.length) {
+    const more = el('details', 'more');
+    more.innerHTML = `<summary>나머지 평가셋 ${restRet.length}벌도 보기</summary>`;
+    more.appendChild(renderRetrieval(restRet, true));
+    root.appendChild(more);
+  }
 }
 
 main();
