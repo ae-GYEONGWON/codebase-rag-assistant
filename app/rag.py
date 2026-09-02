@@ -126,37 +126,83 @@ def _messages(question: str, docs: List[Document], dev_mode: bool = False, turns
     msgs.append(HumanMessage(content=f"[근거]\n{_format_context(docs)}\n\n[질문]\n{question}"))
     return msgs
 
-def answer(question: str, dev_mode: bool = False, history=None) -> Dict[str, Any]:
-    """질문 → {answer, sources, mode, retrieval, rewrite} (비스트리밍)."""
+def _route_info(route) -> Dict[str, Any]:
+    """경로 선택을 응답에 실어 보낸다 — 왜 느렸는지/빨랐는지가 화면에서 보여야 한다."""
+    return {"mode": route.mode, "reason": route.reason, "axes": list(route.axes)}
+
+
+def answer(question: str, dev_mode: bool = False, history=None,
+           route: str | None = None) -> Dict[str, Any]:
+    """질문 → {answer, sources, mode, retrieval, rewrite, route} (비스트리밍).
+
+    `route` 로 경로를 강제할 수 있다("single" | "agent"). 지정하지 않으면 라우터가
+    질문을 보고 고른다(app/router.py) — 축을 둘 이상 물으면 에이전트, 아니면 단발.
+    """
     from app.conversation import parse_history, rewrite_query
+    from app.router import decide
 
     turns = parse_history(history)
     query, rw = rewrite_query(question, turns)
 
+    # 재작성된 질의로 판단한다 — 후속 질문("그건 왜 바뀌었어?")은 원문만 보면
+    # 축이 하나로 보이지만, 재작성하면 무엇을 묻는지가 드러난다.
+    chosen = decide(query, force=route)
+    if chosen.uses_agent:
+        from app.agent import answer as agent_answer
+
+        res = agent_answer(query, dev_mode)
+        res.setdefault("retrieval", {})
+        res["rewrite"] = rw
+        res["route"] = {"mode": chosen.mode, "reason": chosen.reason,
+                        "axes": list(chosen.axes)}
+        return res
+
     docs, debug = search(query)
     if not docs:
         return {"answer": OUT_OF_SCOPE, "sources": [], "mode": "no_hit",
-                "retrieval": debug, "rewrite": rw}
+                "retrieval": debug, "rewrite": rw, "route": _route_info(chosen)}
 
     sources = snippets_for(docs, query)  # 순서 = 프롬프트의 [문서 N] = 답변의 [n]
     provider = settings.active_llm
     if provider == "extractive":
         return {"answer": _extractive_text(docs), "sources": sources, "mode": "extractive",
-                "retrieval": debug, "rewrite": rw}
+                "retrieval": debug, "rewrite": rw, "route": _route_info(chosen)}
 
     resp = _llm().invoke(_messages(question, docs, dev_mode, turns))
     return {"answer": _text_of(resp.content), "sources": sources, "mode": provider,
-            "retrieval": debug, "rewrite": rw}
+            "retrieval": debug, "rewrite": rw, "route": _route_info(chosen)}
 
 
-def stream_answer(question: str, dev_mode: bool = False, history=None) -> Iterator[Dict[str, Any]]:
+def stream_answer(question: str, dev_mode: bool = False, history=None,
+                  route: str | None = None) -> Iterator[Dict[str, Any]]:
     """질문 → 이벤트 스트림. 각 이벤트: {type: rewrite|sources|token|done|error, ...}."""
     from app.conversation import parse_history, rewrite_query
+
+    from app.router import decide
 
     turns = parse_history(history)
     query, rw = rewrite_query(question, turns)
     # 무엇으로 검색했는지 먼저 알린다 — 답이 나오기 전에 보여야 사용자가 맥락을 잡는다.
     yield {"type": "rewrite", **rw}
+
+    chosen = decide(query, force=route)
+    yield {"type": "route", **_route_info(chosen)}
+    if chosen.uses_agent:
+        # 에이전트는 툴 호출 루프라 토큰 단위 스트리밍이 없다. 지연이 ~10초이므로
+        # 경로를 먼저 알려(위 route 이벤트) 사용자가 왜 기다리는지 알게 한 뒤 한 번에 보낸다.
+        from app.agent import answer as agent_answer
+
+        try:
+            res = agent_answer(query, dev_mode)
+        except Exception as e:  # noqa: BLE001
+            yield {"type": "error", "message": f"에이전트 오류: {e}"}
+            return
+        yield {"type": "sources", "sources": res.get("sources", [])}
+        yield {"type": "token", "text": res.get("answer", "")}
+        yield {"type": "done", "mode": res.get("mode", "agent"),
+               "retrieval": res.get("retrieval", {}),
+               "trace": res.get("trace", []), "llm_calls": res.get("llm_calls")}
+        return
 
     docs, debug = search(query)
 

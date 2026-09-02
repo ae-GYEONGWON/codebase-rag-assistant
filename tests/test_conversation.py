@@ -114,3 +114,82 @@ def test_재작성_실패해도_예외를_밖으로_던지지_않는다(monkeypa
 def test_히스토리_포맷은_역할을_한국어로_표기한다():
     text = format_history([Turn("user", "질문"), Turn("assistant", "답변")])
     assert text == "사용자: 질문\n어시스턴트: 답변"
+
+
+# --- 재작성이 사실을 지어내는 것 막기 (2026-09-02, 데모에서 실제로 발생) ------
+
+from app.conversation import invented_facts
+
+
+def _t(role, content):
+    return Turn(role, content)
+
+
+def test_없던_숫자를_넣으면_지어낸_것으로_본다():
+    # 실제 사례: "MMR 계수를 왜 그렇게 정했고" → "MMR 계수를 왜 0.5로 설정했고"
+    # 재작성된 질의로 검색하므로, 이건 문장이 어색한 정도가 아니라 검색을 망친다.
+    turns = [_t("user", "리랭커를 왜 껐어?"), _t("assistant", "코드 질문 정확도가 떨어져서요.")]
+    got = invented_facts("MMR 계수를 왜 0.5로 설정했어?", "MMR 계수를 왜 그렇게 정했어?", turns)
+    assert "0.5" in got
+
+
+def test_대화에_있던_숫자는_지어낸_것이_아니다():
+    turns = [_t("assistant", "mmr_lambda 는 1.0 으로 두었습니다.")]
+    assert invented_facts("mmr_lambda 를 왜 1.0 으로 뒀어?", "그걸 왜 그렇게 뒀어?", turns) == []
+
+
+def test_표기가_흔들려도_정수부가_있으면_통과():
+    # "5건" → "5.0" 처럼 모델이 표기를 바꾸는 것까지 창작으로 보면 과잉 차단이 된다.
+    turns = [_t("assistant", "상위 5건을 봅니다.")]
+    assert invented_facts("상위 5.0건이 뭐야?", "그게 뭐야?", turns) == []
+
+
+def test_없던_식별자를_넣으면_지어낸_것으로_본다():
+    turns = [_t("assistant", "리랭커는 껐습니다.")]
+    assert "app/nonexistent.py" in invented_facts(
+        "app/nonexistent.py 에서 왜 껐어?", "그걸 왜 껐어?", turns)
+
+
+def test_대화에_있던_식별자로_치환하는_것이_재작성의_본래_일이다():
+    turns = [_t("assistant", "app/retriever.py 의 search 함수에서 처리합니다.")]
+    assert invented_facts("app/retriever.py 의 search 함수는 뭘 해?", "그건 뭘 해?", turns) == []
+
+
+class _FakeLLM:
+    """재작성 모델을 대신한다 — 정해진 문자열만 돌려준다(네트워크·쿼터 없이 경로를 고정)."""
+
+    def __init__(self, text):
+        self._text = text
+
+    def invoke(self, prompt):
+        class _Resp:
+            content = self._text
+        return _Resp()
+
+
+def _run_rewrite(monkeypatch, llm_output, question, turns):
+    import app.conversation as C
+    import app.rag as R
+
+    # active_llm 은 읽기 전용 property 라 provider 쪽을 바꾼다.
+    monkeypatch.setattr(C.settings, "llm_provider", "gemini")
+    monkeypatch.setattr(R, "_llm", lambda: _FakeLLM(llm_output))
+    return C.rewrite_query(question, turns)
+
+
+def test_지어낸_재작성은_버리고_원문으로_검색한다(monkeypatch):
+    # 재작성이 실패해도 멀티턴 이전 동작(원문 검색)으로 안전하게 떨어져야 한다.
+    turns = [_t("user", "리랭커 얘기"), _t("assistant", "네.")]
+    q, info = _run_rewrite(monkeypatch, "MMR 계수를 왜 0.5로 정했어?",
+                           "그건 왜 그렇게 정했어?", turns)
+    assert q == "그건 왜 그렇게 정했어?"          # 원문으로 되돌아간다
+    assert info["skipped"] == "invented_facts"
+    assert "0.5" in info["invented"]
+
+
+def test_정상적인_재작성은_그대로_쓴다(monkeypatch):
+    turns = [_t("user", "리랭커를 왜 껐어?"),
+             _t("assistant", "app/retriever.py 의 search 에서 껐습니다.")]
+    q, info = _run_rewrite(monkeypatch, "리랭커를 왜 껐어?", "그건 왜 그랬어?", turns)
+    assert q == "리랭커를 왜 껐어?"
+    assert info["applied"] is True and info.get("invented") is None

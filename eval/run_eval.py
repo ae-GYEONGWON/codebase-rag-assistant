@@ -68,6 +68,23 @@ def _without_reranker(fn: Callable[[str, int], List[str]]) -> Callable[[str, int
     return wrapped
 
 
+def _with_intent(fn: Callable[[str, int], List[str]], on: bool) -> Callable[[str, int], List[str]]:
+    """의도 라우팅을 강제로 켜거나 끈 변형 — 장치의 기여를 분리해 재기 위한 것.
+
+    `settings` 를 임시로 바꿨다가 되돌린다. 기본값을 바꿔 가며 두 번 돌리면
+    코퍼스 로딩까지 다시 하게 되고, 그 사이 무엇이 달라졌는지 보증할 수 없다.
+    """
+    def wrapped(question: str, k: int) -> List[str]:
+        prev = settings.use_intent_routing
+        settings.use_intent_routing = on
+        try:
+            return fn(question, k)
+        finally:
+            settings.use_intent_routing = prev
+
+    return wrapped
+
+
 def retrieve_rrf_no_mmr(question: str, k: int) -> List[str]:
     """MMR 을 뺀 순수 RRF — MMR 이 실제로 기여하는지 분리 측정용."""
     docs, embs, bm25 = _corpus()
@@ -246,7 +263,10 @@ def main() -> None:
         "vector only": _without_reranker(retrieve_vector),
         "bm25 only": _without_reranker(retrieve_bm25),
         "hybrid RRF": _without_reranker(retrieve_rrf_no_mmr),
-        "운영 파이프라인": _without_reranker(retrieve_hybrid),
+        # 심볼 슬롯까지 = 예전의 '운영 파이프라인'. 의도 라우팅 도입 전 기준선으로 남긴다.
+        "+심볼슬롯": _with_intent(_without_reranker(retrieve_hybrid), False),
+        # 지금의 운영 파이프라인. 문서·커밋 질문에서는 심볼 슬롯을 끈다(app/intent.py).
+        "운영 파이프라인": _with_intent(_without_reranker(retrieve_hybrid), True),
     }
     if args.rerank:
         # 리랭커를 강제로 켠 변형(설정과 무관하게 비교용)
@@ -288,7 +308,8 @@ def main() -> None:
         suite = rp.Suite(title=title, n=len(cases))
         report.suites.append(suite)
         print(f"\n■ {title} — {len(cases)}문항, k={k}\n")
-        print("   (운영 파이프라인 = RRF + 심볼슬롯 + MMR(lambda=1.0 -> no-op) + 범위밖 게이트)")
+        print("   (운영 파이프라인 = RRF + 의도 라우팅된 심볼슬롯 + MMR(lambda=1.0 -> no-op) + 범위밖 게이트)")
+        print("   (+심볼슬롯 = 라우팅 없이 항상 켠 상태 — 의도 라우팅의 기여를 분리해 보는 기준선)")
         print(f"{'retriever':<16}{'recall@k':>10}{'MRR':>8}   miss")
         print("-" * 64)
         for name, fn in retrievers.items():

@@ -19,6 +19,7 @@ from langchain_core.documents import Document
 from rank_bm25 import BM25Okapi
 
 from app.config import settings
+from app.profiles import active_profile
 from app.embeddings import get_embeddings
 from app.ingest import get_vectorstore
 
@@ -33,25 +34,38 @@ _ID_TOKEN_RE = re.compile(r"[a-zA-Z][a-zA-Z0-9_]*")
 
 
 def _tokenize(text: str) -> List[str]:
-    """형태소 분석기 없이 쓰는 경량 토크나이저.
+    """BM25 토크나이저. 구현은 app/tokenizer.py 가 설정(`TOKENIZER`)에 따라 고른다.
 
-    한글은 조사·어미가 붙어 그대로 매칭하면 '모드는' != '모드' 로 어긋난다.
-    → 한글 덩어리는 **문자 2-gram** 으로도 펼쳐 부분 일치를 잡는다.
+    여기에 직접 두지 않는 이유는 **갈아끼우고 비교하기 위해서**다 — 문자 2-gram 근사와
+    형태소 분석기 중 어느 쪽이 나은지는 코퍼스에 달렸고, 그건 재 봐야 안다(노트 #13).
     """
-    tokens: List[str] = []
-    for tok in _TOKEN_RE.findall(text.lower()):
-        tokens.append(tok)
-        if not tok.isascii() and len(tok) > 1:
-            tokens.extend(tok[i : i + 2] for i in range(len(tok) - 1))
-        elif "_" in tok:
-            # snake_case 식별자는 조각으로도 색인. 파일명 composite_m9s5 를 통째 토큰으로만
-            # 두면 "composite m9s5" 질의가 어디에도 걸리지 않는다(본문 표기는 'm=9 / s=5').
-            tokens.extend(p for p in tok.split("_") if p)
-    return tokens
+    from app.tokenizer import tokenize
+
+    return tokenize(text)
 
 
-@lru_cache(maxsize=1)
-def _corpus() -> Tuple[List[Document], np.ndarray, BM25Okapi]:
+def _index_version() -> str:
+    """현재 인덱스의 버전 토큰. 캐시 키로 쓰여 **재기동 없는 갱신**을 만든다.
+
+    인덱서가 쓰기를 끝낼 때 도장을 찍고(app/index_state.py), 여기서 그 값을 읽어
+    lru_cache 키로 넘긴다. 토큰이 바뀌면 캐시가 자연히 미스가 나 새로 만들어진다.
+    파일 하나 읽는 비용이라 검색 지연(5ms)에 묻힌다.
+    """
+    from app import index_state
+
+    from app.tokenizer import name as tokenizer_name
+
+    prof = active_profile()
+    # 토크나이저가 캐시 키에 들어가는 이유: BM25 인덱스가 토크나이저에 종속된다.
+    # 빼먹으면 TOKENIZER 를 바꿔도 예전 BM25 인덱스를 그대로 써서 비교가 거짓이 된다.
+    return (f"{prof.collection_name}@"
+            f"{index_state.version(prof.chroma_dir, prof.collection_name)}"
+            f"#{tokenizer_name()}")
+
+
+# 캐시는 2벌까지 — 갱신 직후 옛 버전이 남아 메모리를 두 배로 물지 않게 한다.
+@lru_cache(maxsize=2)
+def _corpus_at(version: str) -> Tuple[List[Document], np.ndarray, BM25Okapi]:
     """Chroma 에 인덱싱된 청크 전체 + 정규화 임베딩 행렬 + BM25 인덱스.
 
     임베딩을 Chroma 에서 그대로 꺼내 쓰므로 재계산 비용이 없다(956청크 × 768dim ≈ 3MB).
@@ -77,14 +91,22 @@ def _corpus() -> Tuple[List[Document], np.ndarray, BM25Okapi]:
     return docs, embs, bm25
 
 
-@lru_cache(maxsize=1)
-def _symbol_index() -> List[tuple]:
+def _corpus() -> Tuple[List[Document], np.ndarray, BM25Okapi]:
+    """활성 프로필·현재 인덱스 버전의 코퍼스. 인덱스가 바뀌면 알아서 다시 만든다."""
+    return _corpus_at(_index_version())
+
+
+@lru_cache(maxsize=2)
+def _symbol_index_at(version: str) -> List[tuple]:
     """(소문자 심볼명, 청크 인덱스) 목록 — 코드 청크의 함수/메서드명 정확 매칭용.
 
     코드 본문은 영어 식별자뿐이라 한국어 질문과 임베딩 유사도가 낮아 검색에서 밀린다.
     질문에 심볼명이 그대로 등장하면("apply_retry_policy 함수?") 그 청크를 강제로 끌어올린다.
+
+    ★ 청크 **인덱스**를 담으므로 `_corpus_at` 과 **같은 버전**이어야 한다. 버전이 어긋나면
+      엉뚱한 청크를 가리킨다 — 그래서 캐시 키를 공유한다.
     """
-    docs, _, _ = _corpus()
+    docs, _, _ = _corpus_at(version)
     out = []
     for i, d in enumerate(docs):
         if d.metadata.get("doc_type") != "code":
@@ -96,6 +118,10 @@ def _symbol_index() -> List[tuple]:
             if c and c != "module":
                 out.append((c, i))
     return out
+
+
+def _symbol_index() -> List[tuple]:
+    return _symbol_index_at(_index_version())
 
 
 def _symbol_hits(question: str) -> List[int]:
@@ -263,10 +289,19 @@ def search(
 
     picked = _mmr(cands, embs, rel, k, settings.mmr_lambda)
 
-    # 심볼 정확매칭 청크를 top-k 에 최대 _SYMBOL_SLOTS 개 보장(융합점수 순). 나머지 슬롯은
+    # 심볼 정확매칭 청크를 top-k 에 최대 n_slots 개 보장(융합점수 순). 나머지 슬롯은
     # 일반 검색 결과 유지 → "batch_deadline 시각?"(정답=문서)이 코드에 독점당하지 않게.
-    if sym_hits:
-        extra = [i for i in sorted(sym_hits, key=lambda i: -fused.get(i, 0.0)) if i not in picked][:_SYMBOL_SLOTS]
+    #
+    # n_slots 는 **질문의 의도**가 정한다. 문서·커밋을 묻는 질문에서는 0 으로 내려
+    # 식별자가 섞여 있어도 설계 노트를 밀어내지 않게 한다(노트 #17 의 숙제 → app/intent.py).
+    n_slots, intent = _SYMBOL_SLOTS, None
+    if settings.use_intent_routing:
+        from app.intent import symbol_slots_for
+
+        n_slots, intent = symbol_slots_for(question, _SYMBOL_SLOTS)
+
+    if sym_hits and n_slots:
+        extra = [i for i in sorted(sym_hits, key=lambda i: -fused.get(i, 0.0)) if i not in picked][:n_slots]
         if extra:
             picked = extra + [p for p in picked if p not in extra]
             picked = picked[:k]
@@ -276,6 +311,11 @@ def search(
     debug = {
         "reason": "hit",
         "reranked": bool(rr_scores),
+        # 어떤 의도로 읽혔고 그래서 무엇이 켜졌는지 — UI 진단 패널과 평가에서 함께 본다.
+        "intent": (None if intent is None else
+                   {"axis": intent.name, "reason": intent.reason,
+                    "hits": list(intent.hits)[:4], "symbol_slots": n_slots}),
+        "symbol_hits": len(sym_hits),
         "best_similarity": round(best_sim, 3),
         "best_bm25": round(best_bm, 2),
         "picked": [

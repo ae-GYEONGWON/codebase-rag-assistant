@@ -61,6 +61,14 @@ _DEPENDENT_HINTS = re.compile(
 )
 
 
+# 재작성이 **지어낼 수 있는 것**을 잡아내는 패턴.
+#   숫자      — 임계값·비율·버전. 지어내면 검색이 없는 값을 쫓는다.
+#   식별자    — 파일·함수·설정 이름. 지어내면 없는 코드를 찾으러 간다.
+# 3자 미만 식별자는 제외한다(조사·관사 수준의 잡음이 섞인다).
+_NUMBER_RE = re.compile(r"\d+(?:\.\d+)?")
+_IDENT_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_./]{2,}")
+
+
 @dataclass
 class Turn:
     role: str      # user | assistant
@@ -93,6 +101,43 @@ def looks_dependent(question: str) -> bool:
     return bool(_DEPENDENT_HINTS.search(q))
 
 
+def invented_facts(rewritten: str, question: str, turns: List[Turn]) -> List[str]:
+    """재작성이 **대화에 없던 숫자·식별자**를 새로 넣었으면 그 목록을 돌려준다.
+
+    ## 왜 프롬프트로는 부족한가
+
+    재작성 프롬프트에는 이미 "새로운 정보를 추가하지 마세요"가 있다. 그런데도 실제 데모에서
+    이런 일이 났다.
+
+        질문   "MMR 계수를 왜 그렇게 정했고 코드에서는 어떻게 구현돼 있어?"
+        재작성 "MMR 계수를 왜 **0.5로** 설정했고, …"        ← 0.5 는 아무 데도 없다(실제 값 1.0)
+
+    재작성된 질의로 **검색을 하기 때문에** 이건 그냥 어색한 문장이 아니다. 검색기가 존재하지
+    않는 값을 쫓게 되고, 그 결과로 고른 근거 위에서 답이 만들어진다. 지시를 지키라고 부탁하는
+    것으로는 막히지 않았으므로 **검증**으로 막는다.
+
+    ## 판정 기준
+
+    재작성이 하는 일은 지시대명사를 앞 대화의 **실제 대상으로 치환**하는 것이다. 그렇다면
+    결과에 나오는 숫자·식별자는 전부 원문 질문이나 대화에 이미 있어야 한다. 없다면
+    치환이 아니라 창작이다.
+
+    보수적으로 본다 — 애매하면 재작성을 버리고 원문으로 검색한다. 그건 멀티턴 도입 이전의
+    동작이라 최악이라도 '예전만큼'이지 더 나빠지지 않는다.
+    """
+    haystack = " ".join([question] + [t.content for t in turns]).lower()
+
+    invented: List[str] = []
+    for tok in _NUMBER_RE.findall(rewritten):
+        # 숫자는 표기가 흔들린다(1.0 ↔ 1). 정수부만이라도 있으면 지어낸 것으로 보지 않는다.
+        if tok.lower() not in haystack and tok.split(".")[0] not in haystack:
+            invented.append(tok)
+    for tok in _IDENT_RE.findall(rewritten):
+        if tok.lower() not in haystack:
+            invented.append(tok)
+    return invented
+
+
 def format_history(turns: List[Turn]) -> str:
     label = {"user": "사용자", "assistant": "어시스턴트"}
     return "\n".join(f"{label[t.role]}: {t.content}" for t in turns)
@@ -123,6 +168,13 @@ def rewrite_query(question: str, turns: List[Turn]) -> Tuple[str, Dict[str, obje
         out = out.strip().strip('"').strip("'").split("\n")[0].strip()
         # 모델이 빈 문자열이나 장문 설명을 뱉으면 신뢰하지 않는다.
         if out and 3 <= len(out) <= 300:
+            # 지시 준수를 믿지 않고 확인한다 — 없던 숫자·식별자를 넣었으면 버린다.
+            invented = invented_facts(out, question, turns)
+            if invented:
+                info["rejected"] = out
+                info["invented"] = invented
+                info["skipped"] = "invented_facts"
+                return question, info
             info["rewritten"] = out
             info["applied"] = out != question
             return out, info

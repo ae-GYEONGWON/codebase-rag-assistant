@@ -75,6 +75,11 @@ class ChatResponse(BaseModel):
     mode: str
     retrieval: dict = {}   # 검색 진단(유사도·BM25·선택된 청크) — 데모에서 근거를 보여주는 용도
     rewrite: dict = {}     # 질의 재작성 결과(멀티턴). 무엇으로 검색했는지 UI 에 노출한다
+    # 경로 선택(단발 RAG vs 에이전트)과 그 이유. ★ 여기에 필드를 안 두면 FastAPI 가
+    # 응답 모델로 걸러 내어 값이 조용히 사라진다 — 실제로 그렇게 빠져 있었다.
+    route: dict = {}
+    trace: list = []       # 에이전트 경로일 때의 툴 호출 순서(진단용)
+    llm_calls: int | None = None
 
 
 class FeedbackRequest(BaseModel):
