@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-02T15:14:12+09:00",
-  "git_sha": "ee1874b",
+  "generated_at": "2026-09-02T15:49:44+09:00",
+  "git_sha": "fe7b16d",
   "retrieval": [
     {
       "key": "private",
@@ -130,7 +130,7 @@
         "code": 245,
         "commit": 31
       },
-      "created_at": "2026-09-02 04:52:55Z",
+      "created_at": "2026-09-02 06:15:17Z",
       "suites": [
         {
           "title": "문서 질문",
@@ -840,7 +840,17 @@
       "measured": "코드 질문 recall 75% → 50%",
       "why": "cross-encoder 가 자연어-자연어 매칭을 자연어-코드보다 선호해, RRF 가 이미 올려 둔 정답 코드 파일을 문서로 뒤집었다. 큰 모델(v2-m3)은 분별력은 나았지만 CPU 4.4s/질문이라 데모 지연이 과했다.",
       "action": "기본 OFF. 구현과 토글은 남겨 `USE_RERANKER=true` 로 재현 가능.",
-      "note": "노트 #7"
+      "note": "노트 #7",
+      "notes": [
+        {
+          "kind": "note",
+          "label": "노트 #7",
+          "n": 7,
+          "title": "리랭커 — SOTA 라고 무지성으로 넣지 않는다",
+          "url": "https://github.com/ae-GYEONGWON/codebase-rag-assistant/blob/main/docs/engineering-notes.md#7-리랭커--sota-라고-무지성으로-넣지-않는다",
+          "line": 78
+        }
+      ]
     },
     {
       "title": "MMR 다양성 계수 λ",
@@ -848,15 +858,41 @@
       "measured": "λ 0.9 → 86% / 0.95 → 89% / 1.0 → 93%",
       "why": "문서만 있던 코퍼스(956청크)에서는 0.8 이 최적이었는데, 코드·git 으로 확장(3,619청크)하니 다양성이 정답을 밀어냈다. 하이퍼파라미터가 데이터에 종속한다는 것을 실측으로 확인했다.",
       "action": "0.8 → 1.0 (다양성 off). λ=1.0 이면 MMR 은 순위를 바꾸지 않으므로, 그 행의 개선은 MMR 이 아니라 심볼 슬롯의 공이었다 — 평가표 행 이름도 함께 정정했다.",
-      "note": "노트 #13, #17"
+      "note": "노트 #13, #17",
+      "notes": [
+        {
+          "kind": "note",
+          "label": "노트 #13",
+          "n": 13,
+          "title": "코퍼스가 커지면 최적값도 바뀐다 — MMR λ 재측정",
+          "url": "https://github.com/ae-GYEONGWON/codebase-rag-assistant/blob/main/docs/engineering-notes.md#13-코퍼스가-커지면-최적값도-바뀐다--mmr-λ-재측정",
+          "line": 148
+        },
+        {
+          "kind": "note",
+          "label": "노트 #17",
+          "n": 17,
+          "title": "평가표의 행 이름이 잘못된 결론을 만들고 있었다 — 'MMR' 이 아니라 심볼 슬롯",
+          "url": "https://github.com/ae-GYEONGWON/codebase-rag-assistant/blob/main/docs/engineering-notes.md#17-평가표의-행-이름이-잘못된-결론을-만들고-있었다--mmr-이-아니라-심볼-슬롯",
+          "line": 228
+        }
+      ]
     },
     {
       "title": "툴콜링 에이전트 (멀티홉)",
       "verdict": "조건부 채택",
       "measured": "동일 청크 예산 통제 시 25% vs 단발 42% → 원인 규명 후 50%",
       "why": "에이전트가 근거를 더 많이 본다는 이점을 배제하려고 단발 검색에도 같은 청크 예산을 줬더니 오히려 **열세**였다. 미스 로그를 뒤져 원인이 '축 누락'임을 규명하고 프롬프트를 고친 뒤에야 역전했다.",
-      "action": "지연 20배·LLM 호출 2.5배라는 비용을 근거로 기본 비활성. 대신 라우터가 멀티홉 질문에만 켠다.",
-      "note": "노트 #10, #11"
+      "action": "지연 20배·LLM 호출 2.5배라는 비용을 근거로 기본 비활성. 대신 라우터가 멀티홉 질문에만 켠다. ⚠️ 이 측정은 엔지니어링 노트에 정리돼 있지 않고 **커밋 메시지에만** 남아 있다 — 재현하려면 평가를 다시 돌려야 하는 알려진 문서화 구멍이다.",
+      "note": "커밋 b856b47",
+      "notes": [
+        {
+          "kind": "commit",
+          "label": "커밋 b856b47",
+          "title": "feat(eval): 멀티홉 평가셋 12문항 + AND 채점 + 에이전트 비교",
+          "url": "https://github.com/ae-GYEONGWON/codebase-rag-assistant/commit/b856b47"
+        }
+      ]
     },
     {
       "title": "한국어 형태소 분석기 (kiwi)",
@@ -864,7 +900,17 @@
       "measured": "BM25 단독 65% → 70% (커밋 축 63% → 74%) / 전체 파이프라인 79% → 78%",
       "why": "부품은 확실히 좋아졌는데 시스템은 나빠졌다. 원인을 쟀더니 BM25 후보가 벡터 쪽과 더 겹쳤다(28.9% → 30.4%). 하이브리드의 이득은 각 검색기의 품질이 아니라 **둘의 오류가 다르다는 데서** 나오므로, BM25 를 정밀하게 만들수록 그 차이가 준다.",
       "action": "기본은 문자 2-gram 유지. `TOKENIZER=kiwi` 로 재현 가능.",
-      "note": "노트 #24"
+      "note": "노트 #24",
+      "notes": [
+        {
+          "kind": "note",
+          "label": "노트 #24",
+          "n": 24,
+          "title": "형태소 분석기가 BM25 를 개선했는데 시스템은 나빠졌다",
+          "url": "https://github.com/ae-GYEONGWON/codebase-rag-assistant/blob/main/docs/engineering-notes.md#24-형태소-분석기가-bm25-를-개선했는데-시스템은-나빠졌다",
+          "line": 594
+        }
+      ]
     },
     {
       "title": "LLM-as-judge 의 groundedness 지표",
@@ -872,7 +918,25 @@
       "measured": "판정기 4종 평균 0.950~1.000 / 문항 단위 합의 Cohen's κ ≈ -0.1 (우연 이하)",
       "why": "답변을 고정하고 판정기만 바꾸는 통제 비교를 했다. 평균은 모였지만 **어느 답이 환각인지에 대한 합의는 0** 이었다. 평가셋이 쉬워서라고 진단하고 환각 유도 문항 29개를 만들어 다시 쟀는데 **그 진단이 틀렸다** — 값이 여전히 안 움직였다. 원인은 지표의 정의였다. 거절은 근거에 없는 주장을 하지 않으므로 자동으로 만점이라, 이 지표는 '말하지 않아서 얻는 만점'을 구분하지 못한다.",
       "action": "환각 여부는 **행동 기반 채점**으로 잰다(덫 종류별 통과 조건). groundedness 수치는 단독으로 인용하지 않는다.",
-      "note": "노트 #21, #22"
+      "note": "노트 #21, #22",
+      "notes": [
+        {
+          "kind": "note",
+          "label": "노트 #21",
+          "n": 21,
+          "title": "self-judge 편향을 재려다 더 나쁜 걸 찾았다 — 판정기들이 평균만 같고 합의는 0",
+          "url": "https://github.com/ae-GYEONGWON/codebase-rag-assistant/blob/main/docs/engineering-notes.md#21-self-judge-편향을-재려다-더-나쁜-걸-찾았다--판정기들이-평균만-같고-합의는-0",
+          "line": 393
+        },
+        {
+          "kind": "note",
+          "label": "노트 #22",
+          "n": 22,
+          "title": "어려운 문항을 만들어 넣었는데도 지표가 안 움직였다 — 문제는 평가셋이 아니라 지표의 정의였다",
+          "url": "https://github.com/ae-GYEONGWON/codebase-rag-assistant/blob/main/docs/engineering-notes.md#22-어려운-문항을-만들어-넣었는데도-지표가-안-움직였다--문제는-평가셋이-아니라-지표의-정의였다",
+          "line": 478
+        }
+      ]
     },
     {
       "title": "브루트포스 전수매칭 vs ANN",
@@ -880,7 +944,25 @@
       "measured": "N=100,000 에서 전수매칭 5.34 ms / 307 MB · 실제 임베딩 HNSW recall@5 = 99%(ef=64)",
       "why": "노트 #15 의 'N ≈ 10만, 지연이 아니라 메모리가 먼저 무너진다'는 3,619 청크에서의 외삽이었다. 실제로 키워 가며 재니 지지됐다 — 10만에서도 지연은 LLM 첫 토큰의 0.4% 다. ANN 은 품질 손실 없이 쓸 수 있지만 **이 규모에서 필요가 없다.**",
       "action": "전수매칭 유지. 전환 임계는 지연이 아니라 메모리로 판단한다.",
-      "note": "노트 #15, #26"
+      "note": "노트 #15, #26",
+      "notes": [
+        {
+          "kind": "note",
+          "label": "노트 #15",
+          "n": 15,
+          "title": "브루트포스 전수매칭은 \"그렇게 된 것\"이 아니라 고른 것 — ANN 전환 임계를 재다",
+          "url": "https://github.com/ae-GYEONGWON/codebase-rag-assistant/blob/main/docs/engineering-notes.md#15-브루트포스-전수매칭은-그렇게-된-것이-아니라-고른-것--ann-전환-임계를-재다",
+          "line": 169
+        },
+        {
+          "kind": "note",
+          "label": "노트 #26",
+          "n": 26,
+          "title": "ANN 전환 임계를 실증하다가, 합성 데이터로 재면 안 되는 것을 배웠다",
+          "url": "https://github.com/ae-GYEONGWON/codebase-rag-assistant/blob/main/docs/engineering-notes.md#26-ann-전환-임계를-실증하다가-합성-데이터로-재면-안-되는-것을-배웠다",
+          "line": 674
+        }
+      ]
     },
     {
       "title": "질문 의도 라우팅",
@@ -888,7 +970,25 @@
       "measured": "전체 258문항 MRR 0.59 → 0.59 / 개입한 10문항(3.9%)만 보면 0.362 → 0.525",
       "why": "심볼 슬롯이 코드 질문은 살리고 문서 질문은 깎던 문제를 규칙 기반 판별로 나눴다. 코드 축 판별은 8/8 정확하지만, **개입 빈도가 4% 라 전체 평균이 움직이지 않는다.** 20문항 골든셋에서 보이던 +0.06 은 사실상 한 문항이었고, 거기 맞춰 규칙을 늘리면 그 20문항에 과적합이다.",
       "action": "지연 비용이 0(정규식)이라 유지. 근거는 평균 개선이 아니라 알려진 실패 모드의 제거다.",
-      "note": "노트 #17, #23"
+      "note": "노트 #17, #23",
+      "notes": [
+        {
+          "kind": "note",
+          "label": "노트 #17",
+          "n": 17,
+          "title": "평가표의 행 이름이 잘못된 결론을 만들고 있었다 — 'MMR' 이 아니라 심볼 슬롯",
+          "url": "https://github.com/ae-GYEONGWON/codebase-rag-assistant/blob/main/docs/engineering-notes.md#17-평가표의-행-이름이-잘못된-결론을-만들고-있었다--mmr-이-아니라-심볼-슬롯",
+          "line": 228
+        },
+        {
+          "kind": "note",
+          "label": "노트 #23",
+          "n": 23,
+          "title": "심볼 슬롯을 의도로 켜고 껐다 — 평균으로는 안 보이는 개선을 어떻게 보고할 것인가",
+          "url": "https://github.com/ae-GYEONGWON/codebase-rag-assistant/blob/main/docs/engineering-notes.md#23-심볼-슬롯을-의도로-켜고-껐다--평균으로는-안-보이는-개선을-어떻게-보고할-것인가",
+          "line": 546
+        }
+      ]
     },
     {
       "title": "합성 데이터로 ANN recall 측정",
@@ -896,7 +996,17 @@
       "measured": "합성 벡터 recall@5 = 0~19% / 실제 임베딩 = 99~100%",
       "why": "768차원 정규분포 벡터는 서로 거의 직교해 **최근접 이웃 구조 자체가 없다.** 근사 탐색이 붙잡을 그래프가 없으니 recall 이 바닥으로 나온 것이고, 그건 HNSW 가 아니라 데이터의 성질이다. 그대로 실었으면 'ANN 은 못 쓴다'는 정반대 결론이 나왔다.",
       "action": "지연·메모리는 합성으로, 품질은 실제 임베딩으로. 같은 실험 안에서도 무엇을 합성으로 재도 되는지 나눈다.",
-      "note": "노트 #26"
+      "note": "노트 #26",
+      "notes": [
+        {
+          "kind": "note",
+          "label": "노트 #26",
+          "n": 26,
+          "title": "ANN 전환 임계를 실증하다가, 합성 데이터로 재면 안 되는 것을 배웠다",
+          "url": "https://github.com/ae-GYEONGWON/codebase-rag-assistant/blob/main/docs/engineering-notes.md#26-ann-전환-임계를-실증하다가-합성-데이터로-재면-안-되는-것을-배웠다",
+          "line": 674
+        }
+      ]
     },
     {
       "title": "질의 재작성의 사실 창작",
@@ -904,7 +1014,17 @@
       "measured": "데모 중 실제 발생 — \"MMR 계수를 왜 그렇게 정했고\" → \"왜 0.5로 설정했고\" (실제 값 1.0, 대화 어디에도 0.5 없음)",
       "why": "재작성 프롬프트에는 이미 '새로운 정보를 추가하지 마세요'가 있었다. 지시로는 안 막혔다. 재작성된 질의로 검색하므로 이건 어색한 문장이 아니라 검색을 망치는 결함이다.",
       "action": "대화에 없던 숫자·식별자가 들어가면 재작성을 버리고 원문으로 검색한다. 버렸다는 사실도 화면에 보인다.",
-      "note": "노트 #22 부수"
+      "note": "노트 #22 부수",
+      "notes": [
+        {
+          "kind": "note",
+          "label": "노트 #22",
+          "n": 22,
+          "title": "어려운 문항을 만들어 넣었는데도 지표가 안 움직였다 — 문제는 평가셋이 아니라 지표의 정의였다",
+          "url": "https://github.com/ae-GYEONGWON/codebase-rag-assistant/blob/main/docs/engineering-notes.md#22-어려운-문항을-만들어-넣었는데도-지표가-안-움직였다--문제는-평가셋이-아니라-지표의-정의였다",
+          "line": 478
+        }
+      ]
     },
     {
       "title": "평가 코퍼스를 저장소 자기 자신으로 두기",
@@ -912,7 +1032,17 @@
       "measured": "첫 CI 실행이 실패하며 드러남",
       "why": "demo 프로필은 저장소 자기 자신을 지식원으로 삼는다. 그러면 커밋할 때마다 코퍼스가 바뀌어, 점수 변화가 코드 탓인지 문서 탓인지 구분할 수 없다. 회귀 게이트가 성립하지 않는다.",
       "action": "`eval` 프로필을 신설해 코퍼스를 git 태그로 고정. 코퍼스 갱신은 새 태그 + baseline 재생성이라는 **명시적 행위**를 요구한다.",
-      "note": "노트 #18"
+      "note": "노트 #18",
+      "notes": [
+        {
+          "kind": "note",
+          "label": "노트 #18",
+          "n": 18,
+          "title": "자기 자신을 코퍼스로 삼으면 회귀 게이트가 성립하지 않는다 — 코퍼스를 태그로 고정",
+          "url": "https://github.com/ae-GYEONGWON/codebase-rag-assistant/blob/main/docs/engineering-notes.md#18-자기-자신을-코퍼스로-삼으면-회귀-게이트가-성립하지-않는다--코퍼스를-태그로-고정",
+          "line": 259
+        }
+      ]
     }
   ]
 }
