@@ -12,7 +12,7 @@
 대상 코드베이스의 **문서 · 소스코드 · git 이력** 세 축을 지식원으로, 질문에 **근거와 출처를 붙여**
 답하는 RAG 어시스턴트. 단순 문서 챗봇이 아니라 "운영 중인 시스템을 아는 어시스턴트"를 노린다.
 
-설계·측정의 자세한 근거는 [`docs/engineering-notes.md`](engineering-notes.md) 에 16건으로 정리돼 있다.
+설계·측정의 자세한 근거는 [`docs/engineering-notes.md`](engineering-notes.md) 에 21건으로 정리돼 있다.
 **이 저장소에서 가장 먼저 읽을 문서다.**
 
 ## 2. 개발 환경 세팅 (새 PC 에서)
@@ -70,6 +70,7 @@ demo 를 `git ls-files` 기반으로 정의한 이유는 노트 #16 참조 — *
 | hybrid + reranker | ↓ (측정 후 기본 OFF) | ↓ |
 
 범위 밖 거절 5/6 · 답변 groundedness(LLM-as-judge) 0.962.
+※ 이 값은 단독으로 인용하지 말 것 — 판정기 패널 결과(노트 #21) 를 함께 볼 것.
 
 ### 합성 평가셋 측정 (258문항 · 같은 고정 코퍼스)
 
@@ -91,7 +92,9 @@ demo 를 `git ls-files` 기반으로 정의한 이유는 노트 #16 참조 — *
 | 79.5% | 하한 | 라벨이 좁아 옳은 검색도 틀렸다고 침 |
 | 93.8% | 상한 | 판정기가 관대할 수 있음 |
 
-→ **구간으로 보고한다.** 동일 표본 통제 비교(같은 20건을 두 판정기에)는 Phase 0-3 에서.
+→ **구간으로 보고한다.** 동일 표본 통제 비교는 Phase 0-3 에서 완료했다(노트 #21) —
+판정기 편차는 **과제 난도에 의존**한다는 게 결론이다. 어려운 문항(라벨 감사)에서는 10%p 벌어지고,
+쉬운 문항(groundedness)에서는 2%p 안에 든다.
 
 ### eval 프로필 — 회귀 게이트 기준 (N=324 청크 @ `eval-corpus-v1`)
 
@@ -123,6 +126,32 @@ demo 를 `git ls-files` 기반으로 정의한 이유는 노트 #16 참조 — *
 이름이 예전엔 `hybrid+MMR` 이었는데, λ=1.0 이면 MMR 은 순위를 바꾸지 않으므로
 그 행의 차이는 MMR 이 아니라 심볼 슬롯이다 → 노트 #17.
 
+### 판정기 패널 — 답변을 고정하고 판정기만 바꾼 통제 비교 (노트 #21)
+
+생성기 `gemini-3.1-flash-lite` 의 **동일 답변 16문항**(범위밖 1 포함)을 판정기만 갈아끼워 채점.
+
+| 판정기 | 종류 | 채점 | 평균 | 환각 지적 |
+|---|---|---:|---:|---:|
+| `gemini-3.1-flash-lite` | **self** | 16 | 0.979 | 6% |
+| `gemini-3.5-flash-lite` | cross | 16 | 1.000 | 0% |
+| RAGAS `Faithfulness`(같은 모델, 다른 도구) | cross | 15 | 0.986 | 13% |
+| `gemini-3-flash-preview` | cross | 4* | 0.950 | 25% |
+| `gemini-3.5-flash` | cross | 4* | 1.000 | 0% |
+
+\* 무료 티어 일일 쿼터로 4건에서 중단. n<8 인 쌍은 **유의성을 주장하지 않는다.**
+
+**self-judge 가 후하다는 가설은 이 표본에서 성립하지 않았다**(self 0.979 < cross 1.000).
+대신 더 중요한 결과: 판정기들이 **감점한 문항이 한 건도 겹치지 않는다** —
+self→q03, RAGAS→q01·q14, `3-flash-preview`→q02. Cohen's κ 는 계산 가능한 쌍 전부 음수
+(**-0.098 ~ -0.333**, 우연 이하). **평균 일치는 합의가 아니라 천장 효과다.**
+
+```bash
+python -m eval.judge_panel freeze --profile eval --n 16
+python -m eval.judge_panel judge  --profile eval --model gemini-3.5-flash-lite --tag cross35lite
+.venv-ragas/Scripts/python eval/ragas_score.py --in eval/reports/panel-answers.json
+python -m eval.judge_panel compare        # → eval/reports/judge-panel.md
+```
+
 ### 검색 지연 (노트 #15)
 
 벡터 전수매칭 0.12 ms · BM25 4.7 ms · LLM 첫 토큰 ~1,400 ms.
@@ -145,12 +174,17 @@ ANN 전환 임계는 **N ≈ 10만** (지연이 아니라 메모리가 먼저 �
 - [~] **0-2** 합성 평가셋 — **258문항 생성 완료**(`eval/generate.py`, 원본 청크 기반·검색기 미사용).
       전체 recall 85%(수기 20) → **79%(합성 258)**, 커밋 축 69% 로 최약점 발견 → 노트 #19.
       거짓 오답 감사 완료(`eval/audit_misses.py`) → 보정 recall 79.5%~93.8% **구간** → 노트 #20.
-      남은 것: ① 49문항 **수동 검수**(`eval/verification/worksheet.md` — 조각만 읽고 ok/wrong/unclear)
-      ② RAGAS 대조(격리 환경 `.venv-ragas` 구축 완료, `eval/ragas_score.py` 준비됨)
-- [ ] **0-3** cross-judge — 판정 모델 분리는 구현 완료(`eval/llm.py` ModelSpec,
-      `faithfulness --judge-provider/--judge-model`). 남은 것은 **동일 표본 통제 비교**:
-      같은 문항·같은 답변을 두 판정기에 걸어 self vs cross 편차를 수치화.
-      ⚠️ 제약: `gemini-3.5-flash` 무료 티어는 **하루 20요청** → 표본 설계 필수(노트 #20)
+      RAGAS 대조 완료 — 격리 환경 `.venv-ragas` 에서 **같은 동결 답변**을 채점해 판정기 패널에
+      합류시켰다(노트 #21). 그 과정에서 `eval/datasets.py` 가 HuggingFace `datasets` 를 가려
+      RAGAS 가 한 번도 돌지 않고 있던 것을 발견·수정.
+      남은 것: 49문항 **수동 검수**(`eval/verification/worksheet.md` — 조각만 읽고 ok/wrong/unclear)
+- [x] **0-3** cross-judge **동일 표본 통제 비교 완료** — `eval/judge_panel.py`
+      (freeze → judge → compare). 답변을 먼저 동결해 판정기만 바꿨고, RAGAS 까지 같은
+      동결본에 걸어 판정기 4종을 한 표에 놓았다 → 노트 #21.
+      **결과가 가설과 반대다.** self(0.979)가 cross(1.000)보다 후하지 않았다.
+      대신 더 나쁜 걸 찾았다 — 네 판정기가 감점한 문항이 **한 건도 겹치지 않는다**
+      (Cohen's κ ≈ -0.1 ~ -0.33, 우연 이하). 평균 일치는 합의가 아니라 **천장 효과**였다.
+      → groundedness 를 못 믿는 이유가 "self-judge 라서"에서 **"평가셋이 쉬워서"** 로 바뀜.
 
 ### 지금 사람이 해야 할 일 (Day 4 입력)
 
@@ -169,6 +203,10 @@ python -m eval.verify score --profile eval      # 문항 불량률 계산 + 검�
 
 ### Phase 0 에서 나온 다음 과제
 
+- **★ 어려운 문항 확보(환각 유도)** — 노트 #21 의 결론. 지금 골든셋은 답변이 대부분 만점이라
+  판정기를 몇 개 더 붙여도 전부 1.00 이 나온다. groundedness 지표가 살아나려면 **틀리기 쉬운
+  질문**(근거가 부분적이거나, 여러 파일에 흩어졌거나, 폐기된 내용을 묻는)이 필요하다.
+  판정기 다양화보다 이게 먼저다.
 - **의도 라우팅** — 심볼 슬롯이 코드 질문 MRR 은 올리고(0.44→0.53) 문서 질문 MRR 은 깎는다(0.88→0.78).
   질문이 어느 축을 묻는지 판별해 장치를 켜고 끄면 양쪽을 다 얻는다 → 노트 #17
 - **CI baseline 의 플랫폼 종속** — baseline 을 Windows 에서 만들고 Linux 러너에서 비교하면
@@ -196,12 +234,15 @@ python -m eval.verify score --profile eval      # 문항 불량률 계산 + 검�
 
 ## 6. 알려진 한계 (먼저 인정할 것)
 
-- 평가셋이 자가 라벨 40문항 — Phase 0-2 가 해결 대상
-- groundedness 0.962 는 생성·판정이 같은 모델(self-judge) — Phase 0-3 가 해결 대상
+- **groundedness 는 지금 평가셋으로 변별되지 않는다.** self-judge 라서가 아니다 — 판정기를
+  4종으로 바꿔도 평균이 0.950~1.000 에 몰린다(노트 #21). 답변이 대부분 만점이라 천장에 붙은
+  것이고, 그 상태에서 판정기끼리 감점 문항은 한 건도 겹치지 않는다(κ ≈ -0.1). 필요한 것은
+  판정기 추가가 아니라 **환각을 유도하는 어려운 문항**이다.
+- 합성 평가셋 258문항의 라벨 검수가 기계 감사까지만 됨(사람 검수 미실시) — 노트 #20
 - Chroma 를 blob 저장소로 쓰는 브루트포스 검색 — **의도된 선택이며 근거는 노트 #15**
 - 한글 토크나이저가 형태소 분석기 없이 문자 2-gram 근사
 - 증분 재인덱싱 없음 / 재인덱싱하려면 서버를 내려야 함(인덱싱·서빙 결합)
-- 멀티턴 대화 없음
+- 무료 티어에서 큰 판정 모델은 **하루 4~5요청**. 교차 검증이 사실상 `-lite` 계열로 제한된다
 
 ## 7. 함정 메모
 
