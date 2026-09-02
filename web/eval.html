@@ -245,7 +245,7 @@ function renderRetrieval(list) {
     '<p class="glossary">' +
     '<b>recall@5</b> 상위 5건 안에 정답 문서가 들어왔는가(높을수록 좋음) · ' +
     '<b>MRR</b> 정답이 몇 번째로 나왔는가(1.0 이면 항상 1위) · ' +
-    '<b>miss</b> 못 찾은 문항 수<br>' +
+    '<b>miss</b> 못 찾은 문항 수 · <b>청크</b> 문서를 검색 단위로 자른 조각<br>' +
     '<b>vector only</b> 임베딩만 · <b>bm25 only</b> 단어 매칭만 · ' +
     '<b>hybrid RRF</b> 둘의 순위를 합침 · ' +
     '<b>운영 파이프라인</b> 실제로 서비스가 쓰는 경로(hybrid + 코드 심볼 매칭 + 범위밖 게이트)</p>';
@@ -298,17 +298,20 @@ function renderRetrieval(list) {
   return sec;
 }
 
-/* 판정기 패널 — 이 프로젝트에서 가장 중요한 표. 평균이 아니라 '합의'를 봐야 한다. */
+/* 채점자 패널 — 이 프로젝트에서 가장 중요한 표. 평균이 아니라 '합의'를 봐야 한다.
+   ★ 용어는 '채점자' 하나로 통일한다. 같은 것을 '판정기'와 '채점자'로 번갈아 부르면
+      읽는 사람이 둘이 다른 것인 줄 안다 — 어려운 단어보다 이 쪽이 더 해롭다. */
 function renderJudges(j, hard) {
   const sec = el('section');
   sec.innerHTML =
-    '<h2>LLM 판정기를 검증했다<span class="num">평가자 자체를 잰다</span></h2>' +
+    '<h2>LLM 채점자를 검증했다<span class="num">평가자 자체를 잰다</span></h2>' +
     '<p class="sub">답변이 근거에 충실한지를 LLM 에게 채점시킨다(LLM-as-judge). ' +
     '그 <b>채점자를 믿을 수 있는지</b>를 확인하려고, 답변과 근거를 ' +
     '<b>고정한 채 채점 모델만</b> 바꿔 봤다. 따라서 아래 차이는 전부 채점자 차이다.</p>' +
     '<p class="glossary">' +
     '<b>self</b> 답을 만든 모델이 자기 답을 채점 · <b>cross</b> 다른 모델이 채점 · ' +
-    '<b>평균</b> 근거에 지지되는 주장의 비율(1.0 = 지어낸 말 없음) · ' +
+    '<b>평균</b> groundedness — 답변의 주장 중 근거에 실제로 있는 것의 비율' +
+    '(1.0 = 지어낸 말 없음) · ' +
     '<b>환각 지적</b> 채점자가 감점한 문항의 비율<br>' +
     '<b>Cohen&rsquo;s κ</b> 두 채점자가 <b>같은 문항</b>을 같게 봤는지 ' +
     '— 1.0 완전 일치 · 0 우연 수준 · 음수는 우연보다 못함</p>';
@@ -327,25 +330,26 @@ function renderJudges(j, hard) {
     const kmax = ks.length ? Math.max(...ks.map(p => p.kappa)) : null;
     card.innerHTML =
       `<h3>${esc(title)}</h3><p class="meta">${esc(note)}</p>` +
-      `<div class="tw"><table><thead><tr><th>판정기</th><th>종류</th>` +
+      `<div class="tw"><table><thead><tr><th>채점자</th><th>종류</th>` +
       `<th class="num">채점</th><th class="num">평균</th><th class="num">환각 지적</th>` +
       `</tr></thead><tbody>${rows}</tbody></table></div>`;
     if (ks.length) {
       card.appendChild(el('div', 'note',
         `<b>평균은 모였는데 합의는 없다.</b> 문항 단위 일치도(Cohen&rsquo;s κ)가 ` +
         `${f3(kmin)} ~ ${f3(kmax)} 로 <b>전부 음수</b> — 우연히 맞추는 것보다 못하다. ` +
-        `즉 판정기들은 &ldquo;몇 점인가&rdquo;에는 비슷하게 답하지만 ` +
+        `즉 채점자들은 &ldquo;몇 점인가&rdquo;에는 비슷하게 답하지만 ` +
         `&ldquo;<b>어느 답이 환각인가</b>&rdquo;에는 한 문항도 합의하지 않았다. ` +
-        `평균이 모인 건 판정기가 견고해서가 아니라 <b>천장 효과</b>다.`));
+        `평균이 모인 건 채점자가 견고해서가 아니라 <b>거의 다 만점이라 ` +
+        `차이가 드러날 자리가 없었기</b> 때문이다(천장 효과).`));
     } else {
       card.appendChild(el('div', 'note plain',
-        `κ 를 계산할 수 있는 쌍이 없다 — 한쪽 판정기가 전 문항에 같은 판정을 내렸다는 뜻이고, ` +
+        `κ 를 계산할 수 있는 쌍이 없다 — 한쪽 채점자가 전 문항에 같은 점수를 줬다는 뜻이고, ` +
         `그 자체가 &ldquo;변별하지 못한다&rdquo;는 결과다.`));
     }
     return card;
   };
 
-  const a = panel(j, '평범한 문항 16개', '골든셋에서 뽑은 답변을 판정기 5종에 걸었다.');
+  const a = panel(j, '평범한 문항 16개', '골든셋에서 뽑은 답변을 채점자 5종에 걸었다.');
   if (a) sec.appendChild(a);
   const b = panel(hard, '환각 유도 문항 19개',
     '"평가셋이 쉬워서"라는 가설을 확인하려고 어려운 문항으로 다시 걸었다.');
@@ -465,7 +469,9 @@ function renderAnn(a) {
       '</tbody></table></div>';
     c2.appendChild(el('div', 'note',
       `<b>합성 벡터로는 이 값을 재면 안 된다.</b> 같은 실험을 합성으로 하면 recall 이 0~19% 로 ` +
-      `나오는데, 768차원 정규분포 벡터는 서로 거의 직교해 <b>최근접 이웃 구조 자체가 없기</b> 때문이다. ` +
+      `나오는데, 무작위로 만든 768차원 벡터는 서로 <b>고르게 멀어서 '가까운 이웃'이라는 게 ` +
+      `사실상 없기</b> 때문이다(거의 직교한다). 근사 검색은 이웃을 따라가며 찾는 방식이라 ` +
+      `따라갈 이웃이 없으면 성립하지 않는다. `+
       `그건 HNSW 의 성질이 아니라 데이터의 성질이다 — 그대로 실었으면 ` +
       `&ldquo;ANN 은 못 쓴다&rdquo;는 정반대 결론이 나왔다.`));
     sec.appendChild(c2);
@@ -530,7 +536,7 @@ function renderHero(d) {
                 `${d.hard.n}문항. 행동 기반 채점 — groundedness 로는 변별이 안 됐다`]);
   }
   if (ks.length) {
-    tiles.push([f3(Math.max(...ks)), 'LLM 판정기 합의도 (κ)',
+    tiles.push([f3(Math.max(...ks)), 'LLM 채점자 합의도 (κ)',
                 '우연 이하. 평균은 같아도 어느 답이 환각인지는 합의하지 않았다']);
   }
   if (nDec) {

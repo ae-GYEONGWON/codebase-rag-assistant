@@ -302,7 +302,11 @@ def compare(files: List[Path], threshold: float) -> dict:
         "pairs": pairs,
         "skipped_pairs": skipped,
         "questions": qtext,
-        "caveat": "판정기가 모두 Gemini 계열이다 — 모델 독립이 아니라 버전 독립. 여기 편차는 하한.",
+        # 용어는 화면과 맞춘다 — 같은 것을 '판정기'와 '채점자'로 번갈아 부르면
+        # 읽는 사람이 둘이 다른 것인 줄 안다.
+        "caveat": ("채점자가 모두 Gemini 계열이다 — 서로 다른 회사의 모델이 아니라 같은 계열의 "
+                   "다른 버전이라는 뜻이고, 그만큼 서로 닮았을 수 있다. 따라서 여기 나온 "
+                   "불일치는 실제보다 **작게** 잡힌 값이다(하한)."),
     }
 
 
