@@ -44,9 +44,17 @@ async def lifespan(app: FastAPI):
     워밍업은 최적화지 필수 경로가 아니다. 여기서 예외가 나 서버가 안 뜨면 최적화하려다
     서비스를 죽이는 것이다 → 잡아서 로그만 남기고 계속 간다.
     """
+    from app.profiles import active_profile
     from app.retriever import search
 
-    search("warmup")
+    docs, _ = search("warmup")
+    if not docs:
+        # clone 직후에는 인덱스가 없다(`chroma_db/` 는 git 제외). 서버는 그대로 뜨게 두고
+        # **무엇을 해야 하는지**만 알린다 — 여기서 죽으면 인덱스가 필요 없는 /eval
+        # 대시보드까지 함께 막힌다.
+        print(f"[warmup] ⚠️ '{active_profile().name}' 인덱스가 비어 있습니다. "
+              f"채팅은 답하지 못합니다 → python -m app.ingest --profile {active_profile().name}")
+        print("[warmup]   (측정 결과 대시보드 /eval 은 인덱스 없이도 볼 수 있습니다)")
     if settings.use_reranker:
         from app.reranker import warmup as rr_warmup
 

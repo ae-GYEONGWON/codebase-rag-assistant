@@ -76,6 +76,13 @@ def _corpus_at(version: str) -> Tuple[List[Document], np.ndarray, BM25Okapi]:
         for text, meta in zip(raw["documents"], raw["metadatas"])
     ]
 
+    # 인덱스가 비어 있을 수 있다 — clone 직후가 정확히 그 상태다(`chroma_db/` 는 git 제외).
+    # 그때 np.asarray([]) 는 1차원이라 axis=1 정규화에서 죽는다. 실제로 새 PC 에서
+    # 서버가 기동 중 크래시했고, 인덱스가 필요 없는 /eval 대시보드까지 함께 막혔다.
+    # → 모양을 갖춘 빈 행렬을 돌려주고, 판단은 호출부(search 의 empty_index)에 맡긴다.
+    if not docs:
+        return [], np.zeros((0, 1), dtype=np.float32), BM25Okapi([[""]])
+
     embs = np.asarray(raw["embeddings"], dtype=np.float32)
     embs /= np.linalg.norm(embs, axis=1, keepdims=True) + 1e-9  # 코사인용 정규화
 

@@ -74,3 +74,26 @@ def test_sources_align_with_answer_footnotes():
     question = _a_doc_section()
     docs, _ = search(question)
     assert len(snippets_for(docs, question)) == len(docs)
+
+
+# --- 빈 인덱스 (clone 직후) -------------------------------------------------
+
+def test_인덱스가_비어_있어도_죽지_않는다(monkeypatch):
+    """clone 직후에는 `chroma_db/` 가 없다. 그때 서버가 기동 중 죽으면
+    **인덱스가 필요 없는 /eval 대시보드까지 함께 막힌다** — 실제로 그랬다."""
+    import app.retriever as R
+
+    class _EmptyStore:
+        def get(self, include=None):
+            return {"documents": [], "metadatas": [], "embeddings": []}
+
+    monkeypatch.setattr(R, "get_vectorstore", lambda: _EmptyStore())
+    R._corpus_at.cache_clear()
+    R._symbol_index_at.cache_clear()
+    try:
+        docs, dbg = R.search("아무거나")
+        assert docs == []
+        assert dbg["reason"] == "empty_index"
+    finally:
+        R._corpus_at.cache_clear()
+        R._symbol_index_at.cache_clear()
