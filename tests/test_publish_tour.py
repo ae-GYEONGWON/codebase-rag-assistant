@@ -131,3 +131,60 @@ def test_깃허브_앵커_규칙():
         "7-리랭커--sota-라고-무지성으로-넣지-않는다"
     # 점·따옴표는 지우고, 하이픈·밑줄은 남긴다
     assert _gh_anchor("17. 'MMR' 이 아니라 심볼 슬롯") == "17-mmr-이-아니라-심볼-슬롯"
+
+
+# --- 서사 -------------------------------------------------------------------
+# 이 절들이 비면 **화면이 조용히 사실의 목록으로 되돌아간다.** 서버는 뜨고 200 도
+# 나오는데 이야기만 사라지는 종류의 고장이라 눈으로 안 보면 모른다.
+
+def test_서사가_스냅샷에_들어_있다(summary):
+    st = summary.get("story") or {}
+    assert st.get("intro"), "도입이 없으면 숫자부터 보게 된다"
+    assert st.get("chapters"), "장이 없으면 사실의 목록으로 되돌아간다"
+    assert st.get("closing")
+
+
+def test_도입은_이게_무엇인지부터_말한다(summary):
+    intro = summary["story"]["intro"]
+    for field in ("what", "example", "twist", "thesis"):
+        assert intro.get(field), f"도입에 '{field}' 가 없다"
+
+
+def test_모든_장이_문제부터_말한다(summary):
+    # 무슨 문제였는지 모르면 측정값을 읽을 수 없다. 이 순서가 이 페이지의 핵심이다.
+    for ch in summary["story"]["chapters"]:
+        for field in ("n", "title", "problem", "did", "measured", "decided"):
+            assert ch.get(field), f"{ch.get('n')}장에 '{field}' 가 없다"
+
+
+def test_장_번호가_1부터_이어진다(summary):
+    ns = [ch["n"] for ch in summary["story"]["chapters"]]
+    assert ns == list(range(1, len(ns) + 1)), f"장 번호가 끊긴다: {ns}"
+
+
+def test_장이_참조하는_판단이_실제로_있다(summary):
+    # 오타 하나로 카드가 조용히 사라지면 그 판단은 화면에서 없었던 일이 된다.
+    titles = {d["title"] for d in summary["decisions"]}
+    for ch in summary["story"]["chapters"]:
+        unknown = [t for t in ch.get("decisions", []) if t not in titles]
+        assert not unknown, f"{ch['n']}장이 없는 판단을 참조: {unknown}"
+
+
+def test_모든_판단이_어느_장에든_실린다(summary):
+    # 장에 안 실린 판단은 화면 뒤쪽 '나머지'로 빠진다. 의도한 것인지 확인해 둔다.
+    shown = {t for ch in summary["story"]["chapters"] for t in ch.get("decisions", [])}
+    left = [d["title"] for d in summary["decisions"] if d["title"] not in shown]
+    assert not left, f"어느 장에도 안 실린 판단: {left}"
+
+
+def test_장이_참조하는_근거가_실제로_있다(summary):
+    known = {r["key"] for r in summary["retrieval"]} | {"judges", "hard", "ann"}
+    for ch in summary["story"]["chapters"]:
+        ev = ch.get("evidence")
+        assert ev is None or ev in known, f"{ch['n']}장의 근거 '{ev}' 를 그릴 수 없다"
+
+
+def test_모든_판단이_무슨_문제였는지_말한다(summary):
+    # MEASURED 부터 시작하면 "이걸 왜 쟀지?" 를 읽는 사람이 스스로 채워야 한다.
+    for d in summary["decisions"]:
+        assert d.get("problem"), f"{d['title']} 에 problem 이 없다"
