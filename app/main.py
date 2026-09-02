@@ -149,7 +149,10 @@ def topics() -> dict:
         "files": files,
         "code_count": len(code),
         "suggestions": list(active_profile().suggestions) or FALLBACK_QUESTIONS,
+        # 기능 지도 — 무엇을 물을 수 있는지가 아니라 **무엇이 구현돼 있는지**를 알린다.
+        "tour": [dict(g) for g in active_profile().tour],
         "llm": settings.active_llm,
+        "router": settings.use_router,
     }
 
 
@@ -184,6 +187,31 @@ def feedback(req: FeedbackRequest) -> dict:
 
     log_feedback(req.model_dump())
     return {"ok": True}
+
+
+_PUBLISHED = Path(__file__).resolve().parent.parent / "eval" / "published" / "summary.json"
+
+
+@app.get("/eval/summary")
+def eval_summary() -> dict:
+    """평가 대시보드가 읽는 **발행된 스냅샷**.
+
+    `eval/reports/` 를 직접 읽지 않는다 — 그건 git 제외라 clone 직후에는 비어 있고,
+    그러면 보러 온 사람 화면에서 대시보드가 빈 페이지가 된다(`eval/publish.py` 참고).
+    """
+    if not _PUBLISHED.exists():
+        return {"error": "스냅샷이 없습니다. `python -m eval.publish` 를 실행하세요."}
+    return json.loads(_PUBLISHED.read_text(encoding="utf-8"))
+
+
+@app.get("/eval", response_class=HTMLResponse)
+def eval_page() -> str:
+    """측정 결과 대시보드. 이 프로젝트의 차별점은 챗봇이 아니라 평가 체계인데,
+    그게 문서 안에만 있으면 화면을 3분 보는 사람에게는 존재하지 않는 것과 같다."""
+    html = _WEB_DIR / "eval.html"
+    if html.exists():
+        return html.read_text(encoding="utf-8")
+    return "<h1>평가 대시보드</h1><p>web/eval.html 이 없습니다.</p>"
 
 
 @app.get("/", response_class=HTMLResponse)

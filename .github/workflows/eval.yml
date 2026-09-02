@@ -84,6 +84,13 @@ jobs:
             python -m eval.run_eval --profile eval --gate
           fi
 
+      # 대시보드(/eval)가 읽는 스냅샷이 낡으면 화면이 옛 수치를 보여준다.
+      # 여기서는 이번 실행이 **다시 만들 수 있는 절만** 비교한다 — CI 는 eval 프로필만
+      # 돌리므로 나머지 절은 '확인하지 않음'으로 두고 통과시킨다(없는 것 ≠ 달라진 것).
+      - name: 발행 스냅샷 신선도 확인
+        if: always()
+        run: python -m eval.publish --check
+
       - name: 리포트 아티팩트 업로드
         if: always()
         uses: actions/upload-artifact@v4

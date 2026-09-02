@@ -1,0 +1,918 @@
+{
+  "generated_at": "2026-09-02T15:14:12+09:00",
+  "git_sha": "ee1874b",
+  "retrieval": [
+    {
+      "key": "private",
+      "label": "private — 규모 있는 실제 코드베이스",
+      "note": "3,619 청크. 이 프로젝트의 대표 수치.",
+      "profile": "private",
+      "dataset": "questions.json",
+      "origins": {
+        "manual": 46
+      },
+      "k": 5,
+      "corpus": {
+        "doc": 1022,
+        "code": 2331,
+        "commit": 266
+      },
+      "created_at": "2026-09-01 06:42:12Z",
+      "suites": [
+        {
+          "title": "문서 질문",
+          "n": 20,
+          "rows": [
+            {
+              "name": "vector only",
+              "recall": 0.85,
+              "mrr": 0.6000000000000001,
+              "misses": 3
+            },
+            {
+              "name": "bm25 only",
+              "recall": 0.85,
+              "mrr": 0.585,
+              "misses": 3
+            },
+            {
+              "name": "hybrid RRF",
+              "recall": 1.0,
+              "mrr": 0.7641666666666667,
+              "misses": 0
+            },
+            {
+              "name": "운영 파이프라인",
+              "recall": 1.0,
+              "mrr": 0.7391666666666666,
+              "misses": 0
+            }
+          ]
+        },
+        {
+          "title": "코드 질문",
+          "n": 8,
+          "rows": [
+            {
+              "name": "vector only",
+              "recall": 0.5,
+              "mrr": 0.35416666666666663,
+              "misses": 4
+            },
+            {
+              "name": "bm25 only",
+              "recall": 0.375,
+              "mrr": 0.25,
+              "misses": 5
+            },
+            {
+              "name": "hybrid RRF",
+              "recall": 0.75,
+              "mrr": 0.4375,
+              "misses": 2
+            },
+            {
+              "name": "운영 파이프라인",
+              "recall": 0.75,
+              "mrr": 0.53125,
+              "misses": 2
+            }
+          ]
+        },
+        {
+          "title": "전체",
+          "n": 28,
+          "rows": [
+            {
+              "name": "vector only",
+              "recall": 0.75,
+              "mrr": 0.5297619047619049,
+              "misses": 7
+            },
+            {
+              "name": "bm25 only",
+              "recall": 0.7142857142857143,
+              "mrr": 0.48928571428571427,
+              "misses": 8
+            },
+            {
+              "name": "hybrid RRF",
+              "recall": 0.9285714285714286,
+              "mrr": 0.6708333333333333,
+              "misses": 2
+            },
+            {
+              "name": "운영 파이프라인",
+              "recall": 0.9285714285714286,
+              "mrr": 0.6797619047619047,
+              "misses": 2
+            }
+          ]
+        }
+      ],
+      "out_of_scope": {
+        "total": 6,
+        "rejected": 5
+      }
+    },
+    {
+      "key": "eval",
+      "label": "eval — CI 회귀 게이트 기준",
+      "note": "코퍼스를 태그로 고정해 커밋해도 값이 안 움직인다(노트 #18).",
+      "profile": "eval",
+      "dataset": "questions.demo.json",
+      "origins": {
+        "manual": 30
+      },
+      "k": 5,
+      "corpus": {
+        "doc": 48,
+        "code": 245,
+        "commit": 31
+      },
+      "created_at": "2026-09-02 04:52:55Z",
+      "suites": [
+        {
+          "title": "문서 질문",
+          "n": 12,
+          "rows": [
+            {
+              "name": "vector only",
+              "recall": 0.9166666666666666,
+              "mrr": 0.5625,
+              "misses": 1
+            },
+            {
+              "name": "bm25 only",
+              "recall": 1.0,
+              "mrr": 0.8541666666666666,
+              "misses": 0
+            },
+            {
+              "name": "hybrid RRF",
+              "recall": 0.9166666666666666,
+              "mrr": 0.861111111111111,
+              "misses": 1
+            },
+            {
+              "name": "+심볼슬롯",
+              "recall": 0.9166666666666666,
+              "mrr": 0.7638888888888888,
+              "misses": 1
+            },
+            {
+              "name": "운영 파이프라인",
+              "recall": 0.9166666666666666,
+              "mrr": 0.8194444444444443,
+              "misses": 1
+            }
+          ]
+        },
+        {
+          "title": "코드 질문",
+          "n": 8,
+          "rows": [
+            {
+              "name": "vector only",
+              "recall": 0.75,
+              "mrr": 0.6875,
+              "misses": 2
+            },
+            {
+              "name": "bm25 only",
+              "recall": 0.75,
+              "mrr": 0.59375,
+              "misses": 2
+            },
+            {
+              "name": "hybrid RRF",
+              "recall": 0.75,
+              "mrr": 0.625,
+              "misses": 2
+            },
+            {
+              "name": "+심볼슬롯",
+              "recall": 0.75,
+              "mrr": 0.625,
+              "misses": 2
+            },
+            {
+              "name": "운영 파이프라인",
+              "recall": 0.75,
+              "mrr": 0.625,
+              "misses": 2
+            }
+          ]
+        },
+        {
+          "title": "전체",
+          "n": 20,
+          "rows": [
+            {
+              "name": "vector only",
+              "recall": 0.85,
+              "mrr": 0.6125,
+              "misses": 3
+            },
+            {
+              "name": "bm25 only",
+              "recall": 0.9,
+              "mrr": 0.75,
+              "misses": 2
+            },
+            {
+              "name": "hybrid RRF",
+              "recall": 0.85,
+              "mrr": 0.7666666666666666,
+              "misses": 3
+            },
+            {
+              "name": "+심볼슬롯",
+              "recall": 0.85,
+              "mrr": 0.7083333333333333,
+              "misses": 3
+            },
+            {
+              "name": "운영 파이프라인",
+              "recall": 0.85,
+              "mrr": 0.7416666666666666,
+              "misses": 3
+            }
+          ]
+        }
+      ],
+      "out_of_scope": {
+        "total": 6,
+        "rejected": 6
+      }
+    },
+    {
+      "key": "eval-synthetic",
+      "label": "합성 258문항 — 규모를 키운 재측정",
+      "note": "수기 20문항의 자가 라벨 편향을 희석하려고 생성(노트 #19).",
+      "profile": "eval",
+      "dataset": "questions.synthetic.json",
+      "origins": {
+        "synthetic": 258
+      },
+      "k": 5,
+      "corpus": {
+        "doc": 48,
+        "code": 245,
+        "commit": 31
+      },
+      "created_at": "2026-09-01 07:39:13Z",
+      "suites": [
+        {
+          "title": "문서 질문",
+          "n": 22,
+          "rows": [
+            {
+              "name": "vector only",
+              "recall": 0.7727272727272727,
+              "mrr": 0.6022727272727273,
+              "misses": 5
+            },
+            {
+              "name": "bm25 only",
+              "recall": 0.7727272727272727,
+              "mrr": 0.6477272727272727,
+              "misses": 5
+            },
+            {
+              "name": "hybrid RRF",
+              "recall": 0.8181818181818182,
+              "mrr": 0.7151515151515151,
+              "misses": 4
+            },
+            {
+              "name": "운영 파이프라인",
+              "recall": 0.8181818181818182,
+              "mrr": 0.7151515151515151,
+              "misses": 4
+            }
+          ]
+        },
+        {
+          "title": "코드 질문",
+          "n": 182,
+          "rows": [
+            {
+              "name": "vector only",
+              "recall": 0.6868131868131868,
+              "mrr": 0.454761904761905,
+              "misses": 57
+            },
+            {
+              "name": "bm25 only",
+              "recall": 0.6428571428571429,
+              "mrr": 0.4641025641025641,
+              "misses": 65
+            },
+            {
+              "name": "hybrid RRF",
+              "recall": 0.7747252747252747,
+              "mrr": 0.5555860805860807,
+              "misses": 41
+            },
+            {
+              "name": "운영 파이프라인",
+              "recall": 0.8241758241758241,
+              "mrr": 0.6145604395604395,
+              "misses": 32
+            }
+          ]
+        },
+        {
+          "title": "커밋 질문",
+          "n": 54,
+          "rows": [
+            {
+              "name": "vector only",
+              "recall": 0.5925925925925926,
+              "mrr": 0.30586419753086425,
+              "misses": 22
+            },
+            {
+              "name": "bm25 only",
+              "recall": 0.6296296296296297,
+              "mrr": 0.44320987654320987,
+              "misses": 20
+            },
+            {
+              "name": "hybrid RRF",
+              "recall": 0.6851851851851852,
+              "mrr": 0.4620370370370369,
+              "misses": 17
+            },
+            {
+              "name": "운영 파이프라인",
+              "recall": 0.6851851851851852,
+              "mrr": 0.4456790123456789,
+              "misses": 17
+            }
+          ]
+        },
+        {
+          "title": "전체",
+          "n": 258,
+          "rows": [
+            {
+              "name": "vector only",
+              "recall": 0.6744186046511628,
+              "mrr": 0.43617571059431526,
+              "misses": 84
+            },
+            {
+              "name": "bm25 only",
+              "recall": 0.6511627906976745,
+              "mrr": 0.4753875968992247,
+              "misses": 90
+            },
+            {
+              "name": "hybrid RRF",
+              "recall": 0.7596899224806202,
+              "mrr": 0.5496124031007754,
+              "misses": 62
+            },
+            {
+              "name": "운영 파이프라인",
+              "recall": 0.7945736434108527,
+              "mrr": 0.5877906976744186,
+              "misses": 53
+            }
+          ]
+        }
+      ],
+      "out_of_scope": {
+        "total": 0,
+        "rejected": 0
+      }
+    },
+    {
+      "key": "demo",
+      "label": "demo — 라이브 데모 코퍼스",
+      "note": "워킹트리를 보므로 커밋마다 커진다. 게이트에는 쓰지 않는다.",
+      "profile": "demo",
+      "dataset": "questions.demo.json",
+      "origins": {
+        "manual": 30
+      },
+      "k": 5,
+      "corpus": {
+        "doc": 84,
+        "code": 564,
+        "commit": 42
+      },
+      "created_at": "2026-09-02 05:59:42Z",
+      "suites": [
+        {
+          "title": "문서 질문",
+          "n": 12,
+          "rows": [
+            {
+              "name": "vector only",
+              "recall": 0.9166666666666666,
+              "mrr": 0.6486111111111111,
+              "misses": 1
+            },
+            {
+              "name": "bm25 only",
+              "recall": 0.9166666666666666,
+              "mrr": 0.7041666666666666,
+              "misses": 1
+            },
+            {
+              "name": "hybrid RRF",
+              "recall": 0.9166666666666666,
+              "mrr": 0.8541666666666666,
+              "misses": 1
+            },
+            {
+              "name": "+심볼슬롯",
+              "recall": 0.9166666666666666,
+              "mrr": 0.7430555555555557,
+              "misses": 1
+            },
+            {
+              "name": "운영 파이프라인",
+              "recall": 0.9166666666666666,
+              "mrr": 0.7986111111111112,
+              "misses": 1
+            }
+          ]
+        },
+        {
+          "title": "코드 질문",
+          "n": 8,
+          "rows": [
+            {
+              "name": "vector only",
+              "recall": 0.75,
+              "mrr": 0.6875,
+              "misses": 2
+            },
+            {
+              "name": "bm25 only",
+              "recall": 0.625,
+              "mrr": 0.4375,
+              "misses": 3
+            },
+            {
+              "name": "hybrid RRF",
+              "recall": 0.75,
+              "mrr": 0.5875,
+              "misses": 2
+            },
+            {
+              "name": "+심볼슬롯",
+              "recall": 0.75,
+              "mrr": 0.625,
+              "misses": 2
+            },
+            {
+              "name": "운영 파이프라인",
+              "recall": 0.75,
+              "mrr": 0.625,
+              "misses": 2
+            }
+          ]
+        },
+        {
+          "title": "전체",
+          "n": 20,
+          "rows": [
+            {
+              "name": "vector only",
+              "recall": 0.85,
+              "mrr": 0.6641666666666667,
+              "misses": 3
+            },
+            {
+              "name": "bm25 only",
+              "recall": 0.8,
+              "mrr": 0.5974999999999999,
+              "misses": 4
+            },
+            {
+              "name": "hybrid RRF",
+              "recall": 0.85,
+              "mrr": 0.7474999999999999,
+              "misses": 3
+            },
+            {
+              "name": "+심볼슬롯",
+              "recall": 0.85,
+              "mrr": 0.6958333333333334,
+              "misses": 3
+            },
+            {
+              "name": "운영 파이프라인",
+              "recall": 0.85,
+              "mrr": 0.7291666666666667,
+              "misses": 3
+            }
+          ]
+        }
+      ],
+      "out_of_scope": {
+        "total": 6,
+        "rejected": 6
+      }
+    }
+  ],
+  "judges": {
+    "generator": "gemini:gemini-3.1-flash-lite",
+    "threshold": 1.0,
+    "judges": [
+      {
+        "judge": "gemini:gemini-3.1-flash-lite",
+        "self_judge": true,
+        "n": 16,
+        "mean": 0.97875,
+        "flag_rate": 0.0625
+      },
+      {
+        "judge": "gemini:gemini-3.5-flash-lite",
+        "self_judge": false,
+        "n": 16,
+        "mean": 1.0,
+        "flag_rate": 0.0
+      },
+      {
+        "judge": "ragas:gemini-3.1-flash-lite",
+        "self_judge": false,
+        "n": 15,
+        "mean": 0.986111111111111,
+        "flag_rate": 0.13333333333333333
+      },
+      {
+        "judge": "gemini:gemini-3-flash-preview",
+        "self_judge": false,
+        "n": 4,
+        "mean": 0.95,
+        "flag_rate": 0.25
+      },
+      {
+        "judge": "gemini:gemini-3.5-flash",
+        "self_judge": false,
+        "n": 4,
+        "mean": 1.0,
+        "flag_rate": 0.0
+      }
+    ],
+    "pairs": [
+      {
+        "a": "gemini:gemini-3.1-flash-lite",
+        "b": "gemini:gemini-3.5-flash-lite",
+        "n": 16,
+        "mean_diff": 0.021249999999999998,
+        "ci95": [
+          0.0,
+          0.06375
+        ],
+        "mad": 0.021249999999999998,
+        "kappa": null,
+        "spearman": null,
+        "underpowered": false
+      },
+      {
+        "a": "gemini:gemini-3.1-flash-lite",
+        "b": "ragas:gemini-3.1-flash-lite",
+        "n": 15,
+        "mean_diff": 0.008777777777777773,
+        "ci95": [
+          -0.030555555555555558,
+          0.062444444444444434
+        ],
+        "mad": 0.036555555555555556,
+        "kappa": -0.09756097560975548,
+        "spearman": -0.10456072210162856,
+        "underpowered": false
+      },
+      {
+        "a": "gemini:gemini-3.1-flash-lite",
+        "b": "gemini:gemini-3-flash-preview",
+        "n": 4,
+        "mean_diff": 0.035,
+        "ci95": [
+          -0.14999999999999997,
+          0.255
+        ],
+        "mad": 0.13499999999999998,
+        "kappa": -0.3333333333333333,
+        "spearman": -0.33333333333333337,
+        "underpowered": true
+      },
+      {
+        "a": "gemini:gemini-3.1-flash-lite",
+        "b": "gemini:gemini-3.5-flash",
+        "n": 4,
+        "mean_diff": 0.08499999999999999,
+        "ci95": [
+          0.0,
+          0.255
+        ],
+        "mad": 0.08499999999999999,
+        "kappa": null,
+        "spearman": null,
+        "underpowered": true
+      },
+      {
+        "a": "gemini:gemini-3.5-flash-lite",
+        "b": "ragas:gemini-3.1-flash-lite",
+        "n": 15,
+        "mean_diff": -0.013888888888888892,
+        "ci95": [
+          -0.03333333333333334,
+          0.0
+        ],
+        "mad": 0.013888888888888892,
+        "kappa": null,
+        "spearman": null,
+        "underpowered": false
+      },
+      {
+        "a": "gemini:gemini-3.5-flash-lite",
+        "b": "gemini:gemini-3-flash-preview",
+        "n": 4,
+        "mean_diff": -0.04999999999999999,
+        "ci95": [
+          -0.14999999999999997,
+          0.0
+        ],
+        "mad": 0.04999999999999999,
+        "kappa": null,
+        "spearman": null,
+        "underpowered": true
+      },
+      {
+        "a": "gemini:gemini-3.5-flash-lite",
+        "b": "gemini:gemini-3.5-flash",
+        "n": 4,
+        "mean_diff": 0.0,
+        "ci95": [
+          0.0,
+          0.0
+        ],
+        "mad": 0.0,
+        "kappa": null,
+        "spearman": null,
+        "underpowered": true
+      },
+      {
+        "a": "ragas:gemini-3.1-flash-lite",
+        "b": "gemini:gemini-3-flash-preview",
+        "n": 4,
+        "mean_diff": -0.029166666666666646,
+        "ci95": [
+          -0.14999999999999997,
+          0.06250000000000003
+        ],
+        "mad": 0.07083333333333333,
+        "kappa": -0.3333333333333333,
+        "spearman": -0.33333333333333337,
+        "underpowered": true
+      },
+      {
+        "a": "ragas:gemini-3.1-flash-lite",
+        "b": "gemini:gemini-3.5-flash",
+        "n": 4,
+        "mean_diff": 0.020833333333333343,
+        "ci95": [
+          0.0,
+          0.06250000000000003
+        ],
+        "mad": 0.020833333333333343,
+        "kappa": null,
+        "spearman": null,
+        "underpowered": true
+      },
+      {
+        "a": "gemini:gemini-3-flash-preview",
+        "b": "gemini:gemini-3.5-flash",
+        "n": 4,
+        "mean_diff": 0.04999999999999999,
+        "ci95": [
+          0.0,
+          0.14999999999999997
+        ],
+        "mad": 0.04999999999999999,
+        "kappa": null,
+        "spearman": null,
+        "underpowered": true
+      }
+    ],
+    "caveat": "판정기가 모두 Gemini 계열이다 — 모델 독립이 아니라 버전 독립. 여기 편차는 하한."
+  },
+  "judges_hard": {
+    "generator": "gemini:gemini-3.1-flash-lite",
+    "threshold": 1.0,
+    "judges": [
+      {
+        "judge": "gemini:gemini-3.1-flash-lite",
+        "self_judge": true,
+        "n": 19,
+        "mean": 0.9894736842105264,
+        "flag_rate": 0.05263157894736842
+      },
+      {
+        "judge": "gemini:gemini-3.5-flash-lite",
+        "self_judge": false,
+        "n": 19,
+        "mean": 0.9910526315789473,
+        "flag_rate": 0.05263157894736842
+      }
+    ],
+    "pairs": [
+      {
+        "a": "gemini:gemini-3.1-flash-lite",
+        "b": "gemini:gemini-3.5-flash-lite",
+        "n": 19,
+        "mean_diff": 0.0015789473684210483,
+        "ci95": [
+          -0.0268421052631579,
+          0.03157894736842105
+        ],
+        "mad": 0.019473684210526317,
+        "kappa": -0.05555555555555618,
+        "spearman": -0.05555555555555555,
+        "underpowered": false
+      }
+    ],
+    "caveat": "판정기가 모두 Gemini 계열이다 — 모델 독립이 아니라 버전 독립. 여기 편차는 하한."
+  },
+  "hard": {
+    "generator": "생성기",
+    "judge": "gemini:gemini-3.5-flash-lite",
+    "n": 29,
+    "pass_rate": 0.9655172413793104,
+    "by_kind": {
+      "absent": {
+        "n": 10,
+        "pass": 10,
+        "pass_rate": 1.0
+      },
+      "partial": {
+        "n": 7,
+        "pass": 7,
+        "pass_rate": 1.0
+      },
+      "superseded": {
+        "n": 12,
+        "pass": 11,
+        "pass_rate": 0.9166666666666666
+      }
+    },
+    "rule_vs_llm": {
+      "n": 10,
+      "rule_pass": 8,
+      "llm_pass": 10,
+      "agreement": 0.8
+    },
+    "failures": [
+      {
+        "kind": "superseded",
+        "q": "현재 우리 서비스에서 비개발자 모드일 때, 답변 내 코드 블록은 기본적으로 어떤 상태로 표시되나요?",
+        "why": "근거 1에 따르면 '💻 코드 보기 (N줄)'는 과거 커밋(0f243e5)의 localStorage 기반 UI 방식이나, 이후 커밋(dfbee00) 및 README(근거 5)에서는 개발자 모드 OFF 시 코드를 산문으로 설명하는 방식으로 변경(superseded)되었으므로 과거 값을 현재 값인 것처럼 오류를 범했습니다.",
+        "fabricated": [
+          "답변에 포함된 코드는 직접적인 코드 블록 대신 \"💻 코드 보기 (N줄)\"라는 문구로 접혀서 표시되어 화면의 복잡함을 줄여줍니다"
+        ]
+      }
+    ]
+  },
+  "ann": {
+    "k": 5,
+    "dim": 768,
+    "scaling": [
+      {
+        "n": 1000,
+        "mb": 3.072,
+        "p50": 0.10269999984302558,
+        "p95": 0.1402899990353033
+      },
+      {
+        "n": 10000,
+        "mb": 30.72,
+        "p50": 0.27909999698749743,
+        "p95": 0.4093699990335152
+      },
+      {
+        "n": 50000,
+        "mb": 153.6,
+        "p50": 2.242499998828862,
+        "p95": 2.5363099972310006
+      },
+      {
+        "n": 100000,
+        "mb": 307.2,
+        "p50": 5.339600000297651,
+        "p95": 5.798890000369283
+      }
+    ],
+    "real": {
+      "n": 324,
+      "n_queries": 20,
+      "brute_p50": 0.015300000086426735,
+      "sweep": [
+        {
+          "ef_search": 16,
+          "p50_ms": 0.010100000508828089,
+          "recall_at_k": 0.92
+        },
+        {
+          "ef_search": 64,
+          "p50_ms": 0.023600001441081986,
+          "recall_at_k": 0.99
+        },
+        {
+          "ef_search": 256,
+          "p50_ms": 0.1021999996737577,
+          "recall_at_k": 1.0
+        }
+      ]
+    }
+  },
+  "decisions": [
+    {
+      "title": "cross-encoder 리랭커",
+      "verdict": "기각",
+      "measured": "코드 질문 recall 75% → 50%",
+      "why": "cross-encoder 가 자연어-자연어 매칭을 자연어-코드보다 선호해, RRF 가 이미 올려 둔 정답 코드 파일을 문서로 뒤집었다. 큰 모델(v2-m3)은 분별력은 나았지만 CPU 4.4s/질문이라 데모 지연이 과했다.",
+      "action": "기본 OFF. 구현과 토글은 남겨 `USE_RERANKER=true` 로 재현 가능.",
+      "note": "노트 #7"
+    },
+    {
+      "title": "MMR 다양성 계수 λ",
+      "verdict": "재조정",
+      "measured": "λ 0.9 → 86% / 0.95 → 89% / 1.0 → 93%",
+      "why": "문서만 있던 코퍼스(956청크)에서는 0.8 이 최적이었는데, 코드·git 으로 확장(3,619청크)하니 다양성이 정답을 밀어냈다. 하이퍼파라미터가 데이터에 종속한다는 것을 실측으로 확인했다.",
+      "action": "0.8 → 1.0 (다양성 off). λ=1.0 이면 MMR 은 순위를 바꾸지 않으므로, 그 행의 개선은 MMR 이 아니라 심볼 슬롯의 공이었다 — 평가표 행 이름도 함께 정정했다.",
+      "note": "노트 #13, #17"
+    },
+    {
+      "title": "툴콜링 에이전트 (멀티홉)",
+      "verdict": "조건부 채택",
+      "measured": "동일 청크 예산 통제 시 25% vs 단발 42% → 원인 규명 후 50%",
+      "why": "에이전트가 근거를 더 많이 본다는 이점을 배제하려고 단발 검색에도 같은 청크 예산을 줬더니 오히려 **열세**였다. 미스 로그를 뒤져 원인이 '축 누락'임을 규명하고 프롬프트를 고친 뒤에야 역전했다.",
+      "action": "지연 20배·LLM 호출 2.5배라는 비용을 근거로 기본 비활성. 대신 라우터가 멀티홉 질문에만 켠다.",
+      "note": "노트 #10, #11"
+    },
+    {
+      "title": "한국어 형태소 분석기 (kiwi)",
+      "verdict": "기각",
+      "measured": "BM25 단독 65% → 70% (커밋 축 63% → 74%) / 전체 파이프라인 79% → 78%",
+      "why": "부품은 확실히 좋아졌는데 시스템은 나빠졌다. 원인을 쟀더니 BM25 후보가 벡터 쪽과 더 겹쳤다(28.9% → 30.4%). 하이브리드의 이득은 각 검색기의 품질이 아니라 **둘의 오류가 다르다는 데서** 나오므로, BM25 를 정밀하게 만들수록 그 차이가 준다.",
+      "action": "기본은 문자 2-gram 유지. `TOKENIZER=kiwi` 로 재현 가능.",
+      "note": "노트 #24"
+    },
+    {
+      "title": "LLM-as-judge 의 groundedness 지표",
+      "verdict": "지표 교체",
+      "measured": "판정기 4종 평균 0.950~1.000 / 문항 단위 합의 Cohen's κ ≈ -0.1 (우연 이하)",
+      "why": "답변을 고정하고 판정기만 바꾸는 통제 비교를 했다. 평균은 모였지만 **어느 답이 환각인지에 대한 합의는 0** 이었다. 평가셋이 쉬워서라고 진단하고 환각 유도 문항 29개를 만들어 다시 쟀는데 **그 진단이 틀렸다** — 값이 여전히 안 움직였다. 원인은 지표의 정의였다. 거절은 근거에 없는 주장을 하지 않으므로 자동으로 만점이라, 이 지표는 '말하지 않아서 얻는 만점'을 구분하지 못한다.",
+      "action": "환각 여부는 **행동 기반 채점**으로 잰다(덫 종류별 통과 조건). groundedness 수치는 단독으로 인용하지 않는다.",
+      "note": "노트 #21, #22"
+    },
+    {
+      "title": "브루트포스 전수매칭 vs ANN",
+      "verdict": "현행 유지",
+      "measured": "N=100,000 에서 전수매칭 5.34 ms / 307 MB · 실제 임베딩 HNSW recall@5 = 99%(ef=64)",
+      "why": "노트 #15 의 'N ≈ 10만, 지연이 아니라 메모리가 먼저 무너진다'는 3,619 청크에서의 외삽이었다. 실제로 키워 가며 재니 지지됐다 — 10만에서도 지연은 LLM 첫 토큰의 0.4% 다. ANN 은 품질 손실 없이 쓸 수 있지만 **이 규모에서 필요가 없다.**",
+      "action": "전수매칭 유지. 전환 임계는 지연이 아니라 메모리로 판단한다.",
+      "note": "노트 #15, #26"
+    },
+    {
+      "title": "질문 의도 라우팅",
+      "verdict": "채택하되 '개선'이라 부르지 않음",
+      "measured": "전체 258문항 MRR 0.59 → 0.59 / 개입한 10문항(3.9%)만 보면 0.362 → 0.525",
+      "why": "심볼 슬롯이 코드 질문은 살리고 문서 질문은 깎던 문제를 규칙 기반 판별로 나눴다. 코드 축 판별은 8/8 정확하지만, **개입 빈도가 4% 라 전체 평균이 움직이지 않는다.** 20문항 골든셋에서 보이던 +0.06 은 사실상 한 문항이었고, 거기 맞춰 규칙을 늘리면 그 20문항에 과적합이다.",
+      "action": "지연 비용이 0(정규식)이라 유지. 근거는 평균 개선이 아니라 알려진 실패 모드의 제거다.",
+      "note": "노트 #17, #23"
+    },
+    {
+      "title": "합성 데이터로 ANN recall 측정",
+      "verdict": "방법 자체를 기각",
+      "measured": "합성 벡터 recall@5 = 0~19% / 실제 임베딩 = 99~100%",
+      "why": "768차원 정규분포 벡터는 서로 거의 직교해 **최근접 이웃 구조 자체가 없다.** 근사 탐색이 붙잡을 그래프가 없으니 recall 이 바닥으로 나온 것이고, 그건 HNSW 가 아니라 데이터의 성질이다. 그대로 실었으면 'ANN 은 못 쓴다'는 정반대 결론이 나왔다.",
+      "action": "지연·메모리는 합성으로, 품질은 실제 임베딩으로. 같은 실험 안에서도 무엇을 합성으로 재도 되는지 나눈다.",
+      "note": "노트 #26"
+    },
+    {
+      "title": "질의 재작성의 사실 창작",
+      "verdict": "프롬프트 대신 검증으로 차단",
+      "measured": "데모 중 실제 발생 — \"MMR 계수를 왜 그렇게 정했고\" → \"왜 0.5로 설정했고\" (실제 값 1.0, 대화 어디에도 0.5 없음)",
+      "why": "재작성 프롬프트에는 이미 '새로운 정보를 추가하지 마세요'가 있었다. 지시로는 안 막혔다. 재작성된 질의로 검색하므로 이건 어색한 문장이 아니라 검색을 망치는 결함이다.",
+      "action": "대화에 없던 숫자·식별자가 들어가면 재작성을 버리고 원문으로 검색한다. 버렸다는 사실도 화면에 보인다.",
+      "note": "노트 #22 부수"
+    },
+    {
+      "title": "평가 코퍼스를 저장소 자기 자신으로 두기",
+      "verdict": "기각",
+      "measured": "첫 CI 실행이 실패하며 드러남",
+      "why": "demo 프로필은 저장소 자기 자신을 지식원으로 삼는다. 그러면 커밋할 때마다 코퍼스가 바뀌어, 점수 변화가 코드 탓인지 문서 탓인지 구분할 수 없다. 회귀 게이트가 성립하지 않는다.",
+      "action": "`eval` 프로필을 신설해 코퍼스를 git 태그로 고정. 코퍼스 갱신은 새 태그 + baseline 재생성이라는 **명시적 행위**를 요구한다.",
+      "note": "노트 #18"
+    }
+  ]
+}

@@ -229,6 +229,30 @@ button, input, textarea { font: inherit; color: inherit; }
 }
 .chip:hover { border-color: var(--c-accent); color: var(--c-accent); background: var(--c-accent-sub); }
 
+/* --- 기능 지도 ----------------------------------------------------------
+   평평한 칩 목록은 "무엇을 물을 수 있는지"만 알려 준다. 처음 온 사람에게 필요한 것은
+   "무엇이 구현돼 있는지"라서, 기능 단위로 묶고 각 질문에 '무엇을 보게 되는지'를 붙인다. */
+.tour { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: var(--s-3); text-align: left; margin-top: var(--s-5); }
+.tour-card { border: 1px solid var(--c-border); background: var(--c-surface);
+             border-radius: var(--r-lg); padding: var(--s-4); }
+.tour-card h3 { font-size: 14px; margin: 0 0 4px; letter-spacing: -.01em; }
+.tour-card .why { font-size: 12.5px; color: var(--c-text-dim); margin: 0 0 var(--s-3);
+                  line-height: 1.55; }
+.tour-q { display: block; width: 100%; text-align: left; cursor: pointer;
+          border: 1px solid var(--c-border); background: transparent; color: var(--c-text);
+          border-radius: var(--r-md); padding: 8px 10px; font-size: 13px; margin-bottom: 6px;
+          transition: border-color .14s, background .14s; }
+.tour-q:hover { border-color: var(--c-accent); background: var(--c-accent-sub); }
+.tour-q .look { display: block; font-size: 11.5px; color: var(--c-text-mute); margin-top: 3px; }
+.tour-q:hover .look { color: var(--c-accent); }
+.tour-follow { font-size: 12px; color: var(--c-text-mute); border-left: 2px solid var(--c-border);
+               padding: 2px 0 2px 10px; margin-top: 8px; line-height: 1.5; }
+.tour-follow b { color: var(--c-text-dim); font-weight: 600; }
+.tour-more { margin-top: var(--s-4); font-size: 13px; color: var(--c-text-dim); }
+.tour-more a { color: var(--c-accent); }
+@media (max-width: 860px) { .tour { grid-template-columns: 1fr; } }
+
 /* --- 메시지 -------------------------------------------------------------- */
 .turn { margin-bottom: var(--s-5); }
 .turn.user { display: flex; justify-content: flex-end; }
@@ -548,7 +572,12 @@ kbd {
           <h2>무엇이든 물어보세요</h2>
           <p>이 저장소의 <strong>문서 · 소스코드 · git 이력</strong>을 근거로 답합니다.
              모든 답변에는 출처와 원문 발췌가 함께 표시됩니다.</p>
-          <div class="chips" id="chips"></div>
+          <div class="tour" id="tour"></div>
+          <div class="chips" id="chips" hidden></div>
+          <p class="tour-more">
+            이 시스템이 실제로 얼마나 맞히는지, 그리고 <b>무엇을 측정해서 기각했는지</b>는
+            <a href="/eval">측정 결과</a>에 있습니다.
+          </p>
         </section>
       </div>
     </main>
@@ -595,6 +624,7 @@ const state = {
 const $ = (id) => document.getElementById(id);
 const els = {
   thread: $('thread'), inner: $('thread-inner'), empty: $('empty'), chips: $('chips'),
+  tour: $('tour'),
   form: $('f'), q: $('q'), send: $('send'), live: $('live'), toast: $('toast'),
   statusDot: $('status-dot'), statusText: $('status-text'), modeNote: $('mode-note'),
   files: $('files'), stDoc: $('st-doc'), stCode: $('st-code'),
@@ -1066,13 +1096,39 @@ async function boot() {
       els.files.appendChild(n);
     });
 
-    els.chips.innerHTML = '';
-    (topics.suggestions || []).slice(0, 6).forEach(s => {
-      const b = el('button', 'chip', esc(s));
-      b.type = 'button';
-      b.onclick = () => { ask(s); };   // 입력창에 남기지 않는다 — 전송된 질문이 두 번 보이면 혼란스럽다
-      els.chips.appendChild(b);
-    });
+    // 기능 지도가 있으면 그것을 쓰고, 없으면 예전 칩으로 떨어진다(다른 프로필 호환).
+    const tour = topics.tour || [];
+    els.tour.innerHTML = '';
+    if (tour.length) {
+      els.chips.hidden = true;
+      tour.forEach(g => {
+        const card = el('div', 'tour-card');
+        card.innerHTML = '<h3>' + esc(g.title) + '</h3><p class="why">' + esc(g.why) + '</p>';
+        (g.items || []).forEach(it => {
+          const b = el('button', 'tour-q',
+            esc(it.q) + '<span class="look">→ ' + esc(it.look) + '</span>');
+          b.type = 'button';
+          // 입력창에 남기지 않는다 — 전송된 질문이 두 번 보이면 혼란스럽다
+          b.onclick = () => { ask(it.q); };
+          card.appendChild(b);
+        });
+        if (g.followup) {
+          card.appendChild(el('div', 'tour-follow',
+            '<b>' + esc(g.followup.hint) + '</b><br>“' + esc(g.followup.q) + '”<br>→ ' +
+            esc(g.followup.look)));
+        }
+        els.tour.appendChild(card);
+      });
+    } else {
+      els.chips.hidden = false;
+      els.chips.innerHTML = '';
+      (topics.suggestions || []).slice(0, 6).forEach(s => {
+        const b = el('button', 'chip', esc(s));
+        b.type = 'button';
+        b.onclick = () => { ask(s); };
+        els.chips.appendChild(b);
+      });
+    }
 
     const llm = (health && health.llm_provider) || topics.llm || 'unknown';
     const ok = llm !== 'extractive';
