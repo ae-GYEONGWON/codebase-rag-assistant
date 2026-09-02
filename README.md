@@ -20,13 +20,19 @@
 | MRR | 0.53 | **0.68** |
 | — 문서 질문 20 | 85% | **100%** |
 | — 코드 질문 8 | 50% | **75%** |
-| 답변 groundedness (환각 없음, LLM-judge) | — | **0.962** |
+| 답변 groundedness (환각 없음, LLM-judge) | — | 0.962 † |
 | 범위 밖 질문 거절률 | — | **83%** (5/6) |
 
 > 지식원: 문서 1,022 + 코드 2,331 + git 커밋 266 = **3,619 청크**.
 > 측정 재현: `python -m eval.run_eval` (검색), `python -m eval.faithfulness` (답변 충실도).
 
-구현하며 마주친 문제와 해결 과정 14건은 **[엔지니어링 노트](docs/engineering-notes.md)** 에 정리.
+**† 이 숫자는 단독으로 쓰지 않는다.** 판정기를 4종으로 바꿔 같은 답변을 채점해 봤더니
+평균은 0.950~1.000 안에 몰렸지만 **어느 답이 환각인지에 대한 합의는 0 이었다**
+(Cohen's κ ≈ -0.1, 우연 이하 → [노트 #21](docs/engineering-notes.md)).
+평균이 모인 건 판정기가 견고해서가 아니라 **평가셋이 쉬워 천장에 붙어서**다.
+지표를 자랑하기 전에 그 지표가 변별력이 있는지를 먼저 쟀고, 없다는 결과를 그대로 적는다.
+
+구현하며 마주친 문제와 해결 과정 21건은 **[엔지니어링 노트](docs/engineering-notes.md)** 에 정리.
 
 ---
 
@@ -184,9 +190,14 @@ eval/
   questions.example.json  평가셋 템플릿(→ questions.json 으로 복사해 대상에 맞게 작성)
   run_eval.py     검색 평가(recall@k·MRR·거절률, 리트리버별 비교)
   faithfulness.py 답변 groundedness(LLM-as-judge)
+  generate.py     합성 평가셋 생성(원본 청크 기반, 검색기 미사용) + 어휘 중복률 검사
+  audit_misses.py 거짓 오답 감사 — miss 를 독립 판정기로 재확인(라벨 편향 보정)
+  judge_panel.py  ★판정기 패널 — 답변을 동결하고 판정기만 교체해 통제 비교
+                  (부트스트랩 CI·Cohen's κ·Spearman ρ, 쿼터 중단 안전)
+  ragas_score.py  RAGAS Faithfulness 대조(격리 환경 .venv-ragas 에서 실행)
 tests/            pytest (토크나이저·정규화·config·AST·검색통합)
 docs/
-  engineering-notes.md  구현 중 마주친 문제 18건
+  engineering-notes.md  구현 중 마주친 문제 21건
   HANDOFF.md            작업 현황·로드맵(여러 PC 에서 이어서 개발)
 ```
 
@@ -195,5 +206,7 @@ docs/
 ### 이력서용 한 줄
 > **운영 중인 실시간 시스템의 문서·소스코드·git 이력(3,600+ 청크)을 대상으로 한 RAG 어시스턴트 구축** —
 > BM25+벡터 하이브리드 검색(RRF)과 코드 심볼 매칭으로 검색 recall 을 벡터 단독 75%→93% 개선,
-> 자체 평가 하네스로 검색 정확도와 답변 충실도(groundedness 0.96)를 수치화. AST 코드 청킹,
+> 자체 평가 하네스로 검색 정확도와 답변 충실도를 수치화하고 **그 평가자 자체를 검증** —
+> 답변을 고정한 채 판정 모델만 교체하는 통제 비교로 LLM-judge 의 문항 단위 합의도가
+> 우연 수준임을 발견(Cohen's κ ≈ -0.1)해 지표의 유효 범위를 한정. AST 코드 청킹,
 > 범위 밖 질문 거절, 문서·코드 불일치 판별, 토큰 스트리밍 서빙까지 무료 스택(Gemini·Chroma·FastAPI)으로 구현.
