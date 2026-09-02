@@ -384,6 +384,9 @@ def main() -> None:
     c.add_argument("files", nargs="*", type=Path, help="기본: reports/panel-judge-*.json 전부")
     c.add_argument("--threshold", type=float, default=1.0,
                    help="'환각 있음' 이분 기준(기본 1.0 = 하나라도 지적되면 환각)")
+    c.add_argument("--out", default="judge-panel",
+                   help="리포트 파일명(확장자 제외). 평범한 셋과 적대적 셋의 비교를 "
+                        "나란히 남기려면 서로 다른 이름을 줘야 한다")
 
     args = ap.parse_args()
     rp.REPORT_DIR.mkdir(parents=True, exist_ok=True)
@@ -418,11 +421,13 @@ def main() -> None:
     if len(files) < 2:
         raise SystemExit("판정 결과가 2개 미만입니다 — judge 를 다른 --tag 로 한 번 더 돌리세요.")
     res = compare(list(files), args.threshold)
-    PANEL_PATH.write_text(json.dumps(res, ensure_ascii=False, indent=2), encoding="utf-8")
+    out_json = rp.REPORT_DIR / f"{args.out}.json"
+    out_md = rp.REPORT_DIR / f"{args.out}.md"
+    out_json.write_text(json.dumps(res, ensure_ascii=False, indent=2), encoding="utf-8")
     md = render(res)
-    PANEL_MD.write_text(md, encoding="utf-8")
+    out_md.write_text(md, encoding="utf-8")
     print(md)
-    print(f"[report] 저장: {PANEL_PATH} · {PANEL_MD}")
+    print(f"[report] 저장: {out_json} · {out_md}")
 
 
 if __name__ == "__main__":

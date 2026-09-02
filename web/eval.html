@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="ko" data-theme="auto">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>측정 결과 — Codebase Assistant</title>
+<style>
+/* ============================================================================
+   이 페이지가 존재하는 이유
+
+   이 프로젝트의 차별점은 챗봇이 아니라 **평가 체계**다. 그런데 그 결과가 전부
+   docs/*.md 안에만 있어서, 화면을 3분 보는 사람에게는 "출처 붙는 RAG 챗봇" 하나로만
+   보였다. 가장 강한 자산이 비가시였다 — 그걸 화면으로 끌어온다.
+
+   디자인 토큰은 index.html 과 같은 값을 쓴다(외부 의존 0, 단일 파일 유지).
+   ========================================================================== */
+:root {
+  --c-bg:#f7f8fa; --c-surface:#ffffff; --c-border:#e3e6ec; --c-border-str:#cbd2dd;
+  --c-text:#16191f; --c-text-dim:#5b6472; --c-text-mute:#8b94a3;
+  --c-accent:#3b5bdb; --c-accent-sub:#eaeeff;
+  --c-ok:#2f9e44; --c-ok-bg:#e9f7ec;
+  --c-warn:#e03131; --c-warn-bg:#fdecec;
+  --c-info:#1c7ed6; --c-info-bg:#e7f2fd;
+  --r-sm:6px; --r-md:10px; --r-lg:14px; --r-full:999px;
+  --s-1:4px; --s-2:8px; --s-3:12px; --s-4:16px; --s-5:24px; --s-6:32px;
+  --shadow-1:0 1px 2px rgba(16,24,40,.05);
+  --font:-apple-system, BlinkMacSystemFont, "Segoe UI", "Pretendard", "Apple SD Gothic Neo",
+         "Malgun Gothic", Roboto, sans-serif;
+  --font-mono:"SFMono-Regular","JetBrains Mono",Consolas,"D2Coding",monospace;
+  --max:1080px;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="auto"] {
+    color-scheme: dark;
+    --c-bg:#0f1115; --c-surface:#161a21; --c-border:#262c37; --c-border-str:#39424f;
+    --c-text:#e6e9ef; --c-text-dim:#a3acbb; --c-text-mute:#727d8d;
+    --c-accent:#748ffc; --c-accent-sub:#1e2540;
+    --c-ok:#51cf66; --c-ok-bg:#132a19;
+    --c-warn:#ff8787; --c-warn-bg:#37191c;
+    --c-info:#4dabf7; --c-info-bg:#132437;
+    --shadow-1:0 1px 2px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --c-bg:#0f1115; --c-surface:#161a21; --c-border:#262c37; --c-border-str:#39424f;
+  --c-text:#e6e9ef; --c-text-dim:#a3acbb; --c-text-mute:#727d8d;
+  --c-accent:#748ffc; --c-accent-sub:#1e2540;
+  --c-ok:#51cf66; --c-ok-bg:#132a19;
+  --c-warn:#ff8787; --c-warn-bg:#37191c;
+  --c-info:#4dabf7; --c-info-bg:#132437;
+  --shadow-1:0 1px 2px rgba(0,0,0,.4);
+}
+
+*,*::before,*::after{box-sizing:border-box}
+body{
+  margin:0; background:var(--c-bg); color:var(--c-text);
+  font-family:var(--font); font-size:15px; line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+  word-break:keep-all; overflow-wrap:anywhere;
+}
+a{color:var(--c-accent)}
+:focus-visible{outline:2px solid var(--c-accent); outline-offset:2px; border-radius:var(--r-sm)}
+@media (prefers-reduced-motion: reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important}}
+
+.wrap{max-width:var(--max); margin:0 auto; padding:var(--s-6) var(--s-4) 80px}
+
+/* --- 헤더 --- */
+.top{display:flex; align-items:flex-start; justify-content:space-between; gap:var(--s-4); flex-wrap:wrap}
+h1{font-size:26px; margin:0 0 var(--s-2); letter-spacing:-.01em}
+.lede{color:var(--c-text-dim); margin:0; max-width:60ch}
+.back{
+  display:inline-flex; align-items:center; gap:6px; text-decoration:none;
+  border:1px solid var(--c-border); border-radius:var(--r-full);
+  padding:6px 14px; font-size:13px; color:var(--c-text-dim); background:var(--c-surface);
+  white-space:nowrap;
+}
+.back:hover{border-color:var(--c-border-str); color:var(--c-text)}
+
+/* 스냅샷 고지 — 지금 잰 값이 아닐 수 있다는 것을 감추지 않는다 */
+.stamp{
+  margin:var(--s-4) 0 var(--s-5); padding:10px 14px; font-size:12.5px;
+  border:1px solid var(--c-border); border-left:3px solid var(--c-info);
+  border-radius:var(--r-md); background:var(--c-surface); color:var(--c-text-dim);
+}
+.stamp code{font-family:var(--font-mono); font-size:11.5px}
+
+section{margin-top:var(--s-6)}
+h2{font-size:19px; margin:0 0 6px; letter-spacing:-.01em}
+h2 .num{color:var(--c-text-mute); font-weight:400; font-size:14px; margin-left:6px}
+.sub{color:var(--c-text-dim); font-size:13.5px; margin:0 0 var(--s-4); max-width:72ch}
+
+.card{
+  background:var(--c-surface); border:1px solid var(--c-border);
+  border-radius:var(--r-lg); padding:var(--s-4); box-shadow:var(--shadow-1);
+  margin-bottom:var(--s-3);
+}
+.card > h3{font-size:15px; margin:0 0 2px}
+.card > .meta{font-size:12px; color:var(--c-text-mute); margin:0 0 var(--s-3)}
+
+/* 표 — 넓으면 가로 스크롤(본문이 밀리지 않게) */
+.tw{overflow-x:auto; -webkit-overflow-scrolling:touch}
+table{width:100%; border-collapse:collapse; font-size:13px; min-width:440px}
+th,td{padding:7px 10px; border-bottom:1px solid var(--c-border); text-align:left; white-space:nowrap}
+th{color:var(--c-text-mute); font-weight:600; font-size:12px}
+td.num,th.num{text-align:right; font-variant-numeric:tabular-nums}
+tr.best td{background:var(--c-accent-sub); font-weight:600}
+tr.best td:first-child::after{content:" ← 운영"; color:var(--c-accent); font-weight:400; font-size:11px}
+.mono{font-family:var(--font-mono); font-size:12px}
+
+.pill{
+  display:inline-block; padding:1px 8px; border-radius:var(--r-full);
+  font-size:11.5px; font-weight:600; white-space:nowrap;
+}
+.pill.ok{background:var(--c-ok-bg); color:var(--c-ok)}
+.pill.warn{background:var(--c-warn-bg); color:var(--c-warn)}
+.pill.info{background:var(--c-info-bg); color:var(--c-info)}
+
+/* 핵심 수치 타일 */
+.tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:var(--s-3); margin-bottom:var(--s-4)}
+.tile{background:var(--c-surface); border:1px solid var(--c-border); border-radius:var(--r-md); padding:var(--s-3) var(--s-4)}
+.tile .v{font-size:26px; font-weight:700; letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+.tile .k{font-size:12px; color:var(--c-text-mute); margin-top:2px}
+.tile .n{font-size:11.5px; color:var(--c-text-dim); margin-top:6px; line-height:1.45; white-space:normal}
+
+/* 경고/해석 블록 — 수치 옆에 조건을 붙여 말한다 */
+.note{
+  margin-top:var(--s-3); padding:10px 12px; font-size:12.5px; line-height:1.6;
+  border-radius:var(--r-md); background:var(--c-warn-bg); color:var(--c-text);
+  border:1px solid color-mix(in srgb, var(--c-warn) 25%, transparent);
+}
+.note.plain{background:var(--c-surface); border-color:var(--c-border); color:var(--c-text-dim)}
+.note b{color:var(--c-warn)}
+.note.plain b{color:var(--c-text)}
+
+/* 판단 목록 */
+.dec{border-left:3px solid var(--c-border-str)}
+.dec.reject{border-left-color:var(--c-warn)}
+.dec.adopt{border-left-color:var(--c-ok)}
+.dec-head{display:flex; align-items:baseline; gap:var(--s-2); flex-wrap:wrap; margin-bottom:6px}
+.dec-head h3{margin:0; font-size:15px}
+.dec dl{display:grid; grid-template-columns:auto 1fr; gap:4px var(--s-3); margin:0; font-size:13px}
+.dec dt{color:var(--c-text-mute); white-space:nowrap}
+.dec dd{margin:0}
+.dec .src{margin-top:8px; font-size:11.5px; color:var(--c-text-mute)}
+
+.fail{font-size:12.5px; border-left:2px solid var(--c-warn); padding-left:10px; margin:8px 0}
+.fail .q{color:var(--c-text-dim)}
+.fail .f{color:var(--c-warn); margin-top:2px}
+
+.err{padding:var(--s-4); border:1px solid var(--c-warn); border-radius:var(--r-md); background:var(--c-warn-bg)}
+.loading{color:var(--c-text-mute); padding:var(--s-5) 0}
+
+/* 접이식 상세 — 표가 길어 본문을 밀어내면 정작 중요한 절이 스크롤 아래로 사라진다.
+   기본은 접고, 펴 볼 수 있게 둔다. */
+details.more{margin-top:var(--s-2)}
+details.more > summary{
+  cursor:pointer; list-style:none; font-size:12.5px; color:var(--c-accent);
+  display:inline-flex; align-items:center; gap:5px; padding:4px 0;
+}
+details.more > summary::-webkit-details-marker{display:none}
+details.more > summary::before{content:"▸"; font-size:10px; transition:transform .12s}
+details.more[open] > summary::before{transform:rotate(90deg)}
+details.more > summary:hover{text-decoration:underline}
+
+/* 최상단 요약 — 30초 훑는 사람이 보는 것은 사실상 이 줄뿐이다 */
+.hero{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+  gap:var(--s-3); margin:var(--s-5) 0 var(--s-6);
+}
+.hero .tile{border-left:3px solid var(--c-accent)}
+.hero .tile .v{font-size:30px}
+.toc{font-size:13px; color:var(--c-text-dim); margin:0 0 var(--s-5)}
+.toc a{margin-right:var(--s-3); white-space:nowrap}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>측정 결과</h1>
+      <p class="lede">
+        이 프로젝트에서 실제로 시간을 쓴 곳은 챗봇이 아니라 <b>평가 체계</b>다.
+        아래는 그 결과이고, <b>기각한 판단</b>을 채택한 것과 나란히 싣는다.
+      </p>
+    </div>
+    <a class="back" href="/">← 데모로</a>
+  </div>
+
+  <div id="stamp" class="stamp">불러오는 중…</div>
+  <main id="main"><p class="loading">불러오는 중…</p></main>
+</div>
+
+<script>
+'use strict';
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pct = v => v == null ? '–' : (v * 100).toFixed(0) + '%';
+const f2 = v => v == null ? '–' : Number(v).toFixed(2);
+const f3 = v => v == null ? 'n/a' : Number(v).toFixed(3);
+const el = (tag, cls, html) => {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (html != null) n.innerHTML = html;
+  return n;
+};
+
+/* 검색 평가 — 리트리버 비교표. '운영 파이프라인' 행을 강조해 무엇이 실제 경로인지 보인다. */
+function renderRetrieval(list) {
+  const sec = el('section');
+  sec.innerHTML =
+    '<h2>검색 정확도<span class="num">recall@5 · MRR</span></h2>' +
+    '<p class="sub">같은 문항을 리트리버만 바꿔 돌린 결과다. ' +
+    '<b>코퍼스와 문항 수가 다르면 서로 비교하지 않는다</b> — 아래 네 벌은 각각 다른 조건이다.</p>';
+
+  list.forEach((r, ri) => {
+    const card = el('div', 'card');
+    const total = (r.corpus.doc || 0) + (r.corpus.code || 0) + (r.corpus.commit || 0);
+    const origins = Object.entries(r.origins || {}).map(([k, v]) => `${k} ${v}`).join(' · ');
+    card.innerHTML =
+      `<h3>${esc(r.label)}</h3>` +
+      `<p class="meta">${total.toLocaleString()}청크 ` +
+      `(문서 ${r.corpus.doc || 0} / 코드 ${r.corpus.code || 0} / 커밋 ${r.corpus.commit || 0}) · ` +
+      `평가셋 <span class="mono">${esc(r.dataset || '?')}</span>` +
+      (origins ? ` · 라벨 ${esc(origins)}` : '') + `</p>` +
+      `<p class="meta">${esc(r.note)}</p>`;
+
+    // '전체' 스위트는 항상 보이고, 축별 상세는 접는다 — 표가 길어 다음 절을 밀어낸다.
+    const table = s => {
+      const rows = s.rows.map(x =>
+        `<tr class="${x.name === '운영 파이프라인' ? 'best' : ''}">` +
+        `<td>${esc(x.name)}</td>` +
+        `<td class="num">${pct(x.recall)}</td>` +
+        `<td class="num">${f2(x.mrr)}</td>` +
+        `<td class="num">${x.misses}</td></tr>`).join('');
+      const tw = el('div', 'tw');
+      tw.innerHTML =
+        `<table><thead><tr><th>${esc(s.title)} <span class="num">${s.n}문항</span></th>` +
+        `<th class="num">recall@5</th><th class="num">MRR</th><th class="num">miss</th></tr></thead>` +
+        `<tbody>${rows}</tbody></table>`;
+      return tw;
+    };
+    const whole = r.suites.filter(s => s.title === '전체');
+    const parts = r.suites.filter(s => s.title !== '전체');
+    (whole.length ? whole : r.suites).forEach(s => card.appendChild(table(s)));
+    if (whole.length && parts.length) {
+      const det = el('details', 'more');
+      det.innerHTML = `<summary>축별로 나눠 보기 (${parts.map(s => esc(s.title)).join(' · ')})</summary>`;
+      parts.forEach(s => det.appendChild(table(s)));
+      card.appendChild(det);
+    }
+
+    const oos = r.out_of_scope || {};
+    if (oos.total) {
+      card.appendChild(el('div', 'note plain',
+        `<b>범위 밖 거절 ${oos.rejected}/${oos.total}</b> — 코사인 임계 미만이면 ` +
+        `검색 단계에서 자른다. LLM 을 아예 부르지 않으므로 환각도 비용도 0 이다.`));
+    }
+    sec.appendChild(card);
+  });
+  return sec;
+}
+
+/* 판정기 패널 — 이 프로젝트에서 가장 중요한 표. 평균이 아니라 '합의'를 봐야 한다. */
+function renderJudges(j, hard) {
+  const sec = el('section');
+  sec.innerHTML =
+    '<h2>LLM 판정기를 검증했다<span class="num">평가자 자체를 잰다</span></h2>' +
+    '<p class="sub">답변과 근거를 <b>고정한 채 판정 모델만</b> 바꿔 채점했다. ' +
+    '따라서 아래 차이는 전부 판정기 차이다.</p>';
+
+  const panel = (d, title, note) => {
+    if (!d) return null;
+    const card = el('div', 'card');
+    const rows = d.judges.map(x =>
+      `<tr><td class="mono">${esc(x.judge)}</td>` +
+      `<td><span class="pill ${x.self_judge ? 'warn' : 'info'}">${x.self_judge ? 'self' : 'cross'}</span></td>` +
+      `<td class="num">${x.n}</td><td class="num">${f3(x.mean)}</td>` +
+      `<td class="num">${pct(x.flag_rate)}</td></tr>`).join('');
+    // κ 는 계산 가능한 쌍만. n/a 는 '한쪽이 전 문항 같은 판정' 이라는 뜻이라 그대로 표기한다.
+    const ks = d.pairs.filter(p => p.kappa != null);
+    const kmin = ks.length ? Math.min(...ks.map(p => p.kappa)) : null;
+    const kmax = ks.length ? Math.max(...ks.map(p => p.kappa)) : null;
+    card.innerHTML =
+      `<h3>${esc(title)}</h3><p class="meta">${esc(note)}</p>` +
+      `<div class="tw"><table><thead><tr><th>판정기</th><th>종류</th>` +
+      `<th class="num">채점</th><th class="num">평균</th><th class="num">환각 지적</th>` +
+      `</tr></thead><tbody>${rows}</tbody></table></div>`;
+    if (ks.length) {
+      card.appendChild(el('div', 'note',
+        `<b>평균은 모였는데 합의는 없다.</b> 문항 단위 일치도(Cohen&rsquo;s κ)가 ` +
+        `${f3(kmin)} ~ ${f3(kmax)} 로 <b>전부 음수</b> — 우연히 맞추는 것보다 못하다. ` +
+        `즉 판정기들은 &ldquo;몇 점인가&rdquo;에는 비슷하게 답하지만 ` +
+        `&ldquo;<b>어느 답이 환각인가</b>&rdquo;에는 한 문항도 합의하지 않았다. ` +
+        `평균이 모인 건 판정기가 견고해서가 아니라 <b>천장 효과</b>다.`));
+    } else {
+      card.appendChild(el('div', 'note plain',
+        `κ 를 계산할 수 있는 쌍이 없다 — 한쪽 판정기가 전 문항에 같은 판정을 내렸다는 뜻이고, ` +
+        `그 자체가 &ldquo;변별하지 못한다&rdquo;는 결과다.`));
+    }
+    return card;
+  };
+
+  const a = panel(j, '평범한 문항 16개', '골든셋에서 뽑은 답변을 판정기 5종에 걸었다.');
+  if (a) sec.appendChild(a);
+  const b = panel(hard, '환각 유도 문항 19개',
+    '"평가셋이 쉬워서"라는 가설을 확인하려고 어려운 문항으로 다시 걸었다.');
+  if (b) sec.appendChild(b);
+
+  if (j && hard) {
+    sec.appendChild(el('div', 'note',
+      `<b>가설이 틀렸다.</b> 문항을 어렵게 만들어도 값이 움직이지 않았다. ` +
+      `원인은 평가셋이 아니라 <b>지표의 정의</b>였다 — 거절은 근거에 없는 주장을 하지 않으므로 ` +
+      `groundedness 가 자동으로 만점이다. 이 지표는 &lsquo;환각을 했는가&rsquo;가 아니라 ` +
+      `&lsquo;한 말이 근거에 있는가&rsquo;를 재고, <b>말하지 않아서 얻는 만점</b>을 구분하지 못한다. ` +
+      `→ 그래서 아래의 <b>행동 기반 채점</b>으로 지표를 바꿨다.`));
+  }
+  if (j && j.caveat) {
+    sec.appendChild(el('div', 'note plain', esc(j.caveat)));
+  }
+  return sec;
+}
+
+/* 적대적 평가 — 지표를 바꾸고 나서야 변별했다는 것을 보이는 자리. 실패 사례를 숨기지 않는다. */
+function renderHard(h) {
+  const sec = el('section');
+  const label = {absent: '없는 사실을 묻는다', partial: '절반만 근거가 있다',
+                 superseded: '옛 값이 튀어나오기 쉽다'};
+  const right = {absent: '없다고 밝힌다', partial: '있는 갈래만 답한다',
+                 superseded: '현재 값을 답한다'};
+  sec.innerHTML =
+    '<h2>환각을 유도하고, 행동으로 채점했다<span class="num">' + h.n + '문항</span></h2>' +
+    '<p class="sub">환각이 실제로 나오는 문항을 <b>일부러</b> 만들고, 덫 종류마다 ' +
+    '통과 조건을 따로 뒀다. 이 지표는 변별한다 — groundedness 로 재면 아래 실패가 0.99 로 묻힌다.</p>';
+
+  const tiles = el('div', 'tiles');
+  tiles.innerHTML =
+    `<div class="tile"><div class="v">${pct(h.pass_rate)}</div><div class="k">전체 통과율</div>` +
+    `<div class="n">나머지가 환각이다</div></div>` +
+    Object.entries(h.by_kind).map(([k, v]) =>
+      `<div class="tile"><div class="v">${pct(v.pass_rate)}</div>` +
+      `<div class="k">${esc(k)} · ${v.pass}/${v.n}</div>` +
+      `<div class="n">${esc(label[k] || '')} → ${esc(right[k] || '')}</div></div>`).join('');
+  sec.appendChild(tiles);
+
+  const rl = h.rule_vs_llm || {};
+  if (rl.n) {
+    sec.appendChild(el('div', 'note plain',
+      `<b>규칙 기반 채점은 쓸 수 없다.</b> &lsquo;거절 어휘가 있는가&rsquo;(정규식)로 세면 ` +
+      `${rl.rule_pass}/${rl.n}, 실제로 지어냈는지 판정하면 ${rl.llm_pass}/${rl.n} — ` +
+      `일치율 ${pct(rl.agreement)}. 어긋나는 쪽은 &ldquo;확인되지 않으나 값은 …입니다&rdquo;처럼 ` +
+      `<b>거절 어휘를 쓰면서 동시에 지어내는</b> 답변이다.`));
+  }
+
+  if (h.failures && h.failures.length) {
+    const card = el('div', 'card');
+    card.innerHTML = '<h3>실제로 지어낸 사례</h3>' +
+      '<p class="meta">잘 되는 것만 보여주면 데모가 된다. 틀린 것을 같이 싣는다.</p>';
+    h.failures.forEach(f => {
+      card.appendChild(el('div', 'fail',
+        `<span class="pill warn">${esc(f.kind)}</span> ` +
+        `<span class="q">${esc(f.q)}</span>` +
+        (f.fabricated || []).map(x => `<div class="f">지어냄: ${esc(x)}</div>`).join('')));
+    });
+    sec.appendChild(card);
+  }
+  return sec;
+}
+
+/* ANN 임계 — 브루트포스가 의도된 선택임을 수치로. 합성/실측을 나눈 이유도 함께. */
+function renderAnn(a) {
+  const sec = el('section');
+  sec.innerHTML =
+    '<h2>브루트포스는 언제까지 버티나<span class="num">전환 임계 실측</span></h2>' +
+    '<p class="sub">벡터 검색을 전수 매칭으로 한다. 그게 게으름이 아니라 선택임을 ' +
+    'N 을 키워 가며 쟀다.</p>';
+
+  const card = el('div', 'card');
+  card.innerHTML =
+    '<h3>지연·메모리 스케일링 <span class="pill info">합성 벡터</span></h3>' +
+    '<p class="meta">행렬곱 비용은 값이 아니라 <b>모양</b>이 정하므로 이 목적에는 합성으로 충분하다.</p>' +
+    '<div class="tw"><table><thead><tr><th class="num">N</th><th class="num">행렬</th>' +
+    '<th class="num">p50</th><th class="num">p95</th></tr></thead><tbody>' +
+    a.scaling.map(r =>
+      `<tr><td class="num">${r.n.toLocaleString()}</td>` +
+      `<td class="num">${Math.round(r.mb).toLocaleString()} MB</td>` +
+      `<td class="num">${f2(r.p50)} ms</td><td class="num">${f2(r.p95)} ms</td></tr>`).join('') +
+    '</tbody></table></div>';
+  const last = a.scaling[a.scaling.length - 1];
+  if (last) {
+    card.appendChild(el('div', 'note plain',
+      `N=${last.n.toLocaleString()} 에서도 ${f2(last.p50)} ms — LLM 첫 토큰(~1,400 ms)의 ` +
+      `<b>${(last.p50 / 1400 * 100).toFixed(1)}%</b> 다. <b>먼저 무너지는 것은 지연이 아니라 메모리</b>이고, ` +
+      `100만 청크면 ${Math.round(last.mb * 10 / 1000)} GB 가 된다.`));
+  }
+  sec.appendChild(card);
+
+  if (a.real) {
+    const c2 = el('div', 'card');
+    c2.innerHTML =
+      '<h3>HNSW 와의 교환 <span class="pill ok">실제 임베딩</span></h3>' +
+      `<p class="meta">실제 코퍼스 ${a.real.n.toLocaleString()}청크 · 실제 평가 질의 ${a.real.n_queries}개. ` +
+      'recall 은 전수 매칭이 고른 것 대비 일치율이다.</p>' +
+      '<div class="tw"><table><thead><tr><th class="num">ef_search</th><th class="num">HNSW p50</th>' +
+      '<th class="num">전수매칭 p50</th><th class="num">recall@5</th></tr></thead><tbody>' +
+      a.real.sweep.map(r =>
+        `<tr><td class="num">${r.ef_search}</td><td class="num">${f2(r.p50_ms)} ms</td>` +
+        `<td class="num">${f2(a.real.brute_p50)} ms</td>` +
+        `<td class="num">${pct(r.recall_at_k)}</td></tr>`).join('') +
+      '</tbody></table></div>';
+    c2.appendChild(el('div', 'note',
+      `<b>합성 벡터로는 이 값을 재면 안 된다.</b> 같은 실험을 합성으로 하면 recall 이 0~19% 로 ` +
+      `나오는데, 768차원 정규분포 벡터는 서로 거의 직교해 <b>최근접 이웃 구조 자체가 없기</b> 때문이다. ` +
+      `그건 HNSW 의 성질이 아니라 데이터의 성질이다 — 그대로 실었으면 ` +
+      `&ldquo;ANN 은 못 쓴다&rdquo;는 정반대 결론이 나왔다.`));
+    sec.appendChild(c2);
+  }
+  return sec;
+}
+
+/* 채택/기각한 판단 — 이 페이지의 결론부. '해봤다'가 아니라 '재고 정했다'. */
+function renderDecisions(list) {
+  const sec = el('section');
+  const nRej = list.filter(d => d.verdict.includes('기각')).length;
+  sec.innerHTML =
+    `<h2>측정하고 정한 것<span class="num">${list.length}건 중 ${nRej}건이 기각</span></h2>` +
+    '<p class="sub">기술을 <b>붙였다</b>가 아니라 <b>재고 정했다</b>가 이 목록의 존재 이유다. ' +
+    '기각한 것을 같이 싣는 이유는, 채택만 나열하면 무엇을 근거로 골랐는지 알 수 없기 때문이다.</p>';
+
+  list.forEach(d => {
+    const rejected = d.verdict.includes('기각');
+    const card = el('div', 'card dec ' + (rejected ? 'reject' : 'adopt'));
+    card.innerHTML =
+      `<div class="dec-head"><h3>${esc(d.title)}</h3>` +
+      `<span class="pill ${rejected ? 'warn' : 'ok'}">${esc(d.verdict)}</span></div>` +
+      `<dl>` +
+      `<dt>잰 값</dt><dd class="mono">${esc(d.measured)}</dd>` +
+      `<dt>왜</dt><dd>${esc(d.why)}</dd>` +
+      `<dt>그래서</dt><dd>${esc(d.action)}</dd>` +
+      `</dl><div class="src">근거: ${esc(d.note)}</div>`;
+    sec.appendChild(card);
+  });
+  return sec;
+}
+
+/* 최상단 요약 — 이 페이지에서 딱 한 줄만 읽는다면 이것이어야 한다. */
+function renderHero(d) {
+  const box = el('div');
+  const nDec = (d.decisions || []).length;
+  const nRej = (d.decisions || []).filter(x => x.verdict.includes('기각')).length;
+  const priv = (d.retrieval || []).find(r => r.key === 'private');
+  const whole = priv && priv.suites.find(s => s.title === '전체');
+  const op = whole && whole.rows.find(r => r.name === '운영 파이프라인');
+  const base = whole && whole.rows.find(r => r.name === 'vector only');
+  const ks = ((d.judges || {}).pairs || []).filter(p => p.kappa != null).map(p => p.kappa);
+
+  const tiles = [];
+  if (op && base) {
+    tiles.push([`${pct(base.recall)}→${pct(op.recall)}`, '검색 recall@5',
+                '벡터 단독 → 하이브리드(RRF). 3,619청크 · 28문항']);
+  }
+  if (d.hard) {
+    tiles.push([pct(d.hard.pass_rate), '환각 유도 문항 통과율',
+                `${d.hard.n}문항. 행동 기반 채점 — groundedness 로는 변별이 안 됐다`]);
+  }
+  if (ks.length) {
+    tiles.push([f3(Math.max(...ks)), 'LLM 판정기 합의도 (κ)',
+                '우연 이하. 평균은 같아도 어느 답이 환각인지는 합의하지 않았다']);
+  }
+  if (nDec) {
+    tiles.push([`${nRej}/${nDec}`, '측정 후 기각한 판단',
+                '리랭커 · 형태소 분석기 · 합성 벤치 방법 등']);
+  }
+  const hero = el('div', 'hero');
+  hero.innerHTML = tiles.map(([v, k, n]) =>
+    `<div class="tile"><div class="v">${esc(v)}</div><div class="k">${esc(k)}</div>` +
+    `<div class="n">${esc(n)}</div></div>`).join('');
+  box.appendChild(hero);
+  return box;
+}
+
+async function main() {
+  const stamp = document.getElementById('stamp');
+  const root = document.getElementById('main');
+  let d;
+  try {
+    const res = await fetch('/eval/summary');
+    d = await res.json();
+  } catch (e) {
+    root.innerHTML = `<div class="err">스냅샷을 불러오지 못했습니다: ${esc(e.message)}</div>`;
+    stamp.textContent = '';
+    return;
+  }
+  if (d.error) {
+    root.innerHTML = `<div class="err">${esc(d.error)}</div>`;
+    stamp.textContent = '';
+    return;
+  }
+
+  // 스냅샷이라는 사실을 먼저 밝힌다 — 수치에 조건을 붙여 말하는 것이 이 프로젝트의 원칙이다.
+  stamp.innerHTML =
+    `이 페이지는 <b>발행된 스냅샷</b>이다(지금 다시 잰 값이 아니다). ` +
+    `생성 ${esc((d.generated_at || '').replace('T', ' ').slice(0, 16))}` +
+    (d.git_sha ? ` · 커밋 <code>${esc(d.git_sha)}</code>` : '') +
+    ` · 갱신은 <code>python -m eval.publish</code>`;
+
+  root.innerHTML = '';
+
+  // 순서는 '강한 것부터'다. 처음에는 검색 표(58행)를 맨 위에 뒀는데, 그러면 이 페이지의
+  // 결론부인 '기각 판단'이 스크롤 맨 아래로 밀린다 — 30초 훑는 사람에게는 없는 것과 같다.
+  root.appendChild(renderHero(d));
+  if (d.decisions && d.decisions.length) root.appendChild(renderDecisions(d.decisions));
+  if (d.judges || d.judges_hard) root.appendChild(renderJudges(d.judges, d.judges_hard));
+  if (d.hard) root.appendChild(renderHard(d.hard));
+  if (d.retrieval && d.retrieval.length) root.appendChild(renderRetrieval(d.retrieval));
+  if (d.ann) root.appendChild(renderAnn(d.ann));
+}
+
+main();
+</script>
+</body>
+</html>
