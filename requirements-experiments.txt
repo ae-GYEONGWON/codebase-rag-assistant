@@ -1,0 +1,24 @@
+# 실험·측정 전용 의존성 — **서비스 실행에는 필요 없다.**
+#
+# 이 파일을 requirements.txt 와 나눈 이유는 하나다. 아래 패키지들은 특정 실험에서만
+# 쓰이는데 설치 비용이 크다(faiss 는 수십 MB 바이너리 휠, kiwipiepy 는 형태소 사전을 포함).
+# clone 직후 `pip install -r requirements.txt` 한 번으로 데모가 떠야 한다는 원칙을
+# 지키려면, 재 보고 싶을 때만 깔면 되는 것을 기본 설치에 섞으면 안 된다.
+# (평가 도구가 서비스 런타임을 오염시키지 않게 RAGAS 를 .venv-ragas 로 격리한 것과 같은 판단.)
+#
+#     pip install -r requirements-experiments.txt
+
+# 한국어 형태소 분석기 — BM25 토크나이저를 2-gram 근사에서 갈아끼울 때만 필요.
+#   TOKENIZER=kiwi 로 켠다(app/tokenizer.py).
+#   ※ 측정 결과 BM25 단독은 좋아지지만 융합 후에는 나빠져 **기본값은 ngram** 이다.
+#      두 검색기의 오류가 서로 달라야 RRF 가 이득을 내는데, 정밀해질수록 그 차이가 준다.
+kiwipiepy>=0.18.0
+
+# ANN(HNSW) 비교 — 브루트포스 전환 임계를 실증하는 벤치에만 쓴다.
+#   python -m eval.ann_threshold --real --profile eval
+#   ※ 서비스 검색 경로는 여전히 전수 매칭이다. 이 패키지는 "언제 갈아타야 하는가"를
+#      재기 위한 것이지, 갈아탔다는 뜻이 아니다.
+faiss-cpu>=1.8.0
+
+# 리포트 검증(PDF 텍스트 추출 등 부수 작업)
+pypdf>=5.0.0

@@ -74,8 +74,14 @@ def freeze(qs, n: int, seed: int) -> dict:
     from app.rag import _format_context, answer
     from app.retriever import search
 
-    cases: List[dict] = [dict(c, bucket="in_scope") for c in qs.in_scope]
-    cases += [dict(c, bucket="in_scope_code") for c in qs.in_scope_code]
+    # 적대적 문항이 있으면 **그것만** 쓴다. 평범한 문항과 섞으면 다시 천장에 붙어
+    # 판정기 편차가 묻힌다 — 노트 #21 이 진단한 것이 정확히 그 희석이었다.
+    if qs.hard:
+        cases: List[dict] = [dict(c, bucket=c.get("kind", "hard")) for c in qs.hard]
+        print(f"[freeze] 적대적 평가셋 {len(cases)}문항을 대상으로 한다(평범한 문항과 섞지 않음)")
+    else:
+        cases = [dict(c, bucket="in_scope") for c in qs.in_scope]
+        cases += [dict(c, bucket="in_scope_code") for c in qs.in_scope_code]
     rng = random.Random(seed)
     rng.shuffle(cases)
     picked = cases[: max(n - 1, 1)]

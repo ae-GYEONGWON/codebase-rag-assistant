@@ -62,6 +62,10 @@ class QuestionSet:
     out_of_scope: List[str]
     # 커밋 축("언제 왜 바뀌었나")은 문서·코드와 성격이 달라 따로 센다.
     in_scope_commit: List[dict] = field(default_factory=list)
+    # 적대적 문항(eval/questions.hard.json). recall 채점 대상이 아니다 —
+    # `absent` 는 정답이 "없다고 말하기"라서 정답 파일이라는 개념 자체가 없다.
+    # 그래서 in_scope 에 합치지 않고 따로 둔다(합치면 recall 이 거짓으로 깎인다).
+    hard: List[dict] = field(default_factory=list)
 
     @property
     def n_total(self) -> int:
@@ -83,7 +87,9 @@ class QuestionSet:
         return (
             f"[{self.profile}] {self.path.name}: 문서 {len(self.in_scope)} · "
             f"코드 {len(self.in_scope_code)} · 커밋 {len(self.in_scope_commit)} · "
-            f"멀티홉 {len(self.multihop)} · 범위밖 {len(self.out_of_scope)} (라벨: {origins})"
+            f"멀티홉 {len(self.multihop)} · 범위밖 {len(self.out_of_scope)}"
+            + (f" · 적대적 {len(self.hard)}" if self.hard else "")
+            + f" (라벨: {origins})"
         )
 
 
@@ -104,4 +110,5 @@ def load_questions(path: Path | None = None) -> QuestionSet:
         in_scope_commit=data.get("in_scope_commit", []),
         multihop=data.get("multihop", []),
         out_of_scope=data.get("out_of_scope", []),
+        hard=data.get("hard", []),
     )

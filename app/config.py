@@ -56,6 +56,13 @@ class Settings(BaseSettings):
     chunk_overlap: int = 150
     retrieval_k: int = 5
 
+    # BM25 토크나이저 — ngram(문자 2-gram 근사, 의존성 0) | kiwi(형태소 분석기)
+    # 한국어는 조사·어미 때문에 어절 매칭이 어긋난다. 2-gram 은 그걸 값싸게 넘기지만
+    # 흔한 음절 조합이 아무 문서에나 걸려 정밀도를 버린다(그래서 BM25 를 범위밖 게이트로
+    # 못 쓴다 — 아래 min_similarity 주석 참고). 어느 쪽이 나은지는 코퍼스에 달렸으므로
+    # 갈아끼울 수 있게 두고 평가 하네스로 비교한다(app/tokenizer.py).
+    tokenizer: str = "ngram"
+
     # 하이브리드 검색(BM25+벡터 RRF 융합 → MMR)
     fetch_k: int = 20            # 융합 전에 각 검색기가 가져올 후보 수
     # 1.0=적합도만(순수 RRF 순위), 0.0=다양성만. λ 스윕으로 결정.
@@ -71,6 +78,13 @@ class Settings(BaseSettings):
     #     CPU 4.4s/질문으로 데모 지연 과다. 둘 다 RRF 가 이미 뽑은 정답 코드파일을 문서로 뒤집음.
     #   원인: cross-encoder 가 자연어-자연어 매칭을 자연어-코드보다 선호 → "코드" 의도 유실.
     #   → 구현·토글은 유지(USE_RERANKER=true 로 실험 가능), 기본은 하이브리드 단독.
+    # 의도 라우팅 — 질문이 어느 축(문서/코드/커밋)을 묻는지 보고 심볼 슬롯을 켜고 끈다.
+    # 심볼 슬롯은 코드 질문 MRR 을 올리고(0.44→0.53) 문서 질문 MRR 을 깎았다(0.88→0.78, 노트 #17).
+    # 장치가 나쁜 게 아니라 켤 때와 끌 때를 안 가린 것이 문제여서, 규칙 기반 판별로 나눈다.
+    # LLM 을 쓰지 않으므로 지연 증가는 사실상 0. 판별이 애매하면(unknown) 기존 동작을 유지한다.
+    # ★ 끄고 켜서 비교할 수 있어야 채택 근거가 남는다 → 토글로 둔다(app/intent.py).
+    use_intent_routing: bool = True
+
     use_reranker: bool = False
     reranker_model: str = "BAAI/bge-reranker-base"
     rerank_candidates: int = 20
@@ -86,6 +100,12 @@ class Settings(BaseSettings):
     # 필요하면 심볼 본문을 다시 읽는다 → 멀티홉 질문("왜 바뀌었고 지금 코드는 어떻게 돼?")에 강함.
     # 대가는 LLM 호출 수 증가(지연·토큰·무료티어 RPM). 그 트레이드오프를 측정하는 게 v2 목표.
     use_agent: bool = False       # 기본 OFF — 단발 RAG 가 기존 검증된 경로
+    # 라우터 — 질문마다 단발/에이전트를 자동 선택(app/router.py). 축을 둘 이상 물으면
+    # 에이전트로 보낸다. 켜면 멀티홉 질문만 골라 에이전트를 쓰므로 "항상 켜기"의
+    # 20배 지연을 피하면서 멀티홉 정답률(42%→50%)을 가져올 수 있다.
+    # ★ 기본 OFF: 무료 티어에서 에이전트가 한 질문에 LLM 을 3~5회 쓰므로 쿼터 위험이 있다.
+    #   켜고 끈 값을 비교할 수 있게 토글로 둔다(리랭커·에이전트와 같은 규칙).
+    use_router: bool = False
     agent_max_steps: int = 5      # 툴 호출 라운드 상한(무한루프·토큰폭주 방지)
     # Gemini 무료 티어는 분당 15요청. 에이전트는 한 질문에 3~5회 호출하므로 간격을 둔다.
     agent_throttle_sec: float = 4.0

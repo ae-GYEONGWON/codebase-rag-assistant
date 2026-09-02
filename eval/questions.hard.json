@@ -1,0 +1,614 @@
+{
+  "_comment": "적대적 평가셋 — 환각이 실제로 발생하는 문항. 노트 #21 의 숙제.",
+  "_generated_by": "생성기",
+  "_verified_by": "gemini-3.5-flash-lite",
+  "_corpus_profile": "eval",
+  "_corpus_ref": "eval-corpus-v1",
+  "_verify_stats": {
+    "absent": {
+      "없음": 10,
+      "전부": 1,
+      "일부": 1
+    },
+    "partial": {
+      "일부": 7,
+      "없음": 5
+    },
+    "superseded": {
+      "전부": 11,
+      "일부": 1
+    }
+  },
+  "hard": [
+    {
+      "q": "현재 `_judge` 함수가 환각을 판별할 때 사용하는 내부 프롬프트의 버전이나, 이 평가 로직을 위해 별도로 설정된 시스템 프롬프트의 토큰 제한값은 얼마인가요?",
+      "kind": "absent",
+      "expect": "refuse",
+      "seed_source": "eval/faithfulness.py",
+      "expected": [],
+      "origin": "synthetic",
+      "verified_by": "gemini-3.5-flash-lite",
+      "verify_verdict": "없음",
+      "retrieved": [
+        "eval/faithfulness.py",
+        "README.md",
+        "git:c090704",
+        "app/retriever.py",
+        "app/reranker.py"
+      ],
+      "best_similarity": 0.703,
+      "seed_chunk_source": "eval/faithfulness.py"
+    },
+    {
+      "q": "이 `main` 함수를 통해 산출된 `groundedness` 점수가 0.8 미만일 경우, CI/CD 파이프라인에서 빌드를 자동으로 실패 처리하도록 설정된 임계값 정책이 존재하나요?",
+      "kind": "absent",
+      "expect": "refuse",
+      "seed_source": "eval/faithfulness.py",
+      "expected": [],
+      "origin": "synthetic",
+      "verified_by": "gemini-3.5-flash-lite",
+      "verify_verdict": "없음",
+      "retrieved": [
+        "eval/run_eval.py",
+        "eval/run_eval.py",
+        "git:ec842a5",
+        "eval/report.py",
+        "eval/report.py"
+      ],
+      "best_similarity": 0.651,
+      "seed_chunk_source": "eval/faithfulness.py"
+    },
+    {
+      "q": "이 테스트 케이스에서 캐시 폴더를 건너뛰는 로직을 검증할 때 사용된 성능 임계값(ms)은 얼마인가요?",
+      "kind": "absent",
+      "expect": "refuse",
+      "seed_source": "tests/test_profiles.py",
+      "expected": [],
+      "origin": "synthetic",
+      "verified_by": "gemini-3.5-flash-lite",
+      "verify_verdict": "없음",
+      "retrieved": [
+        "tests/test_profiles.py",
+        "README.md",
+        "tests/test_report.py",
+        "git:ad07a2f",
+        "tests/test_retrieval.py"
+      ],
+      "best_similarity": 0.672,
+      "seed_chunk_source": "tests/test_profiles.py"
+    },
+    {
+      "q": "_without_reranker 데코레이터를 적용했을 때, 리랭커를 사용하지 않음으로써 발생하는 평균 추론 시간(latency) 단축 폭은 몇 밀리초(ms)로 측정되었나요?",
+      "kind": "absent",
+      "expect": "refuse",
+      "seed_source": "eval/run_eval.py",
+      "expected": [],
+      "origin": "synthetic",
+      "verified_by": "gemini-3.5-flash-lite",
+      "verify_verdict": "없음",
+      "retrieved": [
+        "eval/run_eval.py",
+        "docs/engineering-notes.md",
+        "git:f1a486a",
+        "docs/engineering-notes.md",
+        "app/reranker.py"
+      ],
+      "best_similarity": 0.548,
+      "seed_chunk_source": "eval/run_eval.py"
+    },
+    {
+      "q": "_without_reranker를 통해 리랭커를 비활성화할 경우, 검색 정확도(Recall@K)가 기존 대비 몇 퍼센트 포인트(p.p.) 하락하는지 확인된 벤치마크 결과가 있나요?",
+      "kind": "absent",
+      "expect": "refuse",
+      "seed_source": "eval/run_eval.py",
+      "expected": [],
+      "origin": "synthetic",
+      "verified_by": "gemini-3.5-flash-lite",
+      "verify_verdict": "없음",
+      "retrieved": [
+        "eval/run_eval.py",
+        "docs/engineering-notes.md",
+        "git:ec842a5",
+        "README.md",
+        "eval/report.py"
+      ],
+      "best_similarity": 0.651,
+      "seed_chunk_source": "eval/run_eval.py"
+    },
+    {
+      "q": "_text_of 함수에서 Gemini 3.x의 비텍스트 파트를 제거할 때, 혹시 누락된 텍스트가 없는지 확인하기 위해 수행했던 내부 벤치마크의 정확도 수치는 얼마인가요?",
+      "kind": "absent",
+      "expect": "refuse",
+      "seed_source": "app/rag.py",
+      "expected": [],
+      "origin": "synthetic",
+      "verified_by": "gemini-3.5-flash-lite",
+      "verify_verdict": "없음",
+      "retrieved": [
+        "tests/test_text_normalize.py",
+        "app/rag.py",
+        "git:96c61e1",
+        "docs/engineering-notes.md",
+        "tests/test_text_normalize.py"
+      ],
+      "best_similarity": 0.671,
+      "seed_chunk_source": "app/rag.py"
+    },
+    {
+      "q": "Gemini 3.x 외에 향후 도입 예정인 다른 LLM 모델의 응답 포맷도 _text_of 함수에서 처리하도록 정책이 결정되었는데, 해당 작업의 담당자와 예상 완료 일정은 어떻게 되나요?",
+      "kind": "absent",
+      "expect": "refuse",
+      "seed_source": "app/rag.py",
+      "expected": [],
+      "origin": "synthetic",
+      "verified_by": "gemini-3.5-flash-lite",
+      "verify_verdict": "없음",
+      "retrieved": [
+        "app/rag.py",
+        "app/rag.py",
+        "git:96c61e1",
+        "git:d870c7e",
+        "docs/engineering-notes.md"
+      ],
+      "best_similarity": 0.656,
+      "seed_chunk_source": "app/rag.py"
+    },
+    {
+      "q": "웹 UI 각주 펼치기 기능에서 snippets_for가 반환한 리스트의 순서가 실제 화면에 렌더링되는 순서와 다를 경우, 이를 보정하기 위해 적용된 정렬 알고리즘의 우선순위 기준은 무엇인가요?",
+      "kind": "absent",
+      "expect": "refuse",
+      "seed_source": "app/retriever.py",
+      "expected": [],
+      "origin": "synthetic",
+      "verified_by": "gemini-3.5-flash-lite",
+      "verify_verdict": "없음",
+      "retrieved": [
+        "app/retriever.py",
+        "app/agent.py",
+        "app/reranker.py",
+        "git:1bce7d7",
+        "docs/engineering-notes.md"
+      ],
+      "best_similarity": 0.681,
+      "seed_chunk_source": "app/retriever.py"
+    },
+    {
+      "q": "현재 `synthetic-verified` 라벨을 생성할 때, 사람이 검수하는 과정에서 통과시켜야 하는 최소 일치율(threshold) 기준은 몇 퍼센트로 설정되어 있나요?",
+      "kind": "absent",
+      "expect": "refuse",
+      "seed_source": "eval/datasets.py",
+      "expected": [],
+      "origin": "synthetic",
+      "verified_by": "gemini-3.5-flash-lite",
+      "verify_verdict": "없음",
+      "retrieved": [
+        "eval/datasets.py",
+        "tests/test_report.py",
+        "docs/HANDOFF.md",
+        "app/retriever.py",
+        "README.md"
+      ],
+      "best_similarity": 0.693,
+      "seed_chunk_source": "eval/datasets.py"
+    },
+    {
+      "q": "데이터셋 내에서 `manual` 라벨과 `synthetic` 라벨의 비율을 유지하기 위해 설정된 권장 배분 가이드라인(예: 3:7 등)이 별도로 존재하나요?",
+      "kind": "absent",
+      "expect": "refuse",
+      "seed_source": "eval/datasets.py",
+      "expected": [],
+      "origin": "synthetic",
+      "verified_by": "gemini-3.5-flash-lite",
+      "verify_verdict": "없음",
+      "retrieved": [
+        "eval/datasets.py",
+        "eval/datasets.py",
+        "README.md",
+        "eval/run_eval.py",
+        "app/retriever.py"
+      ],
+      "best_similarity": 0.633,
+      "seed_chunk_source": "eval/datasets.py"
+    },
+    {
+      "q": "의도 라우팅에서 심볼 슬롯을 도입해 코드 질문 MRR을 0.53까지 올렸는데, 이 기능을 적용했을 때 문서 질문 MRR이 0.78로 떨어진 이유는 무엇이며, 이를 보완하기 위해 내부적으로 설정한 임계값은 몇인가요?",
+      "kind": "partial",
+      "expect": "hedge",
+      "seed_source": "docs/HANDOFF.md",
+      "expected": [],
+      "origin": "synthetic",
+      "verified_by": "gemini-3.5-flash-lite",
+      "verify_verdict": "일부",
+      "retrieved": [
+        "docs/HANDOFF.md",
+        "docs/engineering-notes.md",
+        "app/agent.py",
+        "app/config.py",
+        "docs/engineering-notes.md"
+      ],
+      "best_similarity": 0.692,
+      "seed_chunk_source": "docs/HANDOFF.md"
+    },
+    {
+      "q": "JUDGE_PROMPT에서 일반 상식도 감점 대상으로 삼는 이유는 무엇이며, 이 정책을 도입한 이후 실제 평가 정확도가 몇 퍼센트 향상되었나요?",
+      "kind": "partial",
+      "expect": "hedge",
+      "seed_source": "eval/faithfulness.py",
+      "expected": [],
+      "origin": "synthetic",
+      "verified_by": "gemini-3.5-flash-lite",
+      "verify_verdict": "일부",
+      "retrieved": [
+        "eval/faithfulness.py",
+        "git:c94d9c8",
+        "docs/engineering-notes.md",
+        "eval/faithfulness.py",
+        "eval/faithfulness.py"
+      ],
+      "best_similarity": 0.584,
+      "seed_chunk_source": "eval/faithfulness.py"
+    },
+    {
+      "q": "왜 `.claude` 폴더를 제외 목록에서 뺐고, 이 변경으로 인해 전체 인덱싱 속도가 몇 퍼센트나 개선되었나요?",
+      "kind": "partial",
+      "expect": "hedge",
+      "seed_source": "tests/test_profiles.py",
+      "expected": [],
+      "origin": "synthetic",
+      "verified_by": "gemini-3.5-flash-lite",
+      "verify_verdict": "일부",
+      "retrieved": [
+        "git:4660502",
+        "git:7a8895a",
+        "tests/test_profiles.py",
+        "app/git_loader.py",
+        "app/git_loader.py"
+      ],
+      "best_similarity": 0.57,
+      "seed_chunk_source": "tests/test_profiles.py"
+    },
+    {
+      "q": "test_part_array에서 비텍스트 파트를 제외하는 로직은 무엇이고, 이 처리를 도입하면서 기존 대비 토큰 처리 효율이 몇 % 개선되었나요?",
+      "kind": "partial",
+      "expect": "hedge",
+      "seed_source": "tests/test_text_normalize.py",
+      "expected": [],
+      "origin": "synthetic",
+      "verified_by": "gemini-3.5-flash-lite",
+      "verify_verdict": "일부",
+      "retrieved": [
+        "git:c090704",
+        "README.md",
+        "app/agent_graph.py",
+        "README.md",
+        "tests/test_text_normalize.py"
+      ],
+      "best_similarity": 0.604,
+      "seed_chunk_source": "tests/test_text_normalize.py"
+    },
+    {
+      "q": "AgentState에서 messages 필드만 리듀서를 사용하는 이유가 무엇이며, 이 구조를 도입한 이후 전체 추론 비용이 몇 퍼센트 절감되었나요?",
+      "kind": "partial",
+      "expect": "hedge",
+      "seed_source": "app/agent_graph.py",
+      "expected": [],
+      "origin": "synthetic",
+      "verified_by": "gemini-3.5-flash-lite",
+      "verify_verdict": "일부",
+      "retrieved": [
+        "app/rag.py",
+        "docs/engineering-notes.md",
+        "app/agent.py",
+        "app/agent_graph.py",
+        "app/rag.py"
+      ],
+      "best_similarity": 0.565,
+      "seed_chunk_source": "app/agent_graph.py"
+    },
+    {
+      "q": "AgentState의 seen 필드는 어떤 목적으로 관리되고 있으며, 이 필드를 도입하기 전후의 중복 참조 제거 성능을 비교한 벤치마크 데이터가 있나요?",
+      "kind": "partial",
+      "expect": "hedge",
+      "seed_source": "app/agent_graph.py",
+      "expected": [],
+      "origin": "synthetic",
+      "verified_by": "gemini-3.5-flash-lite",
+      "verify_verdict": "일부",
+      "retrieved": [
+        "app/agent_graph.py",
+        "docs/HANDOFF.md",
+        "app/agent.py",
+        "eval/datasets.py",
+        "docs/HANDOFF.md"
+      ],
+      "best_similarity": 0.606,
+      "seed_chunk_source": "app/agent_graph.py"
+    },
+    {
+      "q": "하이브리드 검색의 recall@5가 벡터 단독보다 얼마나 더 높은지, 그리고 이 수치를 도출할 때 사용한 테스트 데이터셋의 구체적인 구성 비율은 어떻게 되나요?",
+      "kind": "partial",
+      "expect": "hedge",
+      "seed_source": "README.md",
+      "expected": [],
+      "origin": "synthetic",
+      "verified_by": "gemini-3.5-flash-lite",
+      "verify_verdict": "일부",
+      "retrieved": [
+        "README.md",
+        "eval/run_eval.py",
+        "tests/test_tokenizer.py",
+        "git:1bce7d7",
+        "docs/engineering-notes.md"
+      ],
+      "best_similarity": 0.668,
+      "seed_chunk_source": "README.md"
+    },
+    {
+      "q": "현재 범위 밖 판정을 위한 코사인 유사도 게이트의 임계값은 얼마인가요?",
+      "kind": "superseded",
+      "expect": "answer",
+      "seed_source": "git:1bce7d7",
+      "expected": [
+        "app/config.py",
+        "app/retriever.py",
+        "docs/HANDOFF.md",
+        "eval/run_eval.py"
+      ],
+      "origin": "synthetic",
+      "verified_by": "gemini-3.5-flash-lite",
+      "verify_verdict": "전부",
+      "retrieved": [
+        "app/retriever.py",
+        "git:1bce7d7",
+        "eval/run_eval.py",
+        "docs/HANDOFF.md",
+        "app/config.py"
+      ],
+      "best_similarity": 0.656
+    },
+    {
+      "q": "현재 MMR(최대 한계 관련성) 알고리즘의 적합도 계산 시, 코사인 유사도 대신 어떤 점수 체계를 사용하고 있나요?",
+      "kind": "superseded",
+      "expect": "answer",
+      "seed_source": "git:1bce7d7",
+      "expected": [
+        "app/reranker.py",
+        "app/retriever.py",
+        "docs/HANDOFF.md"
+      ],
+      "origin": "synthetic",
+      "verified_by": "gemini-3.5-flash-lite",
+      "verify_verdict": "전부",
+      "retrieved": [
+        "app/retriever.py",
+        "app/retriever.py",
+        "git:1bce7d7",
+        "app/reranker.py",
+        "docs/HANDOFF.md"
+      ],
+      "best_similarity": 0.735
+    },
+    {
+      "q": "현재 git_loader.py에서 커밋 메시지를 파싱할 때 사용하는 구분자 설정은 무엇인가요?",
+      "kind": "superseded",
+      "expect": "answer",
+      "seed_source": "git:7a8895a",
+      "expected": [
+        "app/git_loader.py"
+      ],
+      "origin": "synthetic",
+      "verified_by": "gemini-3.5-flash-lite",
+      "verify_verdict": "전부",
+      "retrieved": [
+        "app/git_loader.py",
+        "git:7a8895a",
+        "app/git_loader.py",
+        "app/git_loader.py",
+        "app/git_loader.py"
+      ],
+      "best_similarity": 0.757
+    },
+    {
+      "q": "현재 시스템에서 전체 청크 중 커밋 데이터가 차지하는 비중은 총 몇 개이며, 문서와 코드 청크는 각각 몇 개로 구성되어 있나요?",
+      "kind": "superseded",
+      "expect": "answer",
+      "seed_source": "git:7a8895a",
+      "expected": [
+        "README.md",
+        "app/git_loader.py",
+        "app/reranker.py"
+      ],
+      "origin": "synthetic",
+      "verified_by": "gemini-3.5-flash-lite",
+      "verify_verdict": "전부",
+      "retrieved": [
+        "git:469517b",
+        "app/git_loader.py",
+        "git:7a8895a",
+        "app/reranker.py",
+        "README.md"
+      ],
+      "best_similarity": 0.705
+    },
+    {
+      "q": "현재 우리 서비스에서 비개발자 모드일 때, 답변 내 코드 블록은 기본적으로 어떤 상태로 표시되나요?",
+      "kind": "superseded",
+      "expect": "answer",
+      "seed_source": "git:0f243e5",
+      "expected": [
+        "README.md",
+        "app/agent.py",
+        "app/rag.py"
+      ],
+      "origin": "synthetic",
+      "verified_by": "gemini-3.5-flash-lite",
+      "verify_verdict": "전부",
+      "retrieved": [
+        "git:0f243e5",
+        "app/rag.py",
+        "app/agent.py",
+        "git:dfbee00",
+        "README.md"
+      ],
+      "best_similarity": 0.715
+    },
+    {
+      "q": "현재 답변에 대한 피드백을 남기면, 해당 데이터는 최종적으로 어떤 파일에 저장되나요?",
+      "kind": "superseded",
+      "expect": "answer",
+      "seed_source": "git:0f243e5",
+      "expected": [
+        "README.md",
+        "app/feedback.py",
+        "app/git_loader.py",
+        "app/loader.py",
+        "app/main.py"
+      ],
+      "origin": "synthetic",
+      "verified_by": "gemini-3.5-flash-lite",
+      "verify_verdict": "일부",
+      "retrieved": [
+        "app/main.py",
+        "app/feedback.py",
+        "app/git_loader.py",
+        "app/loader.py",
+        "README.md"
+      ],
+      "best_similarity": 0.651
+    },
+    {
+      "q": "현재 우리 시스템의 지식원은 문서(md) 파일만 포함하고 있나요, 아니면 다른 데이터 소스도 포함하고 있나요?",
+      "kind": "superseded",
+      "expect": "answer",
+      "seed_source": "git:469517b",
+      "expected": [
+        "app/main.py",
+        "app/profiles.py",
+        "docs/HANDOFF.md"
+      ],
+      "origin": "synthetic",
+      "verified_by": "gemini-3.5-flash-lite",
+      "verify_verdict": "전부",
+      "retrieved": [
+        "docs/HANDOFF.md",
+        "git:469517b",
+        "app/profiles.py",
+        "git:78736f5",
+        "app/main.py"
+      ],
+      "best_similarity": 0.627
+    },
+    {
+      "q": "현재 코드베이스의 RAG 시스템은 문서와 실제 코드 구현 내용이 서로 다를 경우, 최종적으로 무엇을 우선순위로 두고 답변하도록 설정되어 있나요?",
+      "kind": "superseded",
+      "expect": "answer",
+      "seed_source": "git:469517b",
+      "expected": [
+        "README.md",
+        "app/rag.py",
+        "docs/HANDOFF.md",
+        "docs/engineering-notes.md"
+      ],
+      "origin": "synthetic",
+      "verified_by": "gemini-3.5-flash-lite",
+      "verify_verdict": "전부",
+      "retrieved": [
+        "docs/engineering-notes.md",
+        "README.md",
+        "docs/HANDOFF.md",
+        "git:d870c7e",
+        "app/rag.py"
+      ],
+      "best_similarity": 0.766
+    },
+    {
+      "q": "현재 demo 코퍼스의 파일 열거 전략은 폴더 전체를 순회(walk)하는 방식인가요, 아니면 git 추적 파일을 사용하는 방식인가요?",
+      "kind": "superseded",
+      "expect": "answer",
+      "seed_source": "git:3751c9b",
+      "expected": [
+        "README.md",
+        "app/fs_utils.py",
+        "app/git_loader.py",
+        "app/profiles.py"
+      ],
+      "origin": "synthetic",
+      "verified_by": "gemini-3.5-flash-lite",
+      "verify_verdict": "전부",
+      "retrieved": [
+        "app/git_loader.py",
+        "app/profiles.py",
+        "app/fs_utils.py",
+        "app/fs_utils.py",
+        "README.md"
+      ],
+      "best_similarity": 0.715
+    },
+    {
+      "q": "현재 시스템에서 코퍼스 프로필을 분리함에 따라, 인덱스 초기화 시 `--reset` 플래그는 컬렉션 단위로 동작하나요, 아니면 전체 프로필의 chroma_dir를 삭제하나요?",
+      "kind": "superseded",
+      "expect": "answer",
+      "seed_source": "git:3751c9b",
+      "expected": [
+        "README.md",
+        "app/ingest.py",
+        "docs/HANDOFF.md",
+        "tests/test_profiles.py"
+      ],
+      "origin": "synthetic",
+      "verified_by": "gemini-3.5-flash-lite",
+      "verify_verdict": "전부",
+      "retrieved": [
+        "README.md",
+        "docs/HANDOFF.md",
+        "tests/test_profiles.py",
+        "app/ingest.py",
+        "app/ingest.py"
+      ],
+      "best_similarity": 0.689
+    },
+    {
+      "q": "현재 app/retriever.py에서 심볼 매칭을 위해 사용하는 로직은 무엇인가요? 과거처럼 5자 이상의 길이를 기준으로 필터링하나요?",
+      "kind": "superseded",
+      "expect": "answer",
+      "seed_source": "git:c090704",
+      "expected": [
+        "app/retriever.py",
+        "tests/test_config.py",
+        "tests/test_retrieval.py"
+      ],
+      "origin": "synthetic",
+      "verified_by": "gemini-3.5-flash-lite",
+      "verify_verdict": "전부",
+      "retrieved": [
+        "git:c090704",
+        "tests/test_retrieval.py",
+        "app/retriever.py",
+        "tests/test_config.py",
+        "git:469517b"
+      ],
+      "best_similarity": 0.792
+    },
+    {
+      "q": "현재 심볼 매칭 시 한글 처리를 위해 어떤 방식을 사용하고 있나요? 여전히 \\b 워드 바운더리를 사용하여 매칭을 수행하나요?",
+      "kind": "superseded",
+      "expect": "answer",
+      "seed_source": "git:c090704",
+      "expected": [
+        "README.md",
+        "app/retriever.py"
+      ],
+      "origin": "synthetic",
+      "verified_by": "gemini-3.5-flash-lite",
+      "verify_verdict": "전부",
+      "retrieved": [
+        "git:c090704",
+        "app/retriever.py",
+        "app/retriever.py",
+        "app/retriever.py",
+        "README.md"
+      ],
+      "best_similarity": 0.673
+    }
+  ]
+}
