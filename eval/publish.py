@@ -54,6 +54,91 @@ def _load(name: str) -> Optional[dict]:
     return json.loads(p.read_text(encoding="utf-8"))
 
 
+NOTES_MD = EVAL_DIR.parent / "docs" / "engineering-notes.md"
+# 브랜치는 main 고정 — 커밋 해시로 박으면 링크가 화석이 된다.
+NOTES_URL = ("https://github.com/ae-GYEONGWON/codebase-rag-assistant"
+             "/blob/main/docs/engineering-notes.md")
+
+
+def _gh_anchor(heading: str) -> str:
+    """GitHub 이 `## 제목` 에 붙이는 앵커 id 를 만든다.
+
+    ★ 줄 번호(`#L78`)를 쓰면 안 된다. GitHub 은 마크다운을 기본으로 **Preview 모드**로
+      보여주는데, 그 화면은 줄 앵커를 무시한다(실측: 파일 맨 위로만 간다).
+      제목 앵커는 Preview 에서 정확히 동작하고, 렌더링된 상태로 읽히므로 더 낫다.
+
+    규칙: 소문자화 → 영숫자·공백·하이픈·유니코드 문자만 남김 → 공백을 하이픈으로.
+    제목을 고치면 앵커가 깨지지만, 그때도 **파일 자체로는 도달**하므로 손해가 제한적이다.
+    """
+    import re
+    import unicodedata
+
+    t = heading.strip().lower()
+    t = "".join(c for c in t
+                if c.isalnum() or c in " -_" or unicodedata.category(c).startswith("L"))
+    return re.sub(r"\s", "-", t)
+
+
+def _note_index() -> Dict[int, dict]:
+    """`docs/engineering-notes.md` 의 `## N. 제목` 을 훑어 번호 → (제목, 링크) 로 만든다.
+
+    손으로 제목을 옮겨 적지 않는 이유는 **어긋나기 때문**이다. 노트 제목을 고쳤는데
+    대시보드에 옛 제목이 남으면, 수치의 근거를 보여주겠다는 화면이 거짓말을 하게 된다.
+    """
+    import re
+
+    if not NOTES_MD.exists():
+        print(f"[publish] 경고 — {NOTES_MD.name} 이 없습니다(노트 링크가 비어 나갑니다)")
+        return {}
+    out: Dict[int, dict] = {}
+    for i, line in enumerate(NOTES_MD.read_text(encoding="utf-8").splitlines(), 1):
+        m = re.match(r"^##\s+(\d+)\.\s+(.+?)\s*$", line)
+        if m:
+            n = int(m.group(1))
+            title = m.group(2)
+            out[n] = {"n": n, "title": title,
+                      "url": f"{NOTES_URL}#{_gh_anchor(f'{n}. {title}')}",
+                      "line": i}
+    return out
+
+
+COMMIT_URL = "https://github.com/ae-GYEONGWON/codebase-rag-assistant/commit/"
+
+
+def _commit_subject(sha: str) -> Optional[str]:
+    """커밋 제목 한 줄. 저장소 밖에서 발행하거나 얕은 클론이면 없을 수 있다."""
+    try:
+        r = subprocess.run(["git", "log", "-1", "--format=%s", sha],
+                           capture_output=True, text=True, encoding="utf-8", check=True)
+        return r.stdout.strip() or None
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _resolve_notes(ref: str, index: Dict[int, dict]) -> List[dict]:
+    """"노트 #13, #17" / "커밋 b856b47" 같은 문자열 → [{kind, label, title, url}, ...].
+
+    화면에는 번호나 해시가 아니라 **제목**을 보여준다. 처음 보는 사람에게 '노트 #7' 은
+    아무 뜻도 없는 기호다 — 무엇에 대한 기록인지가 보여야 근거 구실을 한다.
+
+    커밋도 받는 이유는 **모든 측정이 노트에 있지는 않기 때문**이다. 없는 것을 노트인 척
+    적으면 근거를 보여주겠다는 화면이 거짓 인용을 하게 된다(실제로 한 번 그랬다).
+    """
+    import re
+
+    out: List[dict] = []
+    for n in (int(x) for x in re.findall(r"#(\d+)", ref or "")):
+        if n in index:
+            d = index[n]
+            out.append({"kind": "note", "label": f"노트 #{n}", **d})
+    for sha in re.findall(r"\b([0-9a-f]{7,40})\b", ref or ""):
+        subject = _commit_subject(sha)
+        if subject:
+            out.append({"kind": "commit", "label": f"커밋 {sha[:7]}",
+                        "title": subject, "url": COMMIT_URL + sha})
+    return out
+
+
 def _git_sha() -> str:
     try:
         return subprocess.run(["git", "rev-parse", "--short", "HEAD"],
@@ -144,6 +229,14 @@ def build() -> dict:
     decisions: List[dict] = []
     if DECISIONS.exists():
         decisions = json.loads(DECISIONS.read_text(encoding="utf-8")).get("decisions", [])
+        index = _note_index()
+        missing = []
+        for d in decisions:
+            d["notes"] = _resolve_notes(d.get("note", ""), index)
+            if d.get("note") and not d["notes"]:
+                missing.append(d["title"])
+        if missing:
+            print(f"[publish] 경고 — 노트를 못 찾은 항목: {', '.join(missing)}")
     else:
         print(f"[publish] 경고 — {DECISIONS.name} 이 없습니다(기각 판단 목록이 비어 나갑니다)")
 

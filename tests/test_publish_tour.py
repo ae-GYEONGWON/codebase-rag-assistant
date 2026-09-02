@@ -93,3 +93,41 @@ def test_지도의_질문이_추천질문으로_파생된다():
     p = active_profile()
     qs = p.tour_questions()
     assert len(qs) == sum(len(g["items"]) for g in p.tour)
+
+
+# --- 근거 링크 ---------------------------------------------------------------
+
+def test_모든_판단이_근거_링크를_갖는다(summary):
+    # '노트 #7' 은 처음 보는 사람에게 아무 뜻도 없는 기호다. 제목과 링크가 있어야
+    # 근거 구실을 한다.
+    for d in summary["decisions"]:
+        assert d.get("notes"), f"{d['title']} 에 근거 링크가 없다"
+        for n in d["notes"]:
+            assert n["title"] and n["url"].startswith("https://")
+            assert n["kind"] in ("note", "commit")
+            assert n["label"]
+
+
+def test_근거로_커밋도_걸_수_있다(summary):
+    # 모든 측정이 엔지니어링 노트에 있지는 않다. 없는 것을 노트인 척 적으면
+    # 근거를 보여주겠다는 화면이 거짓 인용을 하게 된다(실제로 한 번 그랬다).
+    kinds = {n["kind"] for d in summary["decisions"] for n in d["notes"]}
+    assert "commit" in kinds
+
+
+def test_노트_앵커는_줄번호가_아니라_제목이다(summary):
+    # GitHub 은 마크다운을 Preview 로 보여주는데 그 화면은 `#L78` 을 무시한다(실측).
+    for d in summary["decisions"]:
+        for n in d["notes"]:
+            if n["kind"] == "note":
+                assert "#L" not in n["url"], "줄 앵커는 Preview 에서 동작하지 않는다"
+                assert "#" in n["url"]
+
+
+def test_깃허브_앵커_규칙():
+    from eval.publish import _gh_anchor
+
+    assert _gh_anchor("7. 리랭커 — SOTA 라고 무지성으로 넣지 않는다") == \
+        "7-리랭커--sota-라고-무지성으로-넣지-않는다"
+    # 점·따옴표는 지우고, 하이픈·밑줄은 남긴다
+    assert _gh_anchor("17. 'MMR' 이 아니라 심볼 슬롯") == "17-mmr-이-아니라-심볼-슬롯"

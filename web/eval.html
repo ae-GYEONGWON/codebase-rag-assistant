@@ -107,6 +107,7 @@ td.num,th.num{text-align:right; font-variant-numeric:tabular-nums}
 tr.best td{background:var(--c-accent-sub); font-weight:600}
 tr.best td:first-child::after{content:" ← 운영"; color:var(--c-accent); font-weight:400; font-size:11px}
 .mono{font-family:var(--font-mono); font-size:12px}
+code.mono{background:var(--c-accent-sub); border-radius:var(--r-sm); padding:1px 5px}
 
 .pill{
   display:inline-block; padding:1px 8px; border-radius:var(--r-full);
@@ -142,7 +143,27 @@ tr.best td:first-child::after{content:" ← 운영"; color:var(--c-accent); font
 .dec dl{display:grid; grid-template-columns:auto 1fr; gap:4px var(--s-3); margin:0; font-size:13px}
 .dec dt{color:var(--c-text-mute); white-space:nowrap}
 .dec dd{margin:0}
-.dec .src{margin-top:8px; font-size:11.5px; color:var(--c-text-mute)}
+.dec .src{margin-top:10px; font-size:11.5px; color:var(--c-text-mute);
+           display:flex; flex-wrap:wrap; gap:6px; align-items:center}
+.src-link{
+  display:inline-flex; align-items:baseline; gap:5px; text-decoration:none;
+  border:1px solid var(--c-border); border-radius:var(--r-full);
+  padding:2px 9px; color:var(--c-text-dim); max-width:100%;
+}
+.src-link:hover{border-color:var(--c-accent); color:var(--c-accent)}
+.src-link .tag{font-weight:600; white-space:nowrap; font-size:10.5px;
+               color:var(--c-text-mute); font-family:var(--font-mono)}
+.src-link:hover .tag{color:var(--c-accent)}
+.src-link .ttl{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:46ch}
+
+/* 용어 한 줄 — 처음 보는 사람은 recall@5 도 κ 도 모른다. 접어 두면 아무도 안 편다. */
+.glossary{
+  font-size:12px; color:var(--c-text-mute); margin:0 0 var(--s-3);
+  padding-left:10px; border-left:2px solid var(--c-border); line-height:1.6;
+}
+.glossary b{color:var(--c-text-dim); font-weight:600}
+.dec dt{font-family:var(--font-mono); font-size:11.5px; letter-spacing:.01em;
+        text-transform:uppercase; padding-top:2px}
 
 .fail{font-size:12.5px; border-left:2px solid var(--c-warn); padding-left:10px; margin:8px 0}
 .fail .q{color:var(--c-text-dim)}
@@ -199,6 +220,14 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
 const pct = v => v == null ? '–' : (v * 100).toFixed(0) + '%';
 const f2 = v => v == null ? '–' : Number(v).toFixed(2);
 const f3 = v => v == null ? 'n/a' : Number(v).toFixed(3);
+/* 아주 작은 마크다운 — **굵게** 와 `코드` 만.
+   ★ 반드시 esc() 로 이스케이프한 **뒤에** 태그로 바꾼다. 순서를 바꾸면 데이터에 들어 있는
+   HTML 이 그대로 실행된다. 이 페이지는 저장소 안의 JSON 만 읽지만, 렌더러의 안전성은
+   입력 출처에 기대면 안 된다. */
+const mdLite = s => esc(s)
+  .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+  .replace(/`([^`]+)`/g, '<code class="mono">$1</code>');
+
 const el = (tag, cls, html) => {
   const n = document.createElement(tag);
   if (cls) n.className = cls;
@@ -211,8 +240,15 @@ function renderRetrieval(list) {
   const sec = el('section');
   sec.innerHTML =
     '<h2>검색 정확도<span class="num">recall@5 · MRR</span></h2>' +
-    '<p class="sub">같은 문항을 리트리버만 바꿔 돌린 결과다. ' +
-    '<b>코퍼스와 문항 수가 다르면 서로 비교하지 않는다</b> — 아래 네 벌은 각각 다른 조건이다.</p>';
+    '<p class="sub">같은 문항을 검색 방식만 바꿔 돌린 결과다. ' +
+    '<b>코퍼스와 문항 수가 다르면 서로 비교하지 않는다</b> — 아래 네 벌은 각각 다른 조건이다.</p>' +
+    '<p class="glossary">' +
+    '<b>recall@5</b> 상위 5건 안에 정답 문서가 들어왔는가(높을수록 좋음) · ' +
+    '<b>MRR</b> 정답이 몇 번째로 나왔는가(1.0 이면 항상 1위) · ' +
+    '<b>miss</b> 못 찾은 문항 수<br>' +
+    '<b>vector only</b> 임베딩만 · <b>bm25 only</b> 단어 매칭만 · ' +
+    '<b>hybrid RRF</b> 둘의 순위를 합침 · ' +
+    '<b>운영 파이프라인</b> 실제로 서비스가 쓰는 경로(hybrid + 코드 심볼 매칭 + 범위밖 게이트)</p>';
 
   list.forEach((r, ri) => {
     const card = el('div', 'card');
@@ -267,8 +303,15 @@ function renderJudges(j, hard) {
   const sec = el('section');
   sec.innerHTML =
     '<h2>LLM 판정기를 검증했다<span class="num">평가자 자체를 잰다</span></h2>' +
-    '<p class="sub">답변과 근거를 <b>고정한 채 판정 모델만</b> 바꿔 채점했다. ' +
-    '따라서 아래 차이는 전부 판정기 차이다.</p>';
+    '<p class="sub">답변이 근거에 충실한지를 LLM 에게 채점시킨다(LLM-as-judge). ' +
+    '그 <b>채점자를 믿을 수 있는지</b>를 확인하려고, 답변과 근거를 ' +
+    '<b>고정한 채 채점 모델만</b> 바꿔 봤다. 따라서 아래 차이는 전부 채점자 차이다.</p>' +
+    '<p class="glossary">' +
+    '<b>self</b> 답을 만든 모델이 자기 답을 채점 · <b>cross</b> 다른 모델이 채점 · ' +
+    '<b>평균</b> 근거에 지지되는 주장의 비율(1.0 = 지어낸 말 없음) · ' +
+    '<b>환각 지적</b> 채점자가 감점한 문항의 비율<br>' +
+    '<b>Cohen&rsquo;s κ</b> 두 채점자가 <b>같은 문항</b>을 같게 봤는지 ' +
+    '— 1.0 완전 일치 · 0 우연 수준 · 음수는 우연보다 못함</p>';
 
   const panel = (d, title, note) => {
     if (!d) return null;
@@ -325,14 +368,21 @@ function renderJudges(j, hard) {
 /* 적대적 평가 — 지표를 바꾸고 나서야 변별했다는 것을 보이는 자리. 실패 사례를 숨기지 않는다. */
 function renderHard(h) {
   const sec = el('section');
-  const label = {absent: '없는 사실을 묻는다', partial: '절반만 근거가 있다',
-                 superseded: '옛 값이 튀어나오기 쉽다'};
-  const right = {absent: '없다고 밝힌다', partial: '있는 갈래만 답한다',
-                 superseded: '현재 값을 답한다'};
+  // 덫 이름을 영어 그대로 두면(absent/partial/superseded) 처음 보는 사람은 못 읽는다.
+  const kname = {absent: '없는 것을 물음', partial: '절반만 근거 있음',
+                 superseded: '옛 값 유도'};
+  const label = {absent: '기록에 없는 사실을 묻는다', partial: '한쪽만 답할 수 있다',
+                 superseded: '바뀌기 전 값이 튀어나오기 쉽다'};
+  const right = {absent: '없다고 밝혀야 통과', partial: '있는 쪽만 답해야 통과',
+                 superseded: '현재 값을 답해야 통과'};
   sec.innerHTML =
     '<h2>환각을 유도하고, 행동으로 채점했다<span class="num">' + h.n + '문항</span></h2>' +
-    '<p class="sub">환각이 실제로 나오는 문항을 <b>일부러</b> 만들고, 덫 종류마다 ' +
-    '통과 조건을 따로 뒀다. 이 지표는 변별한다 — groundedness 로 재면 아래 실패가 0.99 로 묻힌다.</p>';
+    '<p class="sub">답이 <b>없거나 절반만 있는</b> 질문을 일부러 만들어, 시스템이 ' +
+    '지어내는지 봤다. 덫 종류마다 <b>통과 조건을 따로</b> 뒀다 — 위의 groundedness 로 재면 ' +
+    '아래 실패가 0.99 로 묻힌다(거절은 지어낸 말이 없어 자동으로 만점이라서).</p>' +
+    '<p class="glossary">문항은 LLM 이 만들고, <b>생성기와 다른 모델</b>이 ' +
+    '&ldquo;정말 근거가 없는지&rdquo;를 확인해 걸러 냈다 — 근거가 있는 질문이 섞이면 ' +
+    '옳게 답한 시스템을 틀렸다고 채점하게 된다.</p>';
 
   const tiles = el('div', 'tiles');
   tiles.innerHTML =
@@ -340,7 +390,7 @@ function renderHard(h) {
     `<div class="n">나머지가 환각이다</div></div>` +
     Object.entries(h.by_kind).map(([k, v]) =>
       `<div class="tile"><div class="v">${pct(v.pass_rate)}</div>` +
-      `<div class="k">${esc(k)} · ${v.pass}/${v.n}</div>` +
+      `<div class="k">${esc(kname[k] || k)} · ${v.pass}/${v.n}</div>` +
       `<div class="n">${esc(label[k] || '')} → ${esc(right[k] || '')}</div></div>`).join('');
   sec.appendChild(tiles);
 
@@ -359,8 +409,8 @@ function renderHard(h) {
       '<p class="meta">잘 되는 것만 보여주면 데모가 된다. 틀린 것을 같이 싣는다.</p>';
     h.failures.forEach(f => {
       card.appendChild(el('div', 'fail',
-        `<span class="pill warn">${esc(f.kind)}</span> ` +
-        `<span class="q">${esc(f.q)}</span>` +
+        `<span class="pill warn">${esc(kname[f.kind] || f.kind)}</span> ` +
+        `<span class="q">${mdLite(f.q)}</span>` +
         (f.fabricated || []).map(x => `<div class="f">지어냄: ${esc(x)}</div>`).join('')));
     });
     sec.appendChild(card);
@@ -373,8 +423,12 @@ function renderAnn(a) {
   const sec = el('section');
   sec.innerHTML =
     '<h2>브루트포스는 언제까지 버티나<span class="num">전환 임계 실측</span></h2>' +
-    '<p class="sub">벡터 검색을 전수 매칭으로 한다. 그게 게으름이 아니라 선택임을 ' +
-    'N 을 키워 가며 쟀다.</p>';
+    '<p class="sub">벡터 검색을 <b>전수 매칭</b>(모든 문서와 하나하나 비교)으로 한다. ' +
+    '보통은 근사 검색(ANN)을 쓰는데, 그게 게으름이 아니라 선택임을 N 을 키워 가며 쟀다.</p>' +
+    '<p class="glossary">' +
+    '<b>N</b> 인덱싱된 조각 수 · <b>p50 / p95</b> 검색 한 번에 걸린 시간의 중앙값 / 상위 5% · ' +
+    '<b>HNSW</b> 대표적인 근사 검색 알고리즘 · ' +
+    '<b>ef_search</b> 근사 탐색의 폭(클수록 정확하고 느림)</p>';
 
   const card = el('div', 'card');
   card.innerHTML =
@@ -426,7 +480,10 @@ function renderDecisions(list) {
   sec.innerHTML =
     `<h2>측정하고 정한 것<span class="num">${list.length}건 중 ${nRej}건이 기각</span></h2>` +
     '<p class="sub">기술을 <b>붙였다</b>가 아니라 <b>재고 정했다</b>가 이 목록의 존재 이유다. ' +
-    '기각한 것을 같이 싣는 이유는, 채택만 나열하면 무엇을 근거로 골랐는지 알 수 없기 때문이다.</p>';
+    '기각한 것을 같이 싣는 이유는, 채택만 나열하면 무엇을 근거로 골랐는지 알 수 없기 때문이다.</p>' +
+    '<p class="glossary"><b>Measured</b> 실제로 잰 값 · <b>Why</b> 그 값이 나온 원인 · ' +
+    '<b>Decision</b> 그래서 내린 결정. 맨 아래 링크는 그 판단이 기록된 ' +
+    '엔지니어링 노트 또는 커밋이다.</p>';
 
   list.forEach(d => {
     const rejected = d.verdict.includes('기각');
@@ -435,10 +492,18 @@ function renderDecisions(list) {
       `<div class="dec-head"><h3>${esc(d.title)}</h3>` +
       `<span class="pill ${rejected ? 'warn' : 'ok'}">${esc(d.verdict)}</span></div>` +
       `<dl>` +
-      `<dt>잰 값</dt><dd class="mono">${esc(d.measured)}</dd>` +
-      `<dt>왜</dt><dd>${esc(d.why)}</dd>` +
-      `<dt>그래서</dt><dd>${esc(d.action)}</dd>` +
-      `</dl><div class="src">근거: ${esc(d.note)}</div>`;
+      `<dt>Measured</dt><dd class="mono">${esc(d.measured)}</dd>` +
+      `<dt>Why</dt><dd>${mdLite(d.why)}</dd>` +
+      `<dt>Decision</dt><dd>${mdLite(d.action)}</dd>` +
+      `</dl>` +
+      // 근거는 번호가 아니라 **제목**으로 보여주고 원문으로 링크한다.
+      // '노트 #7' 은 처음 보는 사람에게 아무 뜻도 없는 기호다.
+      ((d.notes && d.notes.length)
+        ? `<div class="src">` + d.notes.map(n =>
+            `<a class="src-link" href="${esc(n.url)}" target="_blank" rel="noopener">` +
+            `<span class="tag">${esc(n.label)}</span>` +
+            `<span class="ttl">${esc(n.title)}</span></a>`).join('') + `</div>`
+        : '');
     sec.appendChild(card);
   });
   return sec;
