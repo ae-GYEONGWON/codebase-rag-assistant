@@ -126,13 +126,59 @@ def _messages(question: str, docs: List[Document], dev_mode: bool = False, turns
     msgs.append(HumanMessage(content=f"[근거]\n{_format_context(docs)}\n\n[질문]\n{question}"))
     return msgs
 
+# 검색 범위를 사람이 직접 고를 때 쓰는 표. UI 의 세그먼트 값 → 검색 축.
+#
+# 왜 수동 선택을 두는가: 축 판별은 규칙 기반이라(app/intent.py) 표지어가 없는 질문에서는
+# 전체를 뒤진다. 대개 맞지만 틀렸을 때 사용자가 손쓸 방법이 없었다 — "코드에서만 찾아줘"
+# 를 자연어로 부탁해도 그건 다시 같은 판별기를 통과한다. 스위치를 주면 판별을 우회한다.
+SCOPE_AXES: Dict[str, tuple] = {
+    "doc": ("doc",),
+    "code": ("code",),
+    "commit": ("commit",),
+}
+
+SCOPE_LABEL = {"doc": "문서", "code": "코드", "commit": "커밋 이력"}
+
+
+def _axis_of(scope: str | None) -> tuple | None:
+    """`scope` → search() 의 doc_types. 'auto'·None·모르는 값은 전체 검색."""
+    return SCOPE_AXES.get(scope or "")
+
+
+def _scoped_route(chosen, scope: str | None):
+    """범위를 고정하면 경로도 단발로 굳힌다.
+
+    에이전트는 축을 **스스로 나눠** 여러 번 검색하는 경로다. 사용자가 축을 하나로 못
+    박았는데 에이전트를 태우면, 축을 나누라고 만든 도구에 나눌 축이 하나뿐인 상태가 된다
+    — LLM 3~5회를 쓰고 단발과 같은 답을 낸다. 범위 지정은 곧 단발 지정이다.
+    """
+    if not _axis_of(scope):
+        return chosen
+    from app.router import Route
+
+    return Route("single",
+                 f"검색 범위를 '{SCOPE_LABEL[scope]}' 하나로 고정함 — 축이 하나라 단발 검색")
+
+
+def _no_hit_text(scope: str | None) -> str:
+    """범위를 좁혀 못 찾은 것과 코퍼스에 아예 없는 것은 다른 사실이다.
+
+    좁혀서 못 찾았는데 "아는 범위 밖"이라고만 하면, 사용자는 범위를 넓히면 답이 있다는
+    것을 모른 채 질문을 포기한다.
+    """
+    if _axis_of(scope):
+        return (f"'{SCOPE_LABEL[scope]}' 범위에서는 근거를 찾지 못했습니다. "
+                "검색 범위를 '자동' 으로 두고 다시 물어보세요.")
+    return OUT_OF_SCOPE
+
+
 def _route_info(route) -> Dict[str, Any]:
     """경로 선택을 응답에 실어 보낸다 — 왜 느렸는지/빨랐는지가 화면에서 보여야 한다."""
     return {"mode": route.mode, "reason": route.reason, "axes": list(route.axes)}
 
 
 def answer(question: str, dev_mode: bool = False, history=None,
-           route: str | None = None) -> Dict[str, Any]:
+           route: str | None = None, scope: str | None = None) -> Dict[str, Any]:
     """질문 → {answer, sources, mode, retrieval, rewrite, route} (비스트리밍).
 
     `route` 로 경로를 강제할 수 있다("single" | "agent"). 지정하지 않으면 라우터가
@@ -146,7 +192,7 @@ def answer(question: str, dev_mode: bool = False, history=None,
 
     # 재작성된 질의로 판단한다 — 후속 질문("그건 왜 바뀌었어?")은 원문만 보면
     # 축이 하나로 보이지만, 재작성하면 무엇을 묻는지가 드러난다.
-    chosen = decide(query, force=route)
+    chosen = _scoped_route(decide(query, force=route), scope)
     if chosen.uses_agent:
         from app.agent import answer as agent_answer
 
@@ -157,9 +203,9 @@ def answer(question: str, dev_mode: bool = False, history=None,
                         "axes": list(chosen.axes)}
         return res
 
-    docs, debug = search(query)
+    docs, debug = search(query, doc_types=_axis_of(scope))
     if not docs:
-        return {"answer": OUT_OF_SCOPE, "sources": [], "mode": "no_hit",
+        return {"answer": _no_hit_text(scope), "sources": [], "mode": "no_hit",
                 "retrieval": debug, "rewrite": rw, "route": _route_info(chosen)}
 
     sources = snippets_for(docs, query)  # 순서 = 프롬프트의 [문서 N] = 답변의 [n]
@@ -174,7 +220,8 @@ def answer(question: str, dev_mode: bool = False, history=None,
 
 
 def stream_answer(question: str, dev_mode: bool = False, history=None,
-                  route: str | None = None) -> Iterator[Dict[str, Any]]:
+                  route: str | None = None,
+                  scope: str | None = None) -> Iterator[Dict[str, Any]]:
     """질문 → 이벤트 스트림. 각 이벤트: {type: rewrite|sources|token|done|error, ...}."""
     from app.conversation import parse_history, rewrite_query
 
@@ -185,7 +232,7 @@ def stream_answer(question: str, dev_mode: bool = False, history=None,
     # 무엇으로 검색했는지 먼저 알린다 — 답이 나오기 전에 보여야 사용자가 맥락을 잡는다.
     yield {"type": "rewrite", **rw}
 
-    chosen = decide(query, force=route)
+    chosen = _scoped_route(decide(query, force=route), scope)
     yield {"type": "route", **_route_info(chosen)}
     if chosen.uses_agent:
         # 에이전트는 툴 호출 루프라 토큰 단위 스트리밍이 없다. 지연이 ~10초이므로
@@ -204,11 +251,11 @@ def stream_answer(question: str, dev_mode: bool = False, history=None,
                "trace": res.get("trace", []), "llm_calls": res.get("llm_calls")}
         return
 
-    docs, debug = search(query)
+    docs, debug = search(query, doc_types=_axis_of(scope))
 
     if not docs:
         yield {"type": "sources", "sources": []}
-        yield {"type": "token", "text": OUT_OF_SCOPE}
+        yield {"type": "token", "text": _no_hit_text(scope)}
         yield {"type": "done", "mode": "no_hit", "retrieval": debug}
         return
 

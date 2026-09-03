@@ -175,6 +175,11 @@ button, input, textarea { font: inherit; color: inherit; }
 .switch input:focus-visible + .track { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 
 /* 버튼 */
+/* `hidden` 은 display 를 가진 클래스에 밀린다 — .btn/.pill 처럼 display 를 지정한
+   요소는 hidden 을 붙여도 그대로 보인다(실제로 '대화 0턴' 칩이 그렇게 보이고 있었다).
+   속성이 표현보다 세다는 것을 한 줄로 못 박는다. */
+[hidden] { display: none !important; }
+
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: var(--s-2);
   border: 1px solid var(--c-border-str); background: var(--c-surface);
@@ -495,6 +500,121 @@ kbd {
   transition: opacity .18s, transform .18s; z-index: 60;
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ============================================================================
+   원문 뷰어 · 대화 목록 · 검색 범위 · 공유
+   ========================================================================== */
+
+/* --- 검색 범위 세그먼트 --------------------------------------------------- */
+.scope {
+  display: inline-flex; align-items: center; gap: 2px; padding: 2px;
+  background: var(--c-bg); border: 1px solid var(--c-border); border-radius: var(--r-full);
+}
+.scope-btn {
+  border: 0; background: transparent; color: var(--c-text-mute); cursor: pointer;
+  font: inherit; font-size: 11.5px; line-height: 1; padding: 5px 10px; border-radius: var(--r-full);
+}
+.scope-btn:hover { color: var(--c-text); }
+.scope-btn[aria-pressed="true"] {
+  background: var(--c-surface); color: var(--c-accent); box-shadow: var(--shadow-1);
+}
+.composer-foot .scope { margin-right: var(--s-2); }
+
+/* --- 사이드바 대화 목록 --------------------------------------------------- */
+.chat-item {
+  display: flex; align-items: center; gap: var(--s-2); width: 100%;
+  padding: 7px var(--s-2); border: 0; background: transparent; border-radius: var(--r-sm);
+  color: var(--c-text-dim); font: inherit; font-size: 12.5px; text-align: left; cursor: pointer;
+}
+.chat-item:hover { background: var(--c-bg); color: var(--c-text); }
+.chat-item[aria-current="true"] { background: var(--c-accent-sub); color: var(--c-accent); }
+.chat-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-when { flex: none; font-size: 10.5px; color: var(--c-text-mute); font-variant-numeric: tabular-nums; }
+.chat-del {
+  flex: none; border: 0; background: transparent; color: var(--c-text-mute); cursor: pointer;
+  padding: 2px 4px; border-radius: 4px; line-height: 1; font-size: 14px; visibility: hidden;
+}
+.chat-item:hover .chat-del, .chat-del:focus-visible { visibility: visible; }
+.chat-del:hover { color: var(--c-warn); background: var(--c-warn-bg); }
+.side-empty { font-size: 11.5px; color: var(--c-text-mute); padding: var(--s-2); line-height: 1.6; }
+
+/* --- 근거 카드의 '원문 보기' ---------------------------------------------- */
+.src-open {
+  flex: none; border: 1px solid var(--c-border); background: var(--c-surface);
+  color: var(--c-text-dim); font: inherit; font-size: 11px; line-height: 1;
+  padding: 4px 8px; border-radius: var(--r-full); cursor: pointer;
+}
+.src-open:hover { border-color: var(--c-accent); color: var(--c-accent); }
+
+/* --- 원문 뷰어 ------------------------------------------------------------ */
+.sheet-scrim {
+  position: fixed; inset: 0; z-index: 70; background: rgba(10,14,20,.5);
+  display: flex; align-items: center; justify-content: center; padding: var(--s-4);
+}
+.sheet-scrim[hidden] { display: none; }
+.sheet {
+  background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--r-lg);
+  box-shadow: var(--shadow-3); width: min(980px, 100%); max-height: min(86vh, 900px);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.sheet-head {
+  display: flex; align-items: center; gap: var(--s-2); padding: var(--s-3) var(--s-4);
+  border-bottom: 1px solid var(--c-border); flex: none;
+}
+.sheet-title {
+  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-family: var(--font-mono); font-size: 12.5px; color: var(--c-text);
+}
+.sheet-sub { font-size: 11.5px; color: var(--c-text-mute); }
+.sheet-body { overflow: auto; flex: 1; }
+.sheet-foot {
+  flex: none; display: flex; align-items: center; gap: var(--s-2);
+  padding: var(--s-2) var(--s-4); border-top: 1px solid var(--c-border);
+  font-size: 11.5px; color: var(--c-text-mute);
+}
+.code-view { display: table; width: 100%; font-family: var(--font-mono); font-size: 12px; line-height: 1.65; }
+.code-row { display: table-row; }
+.code-row > * { display: table-cell; }
+.code-no {
+  width: 1%; white-space: nowrap; text-align: right; padding: 0 var(--s-3) 0 var(--s-4);
+  color: var(--c-text-mute); user-select: none; font-variant-numeric: tabular-nums;
+  border-right: 1px solid var(--c-border); background: var(--c-bg); position: sticky; left: 0;
+}
+.code-src { padding: 0 var(--s-4) 0 var(--s-3); white-space: pre-wrap; word-break: break-word; color: var(--c-text); }
+.code-row.is-hl .code-src { background: var(--c-accent-sub); }
+.code-row.is-hl .code-no { background: var(--c-accent-sub); color: var(--c-accent); }
+.code-gap {
+  padding: var(--s-2) var(--s-4); font-size: 11.5px; color: var(--c-text-mute);
+  background: var(--c-bg); border-top: 1px solid var(--c-border); border-bottom: 1px solid var(--c-border);
+}
+
+/* --- 공유 링크 상자 -------------------------------------------------------- */
+.share-box { padding: var(--s-4); display: grid; gap: var(--s-3); }
+.share-url {
+  display: flex; gap: var(--s-2); align-items: center;
+}
+.share-url input {
+  flex: 1; min-width: 0; font: inherit; font-family: var(--font-mono); font-size: 12px;
+  padding: 8px 10px; border: 1px solid var(--c-border); border-radius: var(--r-sm);
+  background: var(--c-bg); color: var(--c-text);
+}
+.share-note { font-size: 11.5px; color: var(--c-text-mute); line-height: 1.7; }
+
+/* --- 공유된 대화(읽기 전용) ------------------------------------------------ */
+.readonly-bar {
+  display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap;
+  margin: 0 auto var(--s-4); padding: var(--s-3) var(--s-4);
+  max-width: var(--max-read); background: var(--c-accent-sub); color: var(--c-text);
+  border: 1px solid var(--c-border); border-radius: var(--r-md); font-size: 12.5px;
+}
+.readonly-bar .why { color: var(--c-text-dim); }
+body.is-readonly .composer { display: none; }
+
+@media (max-width: 860px) {
+  .sheet-scrim { padding: 0; align-items: stretch; }
+  .sheet { max-height: 100%; border-radius: 0; border: 0; }
+  .composer-foot .scope { margin-right: var(--s-1); }
+}
 </style>
 </head>
 <body>
@@ -514,6 +634,11 @@ kbd {
     </div>
 
     <div class="side-scroll">
+      <section class="side-section">
+        <h2 class="side-label">대화</h2>
+        <div class="chat-list" id="chat-list" role="list"></div>
+      </section>
+
       <section class="side-section">
         <h2 class="side-label">인덱싱된 지식원</h2>
         <div class="stat-grid">
@@ -561,6 +686,7 @@ kbd {
       </button>
       <h1>프로젝트 질의</h1>
       <div class="spacer"></div>
+      <button class="btn" id="share-btn" type="button" hidden>공유</button>
       <span class="pill" id="turn-pill" hidden>대화 <b id="turn-count">0</b>턴</span>
       <span class="pill" id="status-pill"><span class="dot" id="status-dot"></span><span id="status-text">연결 중…</span></span>
     </header>
@@ -597,10 +723,51 @@ kbd {
           </div>
         </form>
         <div class="composer-foot">
+          <div class="scope" id="scope" role="group" aria-label="검색 범위">
+            <button class="scope-btn" type="button" data-scope="auto" aria-pressed="true">자동</button>
+            <button class="scope-btn" type="button" data-scope="doc" aria-pressed="false">문서</button>
+            <button class="scope-btn" type="button" data-scope="code" aria-pressed="false">코드</button>
+            <button class="scope-btn" type="button" data-scope="commit" aria-pressed="false">커밋 이력</button>
+          </div>
           <span><kbd>Enter</kbd> 전송 · <kbd>Shift</kbd>+<kbd>Enter</kbd> 줄바꿈 · <kbd>Esc</kbd> 중단</span>
           <span id="mode-note"></span>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- 원문 뷰어 — 근거를 발췌가 아니라 파일 안에서 확인한다 -->
+<div class="sheet-scrim" id="viewer" hidden role="dialog" aria-modal="true" aria-labelledby="viewer-title">
+  <div class="sheet">
+    <div class="sheet-head">
+      <span class="badge" id="viewer-badge">DOC</span>
+      <span class="sheet-title" id="viewer-title">—</span>
+      <a class="btn" id="viewer-remote" href="#" target="_blank" rel="noopener noreferrer" hidden>GitHub</a>
+      <button class="btn" id="viewer-all" type="button" hidden>파일 전체 보기</button>
+      <button class="btn btn-icon" id="viewer-close" type="button" aria-label="닫기">✕</button>
+    </div>
+    <div class="sheet-body" id="viewer-body"></div>
+    <div class="sheet-foot" id="viewer-foot"></div>
+  </div>
+</div>
+
+<!-- 공유 링크 -->
+<div class="sheet-scrim" id="sharebox" hidden role="dialog" aria-modal="true" aria-labelledby="sharebox-title">
+  <div class="sheet" style="width:min(560px,100%)">
+    <div class="sheet-head">
+      <span class="sheet-title" id="sharebox-title" style="font-family:var(--font)">대화 공유 링크</span>
+      <button class="btn btn-icon" id="sharebox-close" type="button" aria-label="닫기">✕</button>
+    </div>
+    <div class="share-box">
+      <div class="share-url">
+        <input id="share-url" readonly aria-label="공유 링크" />
+        <button class="btn btn-primary" id="share-copy" type="button">복사</button>
+      </div>
+      <p class="share-note">
+        링크를 아는 사람은 이 대화를 <b>답변·근거·검색 진단까지</b> 그대로 볼 수 있습니다.
+        저장되는 것은 대화 내용과 근거뿐이며, 링크는 취소할 수 없으니 공유 대상을 확인하세요.
+      </p>
     </div>
   </div>
 </div>
@@ -615,10 +782,14 @@ kbd {
    ========================================================================== */
 const state = {
   history: [],        // [{role, content}] — 서버로 보낼 대화 맥락
+  turns: [],          // 화면에 그려진 턴 전체(근거·진단 포함). 저장·공유가 이걸 쓴다
   streaming: false,
   controller: null,   // 진행 중 요청 취소용
   devMode: localStorage.getItem('devMode') === '1',
   theme: localStorage.getItem('theme') || 'auto',
+  scope: localStorage.getItem('scope') || 'auto',
+  convId: null,       // 지금 이어 쓰고 있는 저장된 대화의 id
+  readonly: false,    // /s/<id> 로 열린 공유 화면
 };
 
 const $ = (id) => document.getElementById(id);
@@ -629,6 +800,11 @@ const els = {
   statusDot: $('status-dot'), statusText: $('status-text'), modeNote: $('mode-note'),
   files: $('files'), stDoc: $('st-doc'), stCode: $('st-code'),
   turnPill: $('turn-pill'), turnCount: $('turn-count'),
+  chatList: $('chat-list'), scope: $('scope'), shareBtn: $('share-btn'),
+  viewer: $('viewer'), viewerBody: $('viewer-body'), viewerTitle: $('viewer-title'),
+  viewerBadge: $('viewer-badge'), viewerRemote: $('viewer-remote'),
+  viewerAll: $('viewer-all'), viewerFoot: $('viewer-foot'),
+  shareBox: $('sharebox'), shareUrl: $('share-url'),
 };
 
 /* --- 유틸 ---------------------------------------------------------------- */
@@ -798,6 +974,19 @@ function renderEvidence(node, sources, retrieval) {
         (score ? '<span class="src-score">cos ' + score.similarity + '</span>' : '') +
       '</summary>' +
       '<div class="src-body">' + esc(s.snippet || '(발췌 없음)') + '</div>';
+
+    // 발췌만으로는 근거를 검증할 수 없다 — 앞뒤가 잘려 있으면 반대 뜻이어도 모른다.
+    // summary 안의 버튼은 클릭이 details 토글로 새어 나가므로 전파를 끊는다.
+    if (s.source) {
+      const open = el('button', 'src-open', '원문 보기');
+      open.type = 'button';
+      open.title = s.source + ' 원문을 엽니다';
+      open.addEventListener('click', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        openSource(s.source, s.section || '');
+      });
+      d.querySelector('summary').appendChild(open);
+    }
     box.appendChild(d);
   });
 
@@ -846,6 +1035,15 @@ function renderActions(node, ctx) {
     catch { toast('복사에 실패했습니다'); }
   };
 
+  // 공유된 대화에서는 👍/👎 를 두지 않는다. 보는 사람은 그 질문을 하지 않았고,
+  // 그 표를 평가셋 후보로 쌓으면 **누가 무엇에 매긴 표인지 모르는 데이터**가 된다.
+  if (state.readonly) {
+    bar.appendChild(copy);
+    if (ctx.mode) bar.appendChild(el('span', 'src-score', ctx.mode));
+    node.appendChild(bar);
+    return;
+  }
+
   const up = el('button', 'act', '👍 도움됨');
   const down = el('button', 'act', '👎 아쉬움');
   up.type = down.type = 'button';
@@ -878,6 +1076,338 @@ function renderError(node, message, retry) {
   node.appendChild(box);
 }
 
+/* ============================================================================
+   답변 한 턴을 '데이터로부터' 그린다
+
+   원래 이 코드는 ask() 안에 흩어져 있었다. 그러면 저장된 대화를 되살리거나 공유된
+   대화를 보여 줄 때 같은 렌더링을 한 벌 더 쓰게 되고, 한쪽만 고치는 사고가 반드시 난다.
+   화면을 그리는 입구를 하나로 둔다 — 스트리밍이 끝난 직후에도 이 함수를 쓴다.
+   ========================================================================== */
+function paintAnswer(node, ctx) {
+  renderRewrite(node.rw, ctx.rewrite);
+  renderRoute(node.rw, ctx.route);
+  node.md.innerHTML = renderMarkdown(ctx.text || '', state.devMode) || '<p>(빈 응답)</p>';
+  node.md.classList.remove('caret');
+  renderEvidence(node.ev, ctx.sources, ctx.retrieval);
+  renderActions(node.ac, ctx);
+  wireFootnotes(node);
+}
+
+/* 저장·공유용 턴 기록. 화면에 그려진 것과 같은 것을 담는다. */
+function recordTurn(ctx) {
+  state.turns.push({ role: 'user', content: ctx.question });
+  state.turns.push({
+    role: 'assistant', content: ctx.text, sources: ctx.sources || [],
+    retrieval: ctx.retrieval || null, rewrite: ctx.rewrite || null,
+    route: ctx.route || null, mode: ctx.mode || '', scope: ctx.scope || 'auto',
+  });
+}
+
+/* ============================================================================
+   대화 보관 — 새로고침하면 대화가 통째로 사라지던 것
+
+   서버에 두지 않고 브라우저에 둔다. 이 데모에는 로그인이 없어서 서버에 쌓으면
+   **누구의 대화인지 구분할 방법이 없다**. 공유는 명시적으로 누를 때만 서버로 간다.
+   ========================================================================== */
+const STORE_KEY = 'chats.v1';
+const MAX_CHATS = 20;          // 브라우저 저장 용량은 대개 5MB — 대화 하나가 수십 KB 다
+
+function loadChats() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(STORE_KEY) || '[]');
+    return Array.isArray(raw) ? raw : [];
+  } catch { return []; }         // 손상된 값 하나로 화면 전체가 안 뜨면 안 된다
+}
+
+function writeChats(list) {
+  // 용량 초과는 저장이 통째로 실패한다. 오래된 것부터 버리며 다시 시도한다 —
+  // 여기서 포기하면 **가장 최근 대화**를 잃는데, 그게 사용자가 지금 보고 있는 것이다.
+  let items = list.slice(0, MAX_CHATS);
+  for (;;) {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(items)); return true; }
+    catch (e) {
+      if (items.length <= 1) { console.warn('대화 저장 실패', e); return false; }
+      items = items.slice(0, items.length - 1);
+    }
+  }
+}
+
+function chatTitle() {
+  const first = state.turns.find(t => t.role === 'user');
+  return (first ? first.content : '새 대화').slice(0, 60);
+}
+
+function persistChat() {
+  if (state.readonly || !state.turns.length) return;
+  const list = loadChats().filter(c => c.id !== state.convId);
+  if (!state.convId) state.convId = 'c' + Date.now().toString(36);
+  list.unshift({ id: state.convId, title: chatTitle(), updated: Date.now(), turns: state.turns });
+  writeChats(list);
+  renderChatList();
+}
+
+function deleteChat(id) {
+  writeChats(loadChats().filter(c => c.id !== id));
+  if (state.convId === id) startNewChat({ quiet: true });
+  renderChatList();
+  toast('대화를 삭제했습니다');
+}
+
+function whenLabel(ts) {
+  const m = Math.floor((Date.now() - ts) / 60000);
+  if (m < 1) return '방금';
+  if (m < 60) return m + '분';
+  if (m < 1440) return Math.floor(m / 60) + '시간';
+  return Math.floor(m / 1440) + '일';
+}
+
+function renderChatList() {
+  const list = loadChats();
+  els.chatList.innerHTML = '';
+  if (!list.length) {
+    els.chatList.appendChild(el('div', 'side-empty',
+      '나눈 대화가 여기에 쌓입니다. 이 브라우저에만 저장되며 서버로 보내지 않습니다.'));
+    return;
+  }
+  list.forEach(c => {
+    const row = el('div', 'chat-item');
+    row.setAttribute('role', 'listitem');
+    if (c.id === state.convId) row.setAttribute('aria-current', 'true');
+
+    const open = el('button', 'chat-title', esc(c.title));
+    open.type = 'button'; open.title = c.title;
+    open.onclick = () => openChat(c.id);
+
+    const del = el('button', 'chat-del', '✕');
+    del.type = 'button';
+    del.setAttribute('aria-label', c.title + ' 대화 삭제');
+    del.onclick = (e) => { e.stopPropagation(); deleteChat(c.id); };
+
+    row.append(open, el('span', 'chat-when', whenLabel(c.updated)), del);
+    els.chatList.appendChild(row);
+  });
+}
+
+/* 저장된 대화를 화면에 되살린다. 스트리밍 때와 **같은 렌더러**를 쓴다. */
+function paintTurns(turns) {
+  els.inner.querySelectorAll('.turn').forEach(n => n.remove());
+  els.empty.hidden = turns.length > 0;
+  for (let i = 0; i < turns.length; i++) {
+    const t = turns[i];
+    if (t.role === 'user') { addUserTurn(t.content); continue; }
+    const node = addAnswerShell();
+    const prev = turns[i - 1];
+    paintAnswer(node, {
+      question: prev && prev.role === 'user' ? prev.content : '',
+      text: t.content, sources: t.sources || [], retrieval: t.retrieval || null,
+      rewrite: t.rewrite || null, route: t.route || null, mode: t.mode || '',
+    });
+  }
+  scrollToEnd(true);
+}
+
+function openChat(id) {
+  const found = loadChats().find(c => c.id === id);
+  if (!found) { toast('대화를 찾을 수 없습니다'); return; }
+  if (state.streaming) state.controller && state.controller.abort();
+  // 공유 화면(/s/…)에서 내 대화를 고르면 그건 더 이상 남의 대화가 아니다.
+  // 읽기 전용을 풀지 않으면 입력창이 사라진 채로 내 대화가 열려 고장처럼 보인다.
+  if (state.readonly) {
+    state.readonly = false;
+    document.body.classList.remove('is-readonly');
+    els.inner.querySelectorAll('.readonly-bar').forEach(n => n.remove());
+    history.replaceState(null, '', '/');
+    document.title = 'Codebase Assistant — 근거를 보여주는 코드베이스 어시스턴트';
+    autoGrow();                 // 감춰져 있던 동안 잰 높이는 0 이다
+  }
+  state.convId = id;
+  state.turns = found.turns || [];
+  state.history = state.turns.map(t => ({ role: t.role, content: t.content }));
+  paintTurns(state.turns);
+  updateTurnCount();
+  renderChatList();
+  setDrawer(false);
+}
+
+function startNewChat(opts) {
+  if (state.streaming) state.controller && state.controller.abort();
+  state.convId = null; state.turns = []; state.history = [];
+  els.inner.querySelectorAll('.turn').forEach(n => n.remove());
+  els.empty.hidden = false;
+  updateTurnCount();
+  renderChatList();
+  if (!(opts && opts.quiet)) { els.q.focus(); toast('새 대화를 시작합니다'); }
+}
+
+/* ============================================================================
+   시트(모달) 공통 — 열 때 포커스를 안으로, 닫을 때 원래 자리로
+   ========================================================================== */
+let sheetReturn = null;
+function showSheet(node, focusEl) {
+  sheetReturn = document.activeElement;
+  node.hidden = false;
+  (focusEl || node.querySelector('.btn-icon') || node).focus();
+}
+function hideSheet(node) {
+  node.hidden = true;
+  if (sheetReturn && sheetReturn.focus) sheetReturn.focus();
+  sheetReturn = null;
+}
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if (!els.viewer.hidden) { hideSheet(els.viewer); e.stopPropagation(); }
+  else if (!els.shareBox.hidden) { hideSheet(els.shareBox); e.stopPropagation(); }
+}, true);
+[[els.viewer, 'viewer-close'], [els.shareBox, 'sharebox-close']].forEach(function (pair) {
+  const sheet = pair[0];
+  $(pair[1]).addEventListener('click', () => hideSheet(sheet));
+  sheet.addEventListener('mousedown', (e) => { if (e.target === sheet) hideSheet(sheet); });
+});
+
+/* ============================================================================
+   원문 뷰어 — 근거를 발췌가 아니라 파일 안에서 확인한다
+
+   기본은 **근거 구간 ± 30줄**만 그린다. 파일 전체를 항상 그리지 않는 이유는 둘이다:
+   2천 줄짜리 파일이면 DOM 이 그만큼 생겨 화면이 버벅이고, 더 중요하게는 근거를 볼 때
+   필요한 것이 파일 전체가 아니라 **그 줄의 앞뒤 맥락**이기 때문이다. 전체는 버튼으로 연다.
+   ========================================================================== */
+const CONTEXT_LINES = 30;
+let viewerData = null, viewerFull = false;
+
+async function openSource(ref, section) {
+  els.viewerBody.innerHTML = '<div class="side-empty" style="padding:var(--s-5)">원문을 불러오는 중…</div>';
+  els.viewerTitle.textContent = ref;
+  els.viewerFoot.textContent = '';
+  els.viewerRemote.hidden = true; els.viewerAll.hidden = true;
+  showSheet(els.viewer);
+  try {
+    const url = '/source?ref=' + encodeURIComponent(ref) + '&section=' + encodeURIComponent(section || '');
+    const res = await fetch(url);
+    if (!res.ok) {
+      els.viewerBody.innerHTML = '<div class="side-empty" style="padding:var(--s-5)">' +
+        (res.status === 404
+          ? '이 출처의 원문은 열 수 없습니다. 인덱싱된 파일만 열립니다.'
+          : '원문을 가져오지 못했습니다 (HTTP ' + res.status + ')') + '</div>';
+      return;
+    }
+    viewerData = await res.json();
+    viewerFull = false;
+    paintViewer();
+  } catch {
+    els.viewerBody.innerHTML = '<div class="side-empty" style="padding:var(--s-5)">원문을 가져오지 못했습니다.</div>';
+  }
+}
+
+function paintViewer() {
+  const d = viewerData;
+  if (!d) return;
+  const lines = (d.text || '').split('\n');
+  const hl = d.highlight;
+
+  els.viewerTitle.textContent = d.display;
+  els.viewerBadge.className = 'badge ' + (BADGE[d.doc_type] ? d.doc_type : 'doc');
+  els.viewerBadge.textContent = BADGE[d.doc_type] || 'DOC';
+  els.viewerRemote.hidden = !d.remote_url;
+  if (d.remote_url) els.viewerRemote.href = d.remote_url;
+
+  let from = 1, to = lines.length;
+  if (!viewerFull && hl) {
+    from = Math.max(1, hl.start - CONTEXT_LINES);
+    to = Math.min(lines.length, hl.end + CONTEXT_LINES);
+  } else if (!viewerFull && !hl && lines.length > 200) {
+    to = 200;
+  }
+  const partial = from > 1 || to < lines.length;
+  els.viewerAll.hidden = !partial;
+  els.viewerAll.textContent = '파일 전체 보기 (' + lines.length + '줄)';
+
+  const rows = [];
+  for (let n = from; n <= to; n++) {
+    const isHl = hl && n >= hl.start && n <= hl.end;
+    rows.push('<div class="code-row' + (isHl ? ' is-hl' : '') + '" data-line="' + n + '">' +
+      '<span class="code-no">' + n + '</span>' +
+      '<span class="code-src">' + esc(lines[n - 1] || ' ') + '</span></div>');
+  }
+  els.viewerBody.innerHTML =
+    (from > 1 ? '<div class="code-gap">위 ' + (from - 1) + '줄 생략</div>' : '') +
+    '<div class="code-view">' + rows.join('') + '</div>' +
+    (to < lines.length ? '<div class="code-gap">아래 ' + (lines.length - to) + '줄 생략</div>' : '');
+
+  // 커밋은 애초에 강조할 구간이 없다(메시지 전체가 근거다). 파일에서만 '못 찾았다'고
+  // 말해야 한다 — 커밋에까지 그렇게 쓰면 정상 동작을 실패처럼 보이게 한다.
+  const where = d.doc_type === 'commit' ? '커밋 메시지 전문'
+    : hl ? '근거 구간 ' + hl.start + '–' + hl.end + '행'
+    : '이 근거의 위치를 찾지 못해 파일 전문을 표시합니다';
+  els.viewerFoot.textContent = where + ' · 전체 ' + lines.length + '줄' +
+    (d.truncated ? ' · 파일이 커서 앞부분만 가져왔습니다' : '');
+
+  if (hl) {
+    const target = els.viewerBody.querySelector('.code-row.is-hl');
+    if (target) target.scrollIntoView({ block: 'center' });
+  } else {
+    els.viewerBody.scrollTop = 0;
+  }
+}
+els.viewerAll.addEventListener('click', () => { viewerFull = true; paintViewer(); });
+
+/* ============================================================================
+   공유 — 답변만이 아니라 근거와 검색 진단까지 그대로 건넨다
+   ========================================================================== */
+async function shareChat() {
+  if (!state.turns.length) { toast('공유할 대화가 없습니다'); return; }
+  els.shareBtn.disabled = true;
+  try {
+    const res = await fetch('/share', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: chatTitle(), turns: state.turns }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) { toast(body.detail || '공유에 실패했습니다'); return; }
+    els.shareUrl.value = location.origin + body.url;
+    showSheet(els.shareBox, els.shareUrl);
+    els.shareUrl.select();
+  } catch {
+    toast('공유에 실패했습니다');
+  } finally {
+    els.shareBtn.disabled = false;
+  }
+}
+els.shareBtn.addEventListener('click', shareChat);
+$('share-copy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(els.shareUrl.value); toast('링크를 복사했습니다'); }
+  catch { els.shareUrl.select(); toast('직접 복사하세요 (Ctrl+C)'); }
+});
+
+/* 공유된 대화를 읽기 전용으로 그린다. 화면은 챗봇과 같은 파일이고 입력창만 감춘다. */
+async function bootShared(shareId) {
+  state.readonly = true;
+  document.body.classList.add('is-readonly');
+  els.empty.hidden = true;
+  try {
+    const res = await fetch('/share/' + encodeURIComponent(shareId));
+    if (!res.ok) throw new Error('not found');
+    const data = await res.json();
+    const bar = el('div', 'readonly-bar');
+    bar.innerHTML =
+      '<b>공유된 대화</b>' +
+      '<span class="why">' + esc(data.created || '') + ' 에 저장된 사본입니다 · 이어서 질문할 수는 없습니다</span>';
+    const go = el('button', 'btn', '내 대화 시작하기');
+    go.type = 'button';
+    go.onclick = () => { location.href = '/'; };
+    bar.appendChild(go);
+    els.inner.appendChild(bar);
+    // 공유본의 rewrite·route 는 문자열이다(서버 스키마). 렌더러가 받는 모양으로 되돌린다.
+    paintTurns((data.turns || []).map(t => Object.assign({}, t, {
+      rewrite: t.rewrite ? { applied: true, rewritten: t.rewrite } : null,
+      route: t.route ? { mode: t.mode === 'agent' ? 'agent' : 'single', reason: t.route } : null,
+    })));
+    document.title = (data.title || '공유된 대화') + ' — Codebase Assistant';
+  } catch {
+    els.inner.appendChild(el('div', 'readonly-bar',
+      '<b>없는 공유 링크입니다.</b><span class="why">삭제되었거나 주소가 잘못되었습니다.</span>'));
+  }
+}
+
 /* 스크롤 — 사용자가 위로 올려 읽는 중이면 따라가지 않는다(현업에서 흔한 요구) */
 let stickBottom = true;
 els.thread.addEventListener('scroll', () => {
@@ -900,7 +1430,8 @@ async function ask(question, retryOf) {
   const node = addAnswerShell();
   setStreaming(true);
 
-  const ctx = { question: trimmed, text: '', mode: '', sources: [], retrieval: null };
+  const ctx = { question: trimmed, text: '', mode: '', sources: [], retrieval: null,
+                rewrite: null, route: null, scope: state.scope };
   state.controller = new AbortController();
 
   let pending = '', frame = 0, started = false;
@@ -920,6 +1451,7 @@ async function ask(question, retryOf) {
       body: JSON.stringify({
         question: trimmed, dev_mode: state.devMode,
         history: state.history.slice(-6),
+        scope: state.scope,
       }),
       signal: state.controller.signal,
     });
@@ -937,8 +1469,8 @@ async function ask(question, retryOf) {
       for (const line of lines) {
         if (!line.trim()) continue;
         let ev; try { ev = JSON.parse(line); } catch { continue; }
-        if (ev.type === 'rewrite') { renderRewrite(node.rw, ev); }
-        else if (ev.type === 'route') { renderRoute(node.rw, ev); }
+        if (ev.type === 'rewrite') { ctx.rewrite = ev; renderRewrite(node.rw, ev); }
+        else if (ev.type === 'route') { ctx.route = ev; renderRoute(node.rw, ev); }
         else if (ev.type === 'sources') { ctx.sources = ev.sources || []; }
         else if (ev.type === 'token') { ctx.text += ev.text; schedule(); }
         else if (ev.type === 'error') { throw new Error(ev.message || '알 수 없는 오류'); }
@@ -947,22 +1479,28 @@ async function ask(question, retryOf) {
     }
 
     if (frame) cancelAnimationFrame(frame);
-    node.md.innerHTML = renderMarkdown(ctx.text, state.devMode) || '<p>(빈 응답)</p>';
-    node.md.classList.remove('caret');
-    renderEvidence(node.ev, ctx.sources, ctx.retrieval);
-    renderActions(node.ac, ctx);
-    wireFootnotes(node);
+    paintAnswer(node, ctx);
     els.live.textContent = ctx.text.slice(0, 400);
 
     state.history.push({ role: 'user', content: trimmed });
     state.history.push({ role: 'assistant', content: ctx.text });
+    recordTurn(ctx);
+    persistChat();
     updateTurnCount();
   } catch (err) {
     if (frame) cancelAnimationFrame(frame);
     node.md.classList.remove('caret');
     if (err.name === 'AbortError') {
       if (!ctx.text) node.md.innerHTML = '<p style="color:var(--c-text-mute)">중단되었습니다.</p>';
-      else { renderEvidence(node.ev, ctx.sources, ctx.retrieval); renderActions(node.ac, ctx); }
+      else {
+        renderEvidence(node.ev, ctx.sources, ctx.retrieval);
+        renderActions(node.ac, ctx);
+        state.history.push({ role: 'user', content: trimmed });
+        state.history.push({ role: 'assistant', content: ctx.text });
+        recordTurn(ctx);
+        persistChat();
+        updateTurnCount();
+      }
     } else {
       node.md.innerHTML = '';
       renderError(node.ev, err.message, () => { node.turn.remove(); ask(trimmed, true); });
@@ -1002,6 +1540,8 @@ function updateTurnCount() {
   const n = Math.floor(state.history.length / 2);
   els.turnCount.textContent = String(n);
   els.turnPill.hidden = n === 0;
+  // 공유는 나눌 대화가 있을 때만 보인다. 빈 화면의 '공유' 버튼은 누를 것이 없다.
+  els.shareBtn.hidden = state.readonly || n === 0;
 }
 
 /* ============================================================================
@@ -1009,7 +1549,11 @@ function updateTurnCount() {
    ========================================================================== */
 function autoGrow() {
   els.q.style.height = 'auto';
-  els.q.style.height = Math.min(els.q.scrollHeight, 168) + 'px';
+  // 숨겨져 있을 때(공유 화면은 입력창을 감춘다) scrollHeight 는 0 이다. 그대로 쓰면
+  // 높이가 0px 로 굳어, 나중에 입력창을 다시 보여도 한 줄이 잘린 채 남는다.
+  const h = els.q.scrollHeight;
+  if (!h) { els.q.style.height = ''; return; }
+  els.q.style.height = Math.min(h, 168) + 'px';
 }
 els.q.addEventListener('input', autoGrow);
 
@@ -1058,14 +1602,35 @@ $('theme-btn').addEventListener('click', () => {
 applyTheme();
 
 $('new-chat').addEventListener('click', () => {
-  if (state.streaming) state.controller && state.controller.abort();
-  state.history = [];
-  els.inner.querySelectorAll('.turn').forEach(n => n.remove());
-  els.empty.hidden = false;
-  updateTurnCount();
-  els.q.focus();
-  toast('새 대화를 시작합니다');
+  // 공유된 대화는 남의 화면이다. 여기서 '새 대화'는 그 사본을 지우는 것이 아니라
+  // 내 화면으로 돌아가는 것을 뜻한다.
+  if (state.readonly) { location.href = '/'; return; }
+  startNewChat();
 });
+
+/* --- 검색 범위 ------------------------------------------------------------
+   축 판별은 규칙 기반이라(app/intent.py) 표지어가 없는 질문에서는 전체를 뒤진다.
+   대개 맞지만 틀렸을 때 사용자가 손쓸 방법이 없었다 — 자연어로 "코드에서만 찾아줘"
+   라고 해도 그 문장이 다시 같은 판별기를 통과하기 때문이다. 이 스위치는 판별을 건너뛴다.
+   ------------------------------------------------------------------------ */
+const SCOPE_NOTE = {
+  auto: '', doc: '문서에서만 찾습니다', code: '소스코드에서만 찾습니다',
+  commit: '커밋 이력에서만 찾습니다',
+};
+function applyScope() {
+  els.scope.querySelectorAll('.scope-btn').forEach(b => {
+    b.setAttribute('aria-pressed', String(b.dataset.scope === state.scope));
+  });
+}
+els.scope.addEventListener('click', (e) => {
+  const btn = e.target.closest('.scope-btn');
+  if (!btn) return;
+  state.scope = btn.dataset.scope;
+  localStorage.setItem('scope', state.scope);
+  applyScope();
+  if (SCOPE_NOTE[state.scope]) toast(SCOPE_NOTE[state.scope]);
+});
+applyScope();
 
 /* --- 모바일 드로어 -------------------------------------------------------- */
 const app = $('app');
@@ -1080,6 +1645,12 @@ $('scrim').addEventListener('click', () => setDrawer(false));
    초기 로드 — 지식원 목록·상태·추천 질문
    ========================================================================== */
 async function boot() {
+  // 주소가 /s/<id> 면 공유된 대화를 읽기 전용으로 그린다. 화면은 같은 파일이다 —
+  // 읽기 전용 화면을 따로 만들면 렌더러가 두 벌이 되고 한쪽만 고치는 사고가 난다.
+  const shared = location.pathname.match(/^\/s\/([^/]+)$/);
+  if (shared) await bootShared(decodeURIComponent(shared[1]));
+  renderChatList();      // 공유 화면에서도 내 대화 목록은 그대로 보인다
+
   try {
     const [topics, health] = await Promise.all([
       fetch('/topics').then(r => r.json()),
@@ -1142,7 +1713,7 @@ async function boot() {
     els.statusText.textContent = '서버 응답 없음';
   }
   autoGrow();
-  els.q.focus();
+  if (!state.readonly) els.q.focus();
 }
 boot();
 </script>

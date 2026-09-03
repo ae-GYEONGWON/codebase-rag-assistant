@@ -9,7 +9,7 @@ import json
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
 
@@ -103,6 +103,10 @@ class ChatRequest(BaseModel):
     dev_mode: bool = False   # True 면 답변에 코드 본문을 ``` 블록으로 인용
     # 멀티턴 — 직전 대화. 후속 질문("그건 왜?")을 독립형으로 재작성해 검색한다.
     history: list[HistoryTurn] = []
+    # 검색 범위. "auto"(기본) | "doc" | "code" | "commit".
+    # 축 판별은 규칙 기반이라 표지어가 없으면 전체를 뒤진다 — 그게 틀렸을 때
+    # 사용자가 직접 축을 못 박을 수 있게 하는 스위치다(app/rag.py 의 SCOPE_AXES).
+    scope: str = "auto"
 
 
 class Source(BaseModel):
@@ -169,7 +173,8 @@ def chat(req: ChatRequest) -> ChatResponse:
     from app.rag import answer
 
     return ChatResponse(**answer(req.question.strip(), dev_mode=req.dev_mode,
-                                 history=[t.model_dump() for t in req.history]))
+                                 history=[t.model_dump() for t in req.history],
+                                 scope=req.scope))
 
 
 @app.post("/chat/stream")
@@ -180,9 +185,10 @@ def chat_stream(req: ChatRequest) -> StreamingResponse:
     question = req.question.strip()
     dev_mode = req.dev_mode
     history = [t.model_dump() for t in req.history]
+    scope = req.scope
 
     def gen():
-        for ev in stream_answer(question, dev_mode=dev_mode, history=history):
+        for ev in stream_answer(question, dev_mode=dev_mode, history=history, scope=scope):
             yield json.dumps(ev, ensure_ascii=False) + "\n"
 
     return StreamingResponse(gen(), media_type="application/x-ndjson; charset=utf-8")
@@ -195,6 +201,58 @@ def feedback(req: FeedbackRequest) -> dict:
 
     log_feedback(req.model_dump())
     return {"ok": True}
+
+
+class ShareRequest(BaseModel):
+    title: str = ""
+    turns: list[dict] = []
+
+
+@app.get("/source")
+def source(ref: str, section: str = "") -> dict:
+    """근거 원문. `ref` 는 답변 근거 카드의 `source` 값 그대로다.
+
+    발췌만으로는 근거를 검증할 수 없다 — 앞뒤가 잘려 있으면 반대 뜻이어도 모른다.
+    여는 대상은 **지금 인덱싱된 파일**로 제한된다(app/source_view.py 의 허용목록).
+    """
+    from app.source_view import SourceNotFound, read_source
+
+    try:
+        return read_source(ref, section)
+    except SourceNotFound as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+
+
+@app.post("/share")
+def share_create(req: ShareRequest) -> dict:
+    """대화를 링크로 남긴다. 저장되는 것은 서버가 아는 필드뿐이다(app/share.py)."""
+    from app.share import ShareError, save
+
+    try:
+        share_id = save(req.model_dump())
+    except ShareError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    return {"id": share_id, "url": f"/s/{share_id}"}
+
+
+@app.get("/share/{share_id}")
+def share_read(share_id: str) -> dict:
+    from app.share import ShareNotFound, load
+
+    try:
+        return load(share_id)
+    except ShareNotFound as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+
+
+@app.get("/s/{share_id}", response_class=HTMLResponse)
+def share_page(share_id: str) -> str:
+    """공유된 대화 화면. 챗봇 화면과 **같은 파일**을 준다.
+
+    읽기 전용 화면을 따로 만들면 답변·근거·진단을 그리는 코드가 두 벌이 되고,
+    한쪽만 고치는 사고가 반드시 난다. 화면은 주소(`/s/…`)를 보고 스스로 읽기 전용이 된다.
+    """
+    return index()
 
 
 _PUBLISHED = Path(__file__).resolve().parent.parent / "eval" / "published" / "summary.json"
