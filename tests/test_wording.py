@@ -328,3 +328,46 @@ def test_표의_줄_이름은_데이터가_아니라_화면에서_바꾼다():
     assert "운영 파이프라인" in names, "게이트가 찾는 줄 이름이 데이터에서 바뀌었다"
     for n in names:
         assert f"'{n}'" in html, f"화면에 이름표가 없는 줄: {n}"
+
+
+# --- README -----------------------------------------------------------------
+
+def test_README_가_화면에_없는_것을_가리키지_않는다():
+    """README 는 이 저장소에서 **가장 많이 읽히는 문서**다.
+
+    화면 용어를 바꾸면서 README 를 빠뜨렸더니, 'DOC 배지를 보라' 처럼 화면에 없는 것을
+    가리키고 있었다. 따라 해 보면 하나도 못 찾는다 — 취향 문제가 아니라 **검증 가능한
+    거짓말**이고, 그 순간 옆에 적힌 수치도 같이 의심받는다.
+    """
+    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    for gone in ("DOC 배지", "CODE 배지", "COMMIT 배지", "진단 패널",
+                 "심볼 슬롯 줄", "에이전트 검색", "단발 검색", "개발자 모드 토글",
+                 "검색 진단 보기"):
+        assert gone not in readme, f"README 가 없어진 화면 문구를 가리킨다: {gone}"
+
+
+def test_README_의_스크린샷이_실제로_있다():
+    """이미지가 깨지면 README 는 글자만 남는다 — 안 띄우는 사람에게는 그게 전부다."""
+    import re
+
+    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    shots = [m for m in re.findall(r"!\[[^\]]*\]\(([^)]+)\)", readme)
+             if not m.startswith("http")]
+    assert len(shots) >= 4, f"스크린샷이 {len(shots)}장뿐이다"
+    for rel in shots:
+        assert (REPO_ROOT / rel).is_file(), f"없는 이미지: {rel}"
+
+
+def test_README_앞부분은_용어_없이_읽힌다():
+    """인사 담당자는 첫 화면에서 판단한다. 개발자용 설명은 '아키텍처' 아래로 민다."""
+    import re
+
+    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    head = readme[:readme.index("## 아키텍처")]
+    head = re.sub(r"```.*?```", " ", head, flags=re.S)
+    head = re.sub(r"`[^`]*`", " ", head)          # 백틱 안은 일부러 남긴 용어
+    head = re.sub(r"\]\([^)]*\)", " ", head)      # 링크 주소
+    banned = ["코퍼스", "청크", "임베딩", "리트리버", "판정기", "브루트포스",
+              "멀티홉", "groundedness", "하이브리드", "RRF", "BM25"]
+    hits = [w for w in banned if w in head]
+    assert not hits, f"README 앞부분에 남은 말: {hits}"
