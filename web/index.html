@@ -42,17 +42,16 @@
   --sidebar-w: 268px;
   --max-read: 760px;   /* 본문 최대폭 — 한 줄이 길어지면 읽기 어렵다 */
 }
-:root[data-theme="dark"], :root[data-theme="auto"] {
-  color-scheme: light;
-}
+/* 기본은 밝은 화면. '기기 설정'(auto) 은 기기가 어두운 모드일 때만 아래에서 뒤집는다. */
+:root[data-theme="auto"] { color-scheme: light; }
 @media (prefers-color-scheme: dark) {
   :root[data-theme="auto"] { color-scheme: dark; }
 }
-:root[data-theme="dark"], :root[data-theme="auto"] { }
 
-/* 다크 팔레트 — 명시 선택(data-theme=dark) 과 시스템 설정(auto) 양쪽에 적용 */
-:root[data-theme="dark"],
-:root[data-theme="auto"] { }
+/* ★ 어두운 팔레트가 아래에 **두 벌** 있다. 하나는 '기기 설정'(기기가 어두울 때만),
+   하나는 '어둡게'(항상)다. CSS 에는 미디어 조건 안팎으로 같은 값을 공유할 방법이 없어서
+   줄이지 못한다. 대신 두 벌이 어긋나지 않는지를 테스트로 지킨다
+   (tests/test_wording.py 의 어두운_팔레트가_두_곳에서_같은지). */
 @media (prefers-color-scheme: dark) {
   :root[data-theme="auto"] {
     --c-bg:#0f1115; --c-surface:#161a21; --c-elev:#1c212a; --c-border:#262c37;
@@ -528,7 +527,15 @@ kbd {
 }
 .chat-item:hover { background: var(--c-bg); color: var(--c-text); }
 .chat-item[aria-current="true"] { background: var(--c-accent-sub); color: var(--c-accent); }
-.chat-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ★ 버튼은 색·배경·글꼴을 **상속하지 않는다.** 리셋을 빠뜨리면 브라우저 기본값
+   (`buttonface` 배경 + `buttontext` 글자)이 그대로 나와, 감싼 요소에 준 색이 하나도
+   먹지 않는다. 라이트 모드에서 이 목록의 글자가 안 보이던 원인이 이것이다. */
+.chat-title {
+  flex: 1; min-width: 0; border: 0; background: transparent; color: inherit;
+  font: inherit; padding: 0; text-align: left; cursor: pointer;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 .chat-when { flex: none; font-size: 10.5px; color: var(--c-text-mute); font-variant-numeric: tabular-nums; }
 .chat-del {
   flex: none; border: 0; background: transparent; color: var(--c-text-mute); cursor: pointer;
@@ -676,9 +683,9 @@ body.is-readonly .composer { display: none; }
       <div class="row">
         <div>
           <div class="row-label">테마</div>
-          <div class="row-hint" id="theme-hint">시스템 설정 따름</div>
+          <div class="row-hint" id="theme-hint">기기가 어두운 모드면 어둡게 보입니다</div>
         </div>
-        <button class="btn" id="theme-btn" type="button" aria-label="테마 전환">시스템</button>
+        <button class="btn" id="theme-btn" type="button" aria-label="화면 밝기 바꾸기">기기 설정</button>
       </div>
       <div class="row">
         <button class="btn btn-block" id="new-chat" type="button">＋ 새 대화</button>
@@ -1620,7 +1627,12 @@ devToggle.addEventListener('change', () => {
   toast(state.devMode ? '답에 코드를 그대로 붙여 보여줍니다' : '코드는 말로 풀어 설명합니다');
 });
 
-const THEMES = [['auto', '시스템', '시스템 설정 따름'], ['light', '라이트', '항상 밝게'], ['dark', '다크', '항상 어둡게']];
+// '시스템' 은 무엇의 시스템인지 알려주지 않는다 — 실제로 "무슨 시스템?" 이라는 질문을 받았다.
+const THEMES = [
+  ['auto',  '기기 설정', '기기가 어두운 모드면 어둡게 보입니다'],
+  ['light', '밝게',      '항상 밝게 보입니다'],
+  ['dark',  '어둡게',    '항상 어둡게 보입니다'],
+];
 function applyTheme() {
   document.documentElement.dataset.theme = state.theme;
   const t = THEMES.find(x => x[0] === state.theme) || THEMES[0];

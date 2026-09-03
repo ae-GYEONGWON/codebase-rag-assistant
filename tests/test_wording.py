@@ -166,3 +166,48 @@ def test_hidden_속성이_클래스에_밀리지_않는다():
     """`.pill`/`.btn` 이 display 를 갖고 있어 `hidden` 이 안 먹던 버그의 회귀 방지."""
     html = (REPO_ROOT / "web" / "index.html").read_text(encoding="utf-8")
     assert "[hidden] { display: none !important; }" in html
+
+
+def test_어두운_팔레트가_두_곳에서_같은지():
+    """어두운 색 값이 '기기 설정' 용과 '어둡게' 용으로 두 벌 적혀 있다.
+
+    미디어 조건 안팎으로 같은 값을 공유할 방법이 CSS 에 없어서 줄이지 못했다.
+    한쪽만 고치면 **어떤 사용자에게만** 색이 어긋나고, 그건 고친 사람 화면에서는
+    보이지 않는 종류의 고장이다. 그래서 두 벌이 같은지를 여기서 지킨다.
+    """
+    import re
+
+    css = (REPO_ROOT / "web" / "index.html").read_text(encoding="utf-8")
+
+    def _tokens(block: str) -> dict:
+        return dict(re.findall(r'(--[\w-]+)\s*:\s*([^;]+);', block))
+
+    def _palette(pattern: str) -> str:
+        # `color-scheme` 만 있는 블록이 먼저 나오므로, **색 값이 든** 블록을 고른다.
+        for m in re.finditer(pattern, css, re.S):
+            if "--c-bg" in m.group(1):
+                return m.group(1)
+        return ""
+
+    auto = _palette(r'@media \(prefers-color-scheme: dark\) \{\s*'
+                    r':root\[data-theme="auto"\] \{(.*?)\}')
+    dark = _palette(r':root\[data-theme="dark"\] \{(.*?)\}')
+    assert auto and dark, "어두운 팔레트 블록을 찾지 못했다"
+
+    a, d = _tokens(auto), _tokens(dark)
+    a.pop("color-scheme", None); d.pop("color-scheme", None)
+    assert a, "‘기기 설정’ 쪽 팔레트가 비어 있다"
+    assert a == d, f"두 팔레트가 어긋난다: {set(a.items()) ^ set(d.items())}"
+
+
+def test_대화_목록_글자가_감싼_요소의_색을_따른다():
+    """버튼은 색을 상속하지 않는다 — 리셋을 빠뜨리면 브라우저 기본색이 그대로 나와
+    라이트 모드에서 글자가 안 보인다. 실제로 그 버그가 있었다."""
+    css = (REPO_ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    import re
+
+    block = re.search(r"\.chat-title \{(.*?)\}", css, re.S)
+    assert block, ".chat-title 규칙이 없다"
+    body = block.group(1)
+    for prop in ("color: inherit", "background: transparent", "border: 0", "font: inherit"):
+        assert prop in body, f".chat-title 에 {prop} 가 없다"
