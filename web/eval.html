@@ -137,6 +137,10 @@ code.mono{background:var(--c-accent-sub); border-radius:var(--r-sm); padding:1px
 .dec.adopt{border-left-color:var(--c-ok)}
 .dec-head{display:flex; align-items:baseline; gap:var(--s-2); flex-wrap:wrap; margin-bottom:6px}
 .dec-head h3{margin:0; font-size:15px}
+/* 제목 뒤에 붙는 원래 용어 — 제목 글자보다 작고 조용하게. */
+.dec-head h3 code{font-size:11px; font-weight:400; color:var(--c-text-mute);
+                  background:none; border:1px solid var(--c-border);
+                  border-radius:6px; padding:1px 5px; margin-left:4px}
 .dec dl{display:grid; grid-template-columns:auto 1fr; gap:4px var(--s-3); margin:0; font-size:13px}
 .dec dt{color:var(--c-text-mute); white-space:nowrap}
 .dec dd{margin:0}
@@ -554,9 +558,13 @@ function renderDecisions(list) {
     `<h2>측정하고 정한 것<span class="num">${list.length}건 중 ${nRej}건이 기각</span></h2>` +
     '<p class="sub">기술을 <b>붙였다</b>가 아니라 <b>재고 정했다</b>가 이 목록의 존재 이유다. ' +
     '기각한 것을 같이 싣는 이유는, 채택만 나열하면 무엇을 근거로 골랐는지 알 수 없기 때문이다.</p>' +
-    '<p class="glossary"><b>Measured</b> 실제로 잰 값 · <b>Why</b> 그 값이 나온 원인 · ' +
-    '<b>Decision</b> 그래서 내린 결정. 맨 아래 링크는 그 판단이 기록된 ' +
-    '엔지니어링 노트 또는 커밋이다.</p>';
+    // 항목 이름이 한글이 되어 그 설명은 필요 없어졌다. 대신 카드 안에 되풀이해서
+    // 나오는 **숫자의 이름**을 한 줄로 풀어 둔다 — 접어 두면 아무도 안 편다.
+    '<p class="glossary">숫자에 붙은 이름: ' +
+    '<b>recall@5</b> 찾아야 할 것을 상위 5건 안에서 찾아낸 비율 · ' +
+    '<b>MRR</b> 정답이 몇 번째로 나왔는지의 점수(1 에 가까울수록 위쪽) · ' +
+    '<b>κ</b> 채점자들이 얼마나 같게 봤는지(0 이면 찍은 것과 같음). ' +
+    '맨 아래 링크는 그 판단이 기록된 노트나 커밋이다.</p>';
 
   list.forEach(d => sec.appendChild(decisionCard(d)));
   return sec;
@@ -568,13 +576,19 @@ function decisionCard(d) {
   const rejected = d.verdict.includes('기각');
   const card = el('div', 'card dec ' + (rejected ? 'reject' : 'adopt'));
   card.innerHTML =
-    `<div class="dec-head"><h3>${esc(d.title)}</h3>` +
+    // 제목에도 `백틱` 안의 원래 용어를 살린다 — 본문만 살리면 제목에서 백틱이
+    // 글자 그대로 보인다(실제로 그렇게 보였다).
+    `<div class="dec-head"><h3>${mdLite(d.title)}</h3>` +
     `<span class="pill ${rejected ? 'warn' : 'ok'}">${esc(d.verdict)}</span></div>` +
     `<dl>` +
-    (d.problem ? `<dt>Problem</dt><dd>${mdLite(d.problem)}</dd>` : '') +
-    `<dt>Measured</dt><dd class="mono">${esc(d.measured)}</dd>` +
-    `<dt>Why</dt><dd>${mdLite(d.why)}</dd>` +
-    `<dt>Decision</dt><dd>${mdLite(d.action)}</dd>` +
+    // 항목 이름이 Problem/Measured/Why/Decision 이었다. 카드 안의 용어를 걷어내면서
+    // 정작 **틀의 이름이 영어**로 남아 있었다 — 처음 보는 사람은 거기서 먼저 막힌다.
+    (d.problem ? `<dt>무슨 문제였나</dt><dd>${mdLite(d.problem)}</dd>` : '') +
+    // 이제 숫자만이 아니라 문장이라 고정폭 글꼴을 쓰지 않는다. 용어는 `백틱`으로
+    // 감싸 그 부분만 고정폭이 되고, 앞의 풀어 쓴 말이 먼저 읽힌다.
+    `<dt>재보니</dt><dd>${mdLite(d.measured)}</dd>` +
+    `<dt>왜 그랬나</dt><dd>${mdLite(d.why)}</dd>` +
+    `<dt>그래서</dt><dd>${mdLite(d.action)}</dd>` +
     `</dl>` +
     // 근거는 번호가 아니라 **제목**으로 보여주고 원문으로 링크한다.
     // '노트 #7' 은 처음 보는 사람에게 아무 뜻도 없는 기호다.

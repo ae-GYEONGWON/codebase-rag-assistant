@@ -234,3 +234,52 @@ def test_대화_목록_글자가_감싼_요소의_색을_따른다():
     body = block.group(1)
     for prop in ("color: inherit", "background: transparent", "border: 0", "font: inherit"):
         assert prop in body, f".chat-title 에 {prop} 가 없다"
+
+
+# --- 판단 카드 ---------------------------------------------------------------
+
+# 카드 안에는 지우면 안 되는 용어가 있다(`recall@5`, `MMR` …). 그건 설명이 아니라
+# **내용 자체**라 지우면 카드가 하는 말이 줄어든다. 대신 규칙을 둔다 —
+# 원래 용어는 반드시 `백틱` 안에 넣고, 그 앞에 풀어 쓴 말을 둔다.
+CARD_JARGON = JARGON + [
+    "하이퍼파라미터", "리트리버", "코퍼스", "MMR", "recall", "MRR",
+    "groundedness", "ANN", "HNSW", "κ", "판정기", "프로필", "baseline",
+    "토글", "cross-encoder", "벡터", "2-gram", "λ",
+]
+
+
+def _cards():
+    import json
+
+    path = REPO_ROOT / "eval" / "published" / "decisions.json"
+    return json.loads(path.read_text(encoding="utf-8"))["decisions"]
+
+
+def test_판단_카드의_어려운_말은_백틱_안에만_있다():
+    """`백틱` 밖에 있으면 풀어 쓴 말 없이 그대로 읽히게 된다."""
+    import re
+
+    bad = []
+    for i, card in enumerate(_cards(), 1):
+        for field in ("title", "problem", "measured", "why", "action"):
+            bare = re.sub(r"`[^`]*`", "", card.get(field, ""))
+            hits = [w for w in CARD_JARGON if w in bare]
+            if hits:
+                bad.append(f"{i}.{field}: {hits}")
+    assert not bad, "풀어 쓰지 않은 말이 남았다:" + chr(10) + chr(10).join(bad)
+
+
+def test_판단_카드는_잰_값과_정한_것을_모두_갖는다():
+    """'해봤다'가 아니라 '재고 정했다'가 이 목록의 존재 이유다."""
+    for i, card in enumerate(_cards(), 1):
+        for field in ("title", "verdict", "problem", "measured", "why", "action"):
+            assert card.get(field), f"{i}번 카드에 {field} 가 비어 있다"
+
+
+def test_카드_틀의_이름이_한글이다():
+    """카드 안의 말을 다 고쳐도 틀의 이름이 영어면 거기서 먼저 막힌다."""
+    dash = _screen_text("eval.html")
+    for eng in ("<dt>Problem</dt>", "<dt>Measured</dt>", "<dt>Why</dt>", "<dt>Decision</dt>"):
+        assert eng not in dash, f"카드 틀에 {eng} 가 남아 있다"
+    for ko in ("무슨 문제였나", "재보니", "왜 그랬나", "그래서"):
+        assert ko in dash, f"카드 틀에 '{ko}' 가 없다"
