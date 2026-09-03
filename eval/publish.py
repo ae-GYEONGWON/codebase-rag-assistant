@@ -242,14 +242,14 @@ def build() -> dict:
         print(f"[publish] 경고 — {DECISIONS.name} 이 없습니다(기각 판단 목록이 비어 나갑니다)")
 
     retrieval = [r for r in (
-        _retrieval("private.json", "private — 규모 있는 실제 코드베이스",
-                   "3,619 청크. 이 프로젝트의 대표 수치."),
-        _retrieval("eval.json", "eval — CI 회귀 게이트 기준",
-                   "코퍼스를 태그로 고정해 커밋해도 값이 안 움직인다(노트 #18)."),
-        _retrieval("eval-synthetic.json", "합성 258문항 — 규모를 키운 재측정",
-                   "수기 20문항의 자가 라벨 편향을 희석하려고 생성(노트 #19)."),
-        _retrieval("demo.json", "demo — 라이브 데모 코퍼스",
-                   "워킹트리를 보므로 커밋마다 커진다. 게이트에는 쓰지 않는다."),
+        _retrieval("private.json", "규모 있는 실제 코드베이스",
+                   "자료 3,619조각. 이 프로젝트의 대표 수치다."),
+        _retrieval("eval.json", "정확도가 떨어지면 막아 주는 기준",
+                   "대상을 한 시점으로 고정해, 코드를 고쳐도 이 값은 움직이지 않는다."),
+        _retrieval("eval-synthetic.json", "자동으로 만든 질문 258개 — 규모를 키워 다시 재기",
+                   "직접 만든 20문항이 내 쪽으로 기울었을 수 있어, 수를 늘려 희석했다."),
+        _retrieval("demo.json", "지금 띄워 둔 데모가 보는 자료",
+                   "지금 이 저장소를 그대로 읽으므로 커밋할 때마다 커진다. 기준값으로는 쓰지 않는다."),
     ) if r]
 
     story: dict = {}

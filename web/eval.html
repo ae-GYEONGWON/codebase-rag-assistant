@@ -302,20 +302,39 @@ const el = (tag, cls, html) => {
   return n;
 };
 
-/* 검색 평가 — 리트리버 비교표. '운영 파이프라인' 행을 강조해 무엇이 실제 경로인지 보인다. */
+/* 표에 쓰는 이름 — **데이터가 아니라 화면에서만** 바꾼다.
+   저장된 이름(`vector only` 등)은 회귀 게이트가 줄을 찾는 열쇠라 건드리면 안 된다.
+   여기서만 풀어 쓰고 원래 이름은 뒤에 작게 붙인다. */
+const ROW_LABEL = {
+  'vector only':  ['뜻으로만 찾기', 'vector'],
+  'bm25 only':    ['단어로만 찾기', 'BM25'],
+  'hybrid RRF':   ['둘을 합쳐 찾기', 'RRF'],
+  '+심볼슬롯':     ['함수 이름을 앞자리에', ''],
+  '운영 파이프라인': ['실제 서비스가 쓰는 방식', ''],
+};
+
+function rowName(name) {
+  const m = ROW_LABEL[name];
+  if (!m) return esc(name);
+  return esc(m[0]) + (m[1] ? ` <span class="term">${esc(m[1])}</span>` : '');
+}
+
+/* 검색 평가 — 방식별 비교표. '실제 서비스가 쓰는 방식' 줄을 강조해 무엇이 쓰이는지 보인다. */
 function renderRetrieval(list, bare) {
   const sec = el('section');
   sec.innerHTML = bare ? '' :
-    '<h2>검색 정확도<span class="num">recall@5 · MRR</span></h2>' +
-    '<p class="sub">같은 문항을 검색 방식만 바꿔 돌린 결과다. ' +
-    '<b>코퍼스와 문항 수가 다르면 서로 비교하지 않는다</b> — 아래 네 벌은 각각 다른 조건이다.</p>' +
+    '<h2>검색 정확도</h2>' +
+    '<p class="sub">같은 질문을 <b>찾는 방식만 바꿔</b> 돌린 결과다. ' +
+    '<b>자료 양과 질문 수가 다르면 서로 비교하지 않는다</b> — 아래 네 벌은 각각 다른 조건이다.</p>' +
     '<p class="glossary">' +
-    '<b>recall@5</b> 상위 5건 안에 정답 문서가 들어왔는가(높을수록 좋음) · ' +
-    '<b>MRR</b> 정답이 몇 번째로 나왔는가(1.0 이면 항상 1위) · ' +
-    '<b>miss</b> 못 찾은 문항 수 · <b>청크</b> 문서를 검색 단위로 자른 조각<br>' +
-    '<b>vector only</b> 임베딩만 · <b>bm25 only</b> 단어 매칭만 · ' +
-    '<b>hybrid RRF</b> 둘의 순위를 합침 · ' +
-    '<b>운영 파이프라인</b> 실제로 서비스가 쓰는 경로(hybrid + 코드 심볼 매칭 + 범위밖 게이트)</p>';
+    '<b>상위 5건 안에 정답</b> 찾아온 5건 안에 답이 들어 있었는가(높을수록 좋음) <b>recall@5</b> · ' +
+    '<b>정답 순위 점수</b> 답이 몇 번째로 나왔는가(1.0 이면 항상 1등) <b>MRR</b> · ' +
+    '<b>조각</b> 문서를 검색 단위로 자른 토막<br>' +
+    '<b>뜻으로만 찾기</b> 문장의 의미가 비슷한 것을 고른다 · ' +
+    '<b>단어로만 찾기</b> 같은 단어가 많이 나오는 것을 고른다 · ' +
+    '<b>둘을 합쳐 찾기</b> 두 방식이 각각 뽑은 순위를 합친다 · ' +
+    '<b>실제 서비스가 쓰는 방식</b> 여기에 함수 이름 우선 배치와 ' +
+    '‘근거가 없으면 답하지 않기’까지 더한 것</p>';
 
   list.forEach((r, ri) => {
     const card = el('div', 'card');
@@ -323,24 +342,26 @@ function renderRetrieval(list, bare) {
     const origins = Object.entries(r.origins || {}).map(([k, v]) => `${k} ${v}`).join(' · ');
     card.innerHTML =
       `<h3>${esc(r.label)}</h3>` +
-      `<p class="meta">${total.toLocaleString()}청크 ` +
-      `(문서 ${r.corpus.doc || 0} / 코드 ${r.corpus.code || 0} / 커밋 ${r.corpus.commit || 0}) · ` +
-      `평가셋 <span class="mono">${esc(r.dataset || '?')}</span>` +
-      (origins ? ` · 라벨 ${esc(origins)}` : '') + `</p>` +
+      `<p class="meta">자료 ${total.toLocaleString()}조각 ` +
+      `(문서 ${r.corpus.doc || 0} / 코드 ${r.corpus.code || 0} / 변경 이력 ${r.corpus.commit || 0}) · ` +
+      `질문 목록 <span class="mono">${esc(r.dataset || '?')}</span>` +
+      (origins ? ` · 정답 표시 ${esc(origins)}` : '') + `</p>` +
       `<p class="meta">${esc(r.note)}</p>`;
 
     // '전체' 스위트는 항상 보이고, 축별 상세는 접는다 — 표가 길어 다음 절을 밀어낸다.
     const table = s => {
       const rows = s.rows.map(x =>
         `<tr class="${x.name === '운영 파이프라인' ? 'best' : ''}">` +
-        `<td>${esc(x.name)}</td>` +
+        `<td>${rowName(x.name)}</td>` +
         `<td class="num">${pct(x.recall)}</td>` +
         `<td class="num">${f2(x.mrr)}</td>` +
         `<td class="num">${x.misses}</td></tr>`).join('');
       const tw = el('div', 'tw');
       tw.innerHTML =
         `<table><thead><tr><th>${esc(s.title)} <span class="num">${s.n}문항</span></th>` +
-        `<th class="num">recall@5</th><th class="num">MRR</th><th class="num">miss</th></tr></thead>` +
+        '<th class="num">상위 5건 안에 정답<span class="term">recall@5</span></th>' +
+        '<th class="num">정답 순위 점수<span class="term">MRR</span></th>' +
+        '<th class="num">못 찾음</th></tr></thead>' +
         `<tbody>${rows}</tbody></table>`;
       return tw;
     };
@@ -349,7 +370,7 @@ function renderRetrieval(list, bare) {
     (whole.length ? whole : r.suites).forEach(s => card.appendChild(table(s)));
     if (whole.length && parts.length) {
       const det = el('details', 'more');
-      det.innerHTML = `<summary>축별로 나눠 보기 (${parts.map(s => esc(s.title)).join(' · ')})</summary>`;
+      det.innerHTML = `<summary>종류별로 나눠 보기 (${parts.map(s => esc(s.title)).join(' · ')})</summary>`;
       parts.forEach(s => det.appendChild(table(s)));
       card.appendChild(det);
     }
@@ -357,8 +378,9 @@ function renderRetrieval(list, bare) {
     const oos = r.out_of_scope || {};
     if (oos.total) {
       card.appendChild(el('div', 'note plain',
-        `<b>범위 밖 거절 ${oos.rejected}/${oos.total}</b> — 코사인 임계 미만이면 ` +
-        `검색 단계에서 자른다. LLM 을 아예 부르지 않으므로 환각도 비용도 0 이다.`));
+        `<b>근거가 없어 답하지 않은 것 ${oos.rejected}/${oos.total}</b> — 찾아온 것이 ` +
+        `질문과 충분히 가깝지 않으면 답을 만들기 전에 멈춘다. AI를 아예 부르지 않으므로 ` +
+        `말을 지어낼 기회도, 비용도 0 이다.`));
     }
     sec.appendChild(card);
   });
@@ -371,15 +393,15 @@ function renderRetrieval(list, bare) {
 function renderJudges(j, hard, bare) {
   const sec = el('section');
   sec.innerHTML = bare ? '' :
-    '<h2>LLM 채점자를 검증했다<span class="num">평가자 자체를 잰다</span></h2>' +
-    '<p class="sub">답변이 근거에 충실한지를 LLM 에게 채점시킨다(LLM-as-judge). ' +
-    '그 <b>채점자를 믿을 수 있는지</b>를 확인하려고, 답변과 근거를 ' +
+    '<h2>채점하는 AI 자체를 검증했다<span class="num">채점자를 잰다</span></h2>' +
+    '<p class="sub">답이 근거에 충실한지를 <b>AI 모델에게 채점시킨다</b>. ' +
+    '그 <b>채점을 믿을 수 있는지</b>를 확인하려고, 답과 근거를 ' +
     '<b>고정한 채 채점 모델만</b> 바꿔 봤다. 따라서 아래 차이는 전부 채점자 차이다.</p>' +
     '<p class="glossary">' +
     '<b>self</b> 답을 만든 모델이 자기 답을 채점 · <b>cross</b> 다른 모델이 채점 · ' +
-    '<b>평균</b> groundedness — 답변의 주장 중 근거에 실제로 있는 것의 비율' +
-    '(1.0 = 지어낸 말 없음) · ' +
-    '<b>환각 지적</b> 채점자가 감점한 문항의 비율<br>' +
+    '<b>평균</b> 답에서 한 말 중 근거에 실제로 있는 것의 비율' +
+    '(1.0 = 지어낸 말 없음) <b>groundedness</b> · ' +
+    '<b>지어냈다고 본 비율</b> 채점자가 감점한 문항의 비율<br>' +
     '<b>Cohen&rsquo;s κ</b> 두 채점자가 <b>같은 문항</b>을 같게 봤는지 ' +
     '— 1.0 완전 일치 · 0 우연 수준 · 음수는 우연보다 못함</p>';
 
@@ -398,14 +420,15 @@ function renderJudges(j, hard, bare) {
     card.innerHTML =
       `<h3>${esc(title)}</h3><p class="meta">${esc(note)}</p>` +
       `<div class="tw"><table><thead><tr><th>채점자</th><th>종류</th>` +
-      `<th class="num">채점</th><th class="num">평균</th><th class="num">환각 지적</th>` +
+      `<th class="num">채점</th><th class="num">평균</th>` +
+      `<th class="num">지어냈다고 본 비율</th>` +
       `</tr></thead><tbody>${rows}</tbody></table></div>`;
     if (ks.length) {
       card.appendChild(el('div', 'note',
         `<b>평균은 모였는데 합의는 없다.</b> 문항 단위 일치도(Cohen&rsquo;s κ)가 ` +
         `${f3(kmin)} ~ ${f3(kmax)} 로 <b>전부 음수</b> — 우연히 맞추는 것보다 못하다. ` +
         `즉 채점자들은 &ldquo;몇 점인가&rdquo;에는 비슷하게 답하지만 ` +
-        `&ldquo;<b>어느 답이 환각인가</b>&rdquo;에는 한 문항도 합의하지 않았다. ` +
+        `&ldquo;<b>어느 답이 지어낸 것인가</b>&rdquo;에는 한 문항도 뜻이 모이지 않았다. ` +
         `평균이 모인 건 채점자가 견고해서가 아니라 <b>거의 다 만점이라 ` +
         `차이가 드러날 자리가 없었기</b> 때문이다(천장 효과).`));
     } else {
@@ -418,15 +441,15 @@ function renderJudges(j, hard, bare) {
 
   const a = panel(j, '평범한 문항 16개', '골든셋에서 뽑은 답변을 채점자 5종에 걸었다.');
   if (a) sec.appendChild(a);
-  const b = panel(hard, '환각 유도 문항 19개',
+  const b = panel(hard, '일부러 함정을 판 질문 19개',
     '"평가셋이 쉬워서"라는 가설을 확인하려고 어려운 문항으로 다시 걸었다.');
   if (b) sec.appendChild(b);
 
   if (j && hard) {
     sec.appendChild(el('div', 'note',
       `<b>가설이 틀렸다.</b> 문항을 어렵게 만들어도 값이 움직이지 않았다. ` +
-      `원인은 평가셋이 아니라 <b>지표의 정의</b>였다 — 거절은 근거에 없는 주장을 하지 않으므로 ` +
-      `groundedness 가 자동으로 만점이다. 이 지표는 &lsquo;환각을 했는가&rsquo;가 아니라 ` +
+      `원인은 문항이 아니라 <b>채점 기준 자체</b>였다 — 답을 거절하면 지어낸 말이 하나도 없으므로 ` +
+      `<b>자동으로 만점</b>이다. 이 기준은 &lsquo;지어냈는가&rsquo;가 아니라 ` +
       `&lsquo;한 말이 근거에 있는가&rsquo;를 재고, <b>말하지 않아서 얻는 만점</b>을 구분하지 못한다. ` +
       `→ 그래서 아래의 <b>행동 기반 채점</b>으로 지표를 바꿨다.`));
   }
@@ -447,18 +470,18 @@ function renderHard(h, bare) {
   const right = {absent: '없다고 밝혀야 통과', partial: '있는 쪽만 답해야 통과',
                  superseded: '현재 값을 답해야 통과'};
   sec.innerHTML = bare ? '' :
-    '<h2>환각을 유도하고, 행동으로 채점했다<span class="num">' + h.n + '문항</span></h2>' +
+    '<h2>일부러 함정을 파고, 행동으로 채점했다<span class="num">질문 ' + h.n + '개</span></h2>' +
     '<p class="sub">답이 <b>없거나 절반만 있는</b> 질문을 일부러 만들어, 시스템이 ' +
-    '지어내는지 봤다. 덫 종류마다 <b>통과 조건을 따로</b> 뒀다 — 위의 groundedness 로 재면 ' +
-    '아래 실패가 0.99 로 묻힌다(거절은 지어낸 말이 없어 자동으로 만점이라서).</p>' +
-    '<p class="glossary">문항은 LLM 이 만들고, <b>생성기와 다른 모델</b>이 ' +
+    '지어내는지 봤다. 함정 종류마다 <b>통과 조건을 따로</b> 뒀다 — 위의 채점 기준으로 재면 ' +
+    '아래 실패가 0.99 로 묻힌다(거절하면 지어낸 말이 없어 자동으로 만점이라서).</p>' +
+    '<p class="glossary">질문은 AI가 만들고, <b>만든 모델과 다른 모델</b>이 ' +
     '&ldquo;정말 근거가 없는지&rdquo;를 확인해 걸러 냈다 — 근거가 있는 질문이 섞이면 ' +
     '옳게 답한 시스템을 틀렸다고 채점하게 된다.</p>';
 
   const tiles = el('div', 'tiles');
   tiles.innerHTML =
     `<div class="tile"><div class="v">${pct(h.pass_rate)}</div><div class="k">전체 통과율</div>` +
-    `<div class="n">나머지가 환각이다</div></div>` +
+    `<div class="n">나머지는 지어낸 답이다</div></div>` +
     Object.entries(h.by_kind).map(([k, v]) =>
       `<div class="tile"><div class="v">${pct(v.pass_rate)}</div>` +
       `<div class="k">${esc(kname[k] || k)} · ${v.pass}/${v.n}</div>` +
@@ -493,13 +516,17 @@ function renderHard(h, bare) {
 function renderAnn(a, bare) {
   const sec = el('section');
   sec.innerHTML = bare ? '' :
-    '<h2>브루트포스는 언제까지 버티나<span class="num">전환 임계 실측</span></h2>' +
-    '<p class="sub">벡터 검색을 <b>전수 매칭</b>(모든 문서와 하나하나 비교)으로 한다. ' +
-    '보통은 근사 검색(ANN)을 쓰는데, 그게 게으름이 아니라 선택임을 N 을 키워 가며 쟀다.</p>' +
+    '<h2>전부 하나씩 비교하는 방식은 언제까지 버티나' +
+      '<span class="num">자료를 키워 가며 실측</span></h2>' +
+    '<p class="sub">질문과 자료를 숫자 묶음으로 바꿔 견주는데, 그걸 <b>자료 전부와 하나씩</b> ' +
+    '비교한다. 보통은 일부만 훑는 빠른 방식을 쓰는데, 그렇게 안 한 것이 게으름이 아니라 ' +
+    '선택임을 자료를 키워 가며 쟀다.</p>' +
     '<p class="glossary">' +
-    '<b>N</b> 인덱싱된 조각 수 · <b>p50 / p95</b> 검색 한 번에 걸린 시간의 중앙값 / 상위 5% · ' +
-    '<b>HNSW</b> 대표적인 근사 검색 알고리즘 · ' +
-    '<b>ef_search</b> 근사 탐색의 폭(클수록 정확하고 느림)</p>';
+    '<b>자료 조각 수</b> 검색 대상이 몇 토막인지 <b>N</b> · ' +
+    '<b>보통 걸린 시간 / 느린 편</b> 한 번 검색에 걸린 시간의 중앙값 / 상위 5% ' +
+    '<b>p50 / p95</b> · ' +
+    '<b>일부만 훑는 빠른 방식</b> 널리 쓰이는 대표 알고리즘 <b>HNSW</b> · ' +
+    '<b>얼마나 넓게 훑나</b> 클수록 정확하고 느리다 <b>ef_search</b></p>';
 
   const card = el('div', 'card');
   card.innerHTML =
@@ -507,7 +534,8 @@ function renderAnn(a, bare) {
       '<span class="pill info">지어낸 데이터로 측정</span></h3>' +
     '<p class="meta">행렬곱 비용은 값이 아니라 <b>모양</b>이 정하므로 이 목적에는 합성으로 충분하다.</p>' +
     '<div class="tw"><table><thead><tr><th class="num">N</th><th class="num">행렬</th>' +
-    '<th class="num">p50</th><th class="num">p95</th></tr></thead><tbody>' +
+    '<th class="num">보통 걸린 시간<span class="term">p50</span></th>' +
+    '<th class="num">느린 편<span class="term">p95</span></th></tr></thead><tbody>' +
     a.scaling.map(r =>
       `<tr><td class="num">${r.n.toLocaleString()}</td>` +
       `<td class="num">${Math.round(r.mb).toLocaleString()} MB</td>` +
@@ -516,9 +544,10 @@ function renderAnn(a, bare) {
   const last = a.scaling[a.scaling.length - 1];
   if (last) {
     card.appendChild(el('div', 'note plain',
-      `N=${last.n.toLocaleString()} 에서도 ${f2(last.p50)} ms — LLM 첫 토큰(~1,400 ms)의 ` +
-      `<b>${(last.p50 / 1400 * 100).toFixed(1)}%</b> 다. <b>먼저 무너지는 것은 지연이 아니라 메모리</b>이고, ` +
-      `100만 청크면 ${Math.round(last.mb * 10 / 1000)} GB 가 된다.`));
+      `자료 ${last.n.toLocaleString()}조각에서도 ${f2(last.p50)}밀리초 — AI가 첫 글자를 뱉기까지 ` +
+      `걸리는 시간(약 1.4초)의 <b>${(last.p50 / 1400 * 100).toFixed(1)}%</b> 다. ` +
+      `<b>먼저 한계에 닿는 것은 속도가 아니라 메모리</b>이고, ` +
+      `100만 조각이면 ${Math.round(last.mb * 10 / 1000)} GB 가 된다.`));
   }
   sec.appendChild(card);
 
@@ -527,7 +556,7 @@ function renderAnn(a, bare) {
     c2.innerHTML =
       '<h3>빠르게 찾는 방식으로 바꾸면 무엇을 잃나' +
         '<span class="term">HNSW</span> <span class="pill ok">실제 데이터로 측정</span></h3>' +
-      `<p class="meta">실제 코퍼스 ${a.real.n.toLocaleString()}청크 · 실제 평가 질의 ${a.real.n_queries}개. ` +
+      `<p class="meta">실제 자료 ${a.real.n.toLocaleString()}조각 · 실제 질문 ${a.real.n_queries}개. ` +
       '아래 비율은 <b>하나도 빠짐없이 다 뒤졌을 때 고른 것</b>과 얼마나 같은지다.</p>' +
       '<div class="tw"><table><thead><tr>' +
         '<th class="num">얼마나 넓게 훑나<span class="term">ef_search</span></th>' +
@@ -539,12 +568,12 @@ function renderAnn(a, bare) {
         `<td class="num">${pct(r.recall_at_k)}</td></tr>`).join('') +
       '</tbody></table></div>';
     c2.appendChild(el('div', 'note',
-      `<b>합성 벡터로는 이 값을 재면 안 된다.</b> 같은 실험을 합성으로 하면 recall 이 0~19% 로 ` +
-      `나오는데, 무작위로 만든 768차원 벡터는 서로 <b>고르게 멀어서 '가까운 이웃'이라는 게 ` +
-      `사실상 없기</b> 때문이다(거의 직교한다). 근사 검색은 이웃을 따라가며 찾는 방식이라 ` +
-      `따라갈 이웃이 없으면 성립하지 않는다. `+
-      `그건 HNSW 의 성질이 아니라 데이터의 성질이다 — 그대로 실었으면 ` +
-      `&ldquo;ANN 은 못 쓴다&rdquo;는 정반대 결론이 나왔다.`));
+      `<b>지어낸 데이터로는 이 값을 재면 안 된다.</b> 같은 실험을 지어낸 데이터로 하면 ` +
+      `같은 결과를 찾아내는 비율이 0~19% 로 나온다. 무작위로 만든 숫자 묶음은 서로 ` +
+      `<b>고르게 멀어서 '가까운 이웃'이라는 게 사실상 없기</b> 때문이다. ` +
+      `빠른 방식은 가까운 것끼리 이어 둔 그물을 따라가며 찾으므로, 따라갈 이웃이 없으면 ` +
+      `성립하지 않는다. 그건 <b>그 방식의 성질이 아니라 데이터의 성질</b>이다 — ` +
+      `그대로 실었으면 &ldquo;빠른 방식은 못 쓴다&rdquo;는 정반대 결론이 나왔다.`));
     sec.appendChild(c2);
   }
   return sec;

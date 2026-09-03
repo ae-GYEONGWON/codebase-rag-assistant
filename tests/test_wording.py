@@ -283,3 +283,48 @@ def test_카드_틀의_이름이_한글이다():
         assert eng not in dash, f"카드 틀에 {eng} 가 남아 있다"
     for ko in ("무슨 문제였나", "재보니", "왜 그랬나", "그래서"):
         assert ko in dash, f"카드 틀에 '{ko}' 가 없다"
+
+
+# --- 측정 결과 화면 -----------------------------------------------------------
+
+def test_대시보드_설명문에_만든_사람의_말이_없다():
+    """화면에 그려질 문자열만 훑는다.
+
+    브라우저로 확인해 보니, 고쳐 놓고도 절 설명·표 머리글에 용어가 여럿 남아 있었다.
+    한 곳을 고치면 같은 종류를 전수로 훑어야 하는데 사람 눈으로는 매번 놓친다.
+
+    검사에서 빼는 것:
+      - `백틱`·<b>·<span class="term"> 안의 용어 — 쉬운 말 뒤에 **일부러** 남긴 것
+      - 주석 — 화면에 나가지 않는다
+      - 바깥 기술 문서로 나가는 링크 제목 — 그건 개발자용 문서의 제목이다
+    """
+    import re
+
+    html = _screen_text("eval.html")
+    # 일부러 남긴 용어 자리를 통째로 지운다
+    html = re.sub(r"<span class=\"term\">.*?</span>", " ", html, flags=re.S)
+    html = re.sub(r"<b>[^<]{1,40}</b>", " ", html)
+    html = re.sub(r"`[^`]*`", " ", html)
+
+    banned = ["멀티홉", "심볼 슬롯", "판정기", "환각", "코퍼스", "인덱싱",
+              "groundedness", "LLM-as-judge", "전수 매칭", "직교", "청크"]
+    hits = [w for w in banned if w in html]
+    assert not hits, f"화면 설명문에 남은 말: {hits}"
+
+
+def test_표의_줄_이름은_데이터가_아니라_화면에서_바꾼다():
+    """저장된 줄 이름은 **회귀 게이트가 줄을 찾는 열쇠**라 건드리면 안 된다.
+
+    화면에서만 풀어 쓰고 원래 이름은 뒤에 붙인다. 데이터를 고치면 기준값 비교가 깨진다.
+    """
+    import json
+
+    html = (REPO_ROOT / "web" / "eval.html").read_text(encoding="utf-8")
+    assert "const ROW_LABEL" in html, "화면용 이름표가 없다"
+
+    snap = json.loads((REPO_ROOT / "eval" / "published" / "summary.json")
+                      .read_text(encoding="utf-8"))
+    names = {x["name"] for r in snap["retrieval"] for s in r["suites"] for x in s["rows"]}
+    assert "운영 파이프라인" in names, "게이트가 찾는 줄 이름이 데이터에서 바뀌었다"
+    for n in names:
+        assert f"'{n}'" in html, f"화면에 이름표가 없는 줄: {n}"
