@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko" data-theme="light">
+<html lang="ko" data-theme="dark">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -254,7 +254,7 @@ details.more > summary:hover{text-decoration:underline}
    밝은 화면이 한 번 번쩍인 뒤 어두워진다. */
 try {
   var t = localStorage.getItem('theme');
-  document.documentElement.dataset.theme = (t === 'dark' || t === 'light') ? t : 'light';
+  document.documentElement.dataset.theme = (t === 'dark' || t === 'light') ? t : 'dark';
 } catch (e) { /* 저장소를 못 읽는 환경이면 기본값 그대로 */ }
 </script>
 </head>

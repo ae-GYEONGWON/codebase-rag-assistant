@@ -190,6 +190,29 @@ def test_어두운_팔레트는_화면마다_한_벌뿐이다():
         assert len(blocks) == 1, f"{name} 의 어두운 팔레트가 {len(blocks)}벌이다"
 
 
+def test_기본_밝기가_세_곳에서_어긋나지_않는다():
+    """기본값이 마크업 · 챗봇 JS · 대시보드 조각 세 곳에 적혀 있다.
+
+    한 곳만 바꾸면 화면이 한 번 번쩍이거나(마크업 ≠ JS) 두 화면의 밝기가 갈린다
+    (챗봇 ≠ 대시보드). 셋 다 같은 값인지를 여기서 지킨다.
+    """
+    import re
+
+    chat = _screen_text("index.html")
+    dash = _screen_text("eval.html")
+
+    js_default = re.search(r"const DEFAULT_THEME = '(\w+)'", chat)
+    assert js_default, "DEFAULT_THEME 을 찾지 못했다"
+    default = js_default.group(1)
+
+    for name, html in (("index.html", chat), ("eval.html", dash)):
+        m = re.search(r'<html[^>]*data-theme="(\w+)"', html)
+        assert m and m.group(1) == default, f"{name} 의 마크업 기본값이 {default} 가 아니다"
+
+    m = re.search(r"\? t : '(\w+)'", dash)
+    assert m and m.group(1) == default, "대시보드 조각의 기본값이 다르다"
+
+
 def test_두_화면이_같은_저장값을_쓴다():
     """챗봇에서 '어둡게' 를 골랐는데 측정 결과가 밝게 뜨면 같은 제품으로 읽히지 않는다."""
     chat = (REPO_ROOT / "web" / "index.html").read_text(encoding="utf-8")
