@@ -117,6 +117,12 @@ code.mono{background:var(--c-accent-sub); border-radius:var(--r-sm); padding:1px
 .pill.warn{background:var(--c-warn-bg); color:var(--c-warn)}
 .pill.info{background:var(--c-info-bg); color:var(--c-info)}
 
+/* 원래 용어 — 쉬운 말 뒤에 작게. 챗봇 화면(web/index.html)의 `.term` 과 같은 규칙이다.
+   두 화면이 용어를 다르게 다루면 같은 제품으로 읽히지 않는다. */
+.term{font-size:10.5px; font-weight:400; color:var(--c-text-mute);
+      border:1px solid var(--c-border); border-radius:6px; padding:1px 5px;
+      margin-left:4px; white-space:nowrap}
+
 /* 핵심 수치 타일 */
 .tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:var(--s-3); margin-bottom:var(--s-4)}
 .tile{background:var(--c-surface); border:1px solid var(--c-border); border-radius:var(--r-md); padding:var(--s-3) var(--s-4)}
@@ -493,7 +499,8 @@ function renderAnn(a, bare) {
 
   const card = el('div', 'card');
   card.innerHTML =
-    '<h3>지연·메모리 스케일링 <span class="pill info">합성 벡터</span></h3>' +
+    '<h3>자료가 늘면 얼마나 느려지고 얼마나 무거워지나 ' +
+      '<span class="pill info">지어낸 데이터로 측정</span></h3>' +
     '<p class="meta">행렬곱 비용은 값이 아니라 <b>모양</b>이 정하므로 이 목적에는 합성으로 충분하다.</p>' +
     '<div class="tw"><table><thead><tr><th class="num">N</th><th class="num">행렬</th>' +
     '<th class="num">p50</th><th class="num">p95</th></tr></thead><tbody>' +
@@ -514,11 +521,14 @@ function renderAnn(a, bare) {
   if (a.real) {
     const c2 = el('div', 'card');
     c2.innerHTML =
-      '<h3>HNSW 와의 교환 <span class="pill ok">실제 임베딩</span></h3>' +
+      '<h3>빠르게 찾는 방식으로 바꾸면 무엇을 잃나' +
+        '<span class="term">HNSW</span> <span class="pill ok">실제 데이터로 측정</span></h3>' +
       `<p class="meta">실제 코퍼스 ${a.real.n.toLocaleString()}청크 · 실제 평가 질의 ${a.real.n_queries}개. ` +
-      'recall 은 전수 매칭이 고른 것 대비 일치율이다.</p>' +
-      '<div class="tw"><table><thead><tr><th class="num">ef_search</th><th class="num">HNSW p50</th>' +
-      '<th class="num">전수매칭 p50</th><th class="num">recall@5</th></tr></thead><tbody>' +
+      '아래 비율은 <b>하나도 빠짐없이 다 뒤졌을 때 고른 것</b>과 얼마나 같은지다.</p>' +
+      '<div class="tw"><table><thead><tr>' +
+        '<th class="num">얼마나 넓게 훑나<span class="term">ef_search</span></th>' +
+        '<th class="num">빠른 방식</th><th class="num">다 뒤지기</th>' +
+        '<th class="num">같은 결과 비율</th></tr></thead><tbody>' +
       a.real.sweep.map(r =>
         `<tr><td class="num">${r.ef_search}</td><td class="num">${f2(r.p50_ms)} ms</td>` +
         `<td class="num">${f2(a.real.brute_p50)} ms</td>` +
@@ -669,24 +679,30 @@ function renderHero(d) {
 
   const tiles = [];
   if (op && base) {
-    tiles.push([`${pct(base.recall)}→${pct(op.recall)}`, '검색 recall@5',
-                '벡터 단독 → 하이브리드(RRF). 3,619청크 · 28문항']);
+    tiles.push([`${pct(base.recall)}→${pct(op.recall)}`,
+                '찾아야 할 것을 실제로 찾은 비율<span class="term">recall@5</span>',
+                '뜻으로만 찾을 때 → 뜻과 단어를 함께 쓸 때. 자료 3,619조각 · 질문 28개']);
   }
   if (d.hard) {
-    tiles.push([pct(d.hard.pass_rate), '환각 유도 문항 통과율',
-                `${d.hard.n}문항. 행동 기반 채점 — groundedness 로는 변별이 안 됐다`]);
+    tiles.push([pct(d.hard.pass_rate), '일부러 함정을 판 질문에 옳게 답한 비율',
+                `질문 ${d.hard.n}개. 말을 지어냈는지를 행동으로 채점한다 — ` +
+                '예전 지표로는 가려지지 않았다']);
   }
   if (ks.length) {
-    tiles.push([f3(Math.max(...ks)), 'LLM 채점자 합의도 (κ)',
-                '우연 이하. 평균은 같아도 어느 답이 환각인지는 합의하지 않았다']);
+    tiles.push([f3(Math.max(...ks)),
+                '채점자들이 같은 답을 두고 뜻을 모은 정도<span class="term">κ</span>',
+                '찍는 것만도 못하다. 평균 점수는 같아도 ' +
+                '어느 답이 지어낸 것인지에는 뜻이 모이지 않았다']);
   }
   if (nDec) {
-    tiles.push([`${nRej}/${nDec}`, '측정 후 기각한 판단',
-                '리랭커 · 형태소 분석기 · 합성 벤치 방법 등']);
+    tiles.push([`${nRej}/${nDec}`, '재어 보고 그만둔 판단',
+                '근거 다시 고르기 · 한국어 단어 분석기 · 성능 재는 방법 등']);
   }
   const hero = el('div', 'hero');
+  // 제목에만 <span class="term"> 을 허용한다. 값·설명은 그대로 escape 한다 —
+  // 여기 들어오는 것은 우리가 쓴 문자열이지 사용자 입력이 아니다.
   hero.innerHTML = tiles.map(([v, k, n]) =>
-    `<div class="tile"><div class="v">${esc(v)}</div><div class="k">${esc(k)}</div>` +
+    `<div class="tile"><div class="v">${esc(v)}</div><div class="k">${k}</div>` +
     `<div class="n">${esc(n)}</div></div>`).join('');
   box.appendChild(hero);
   return box;
@@ -700,7 +716,7 @@ async function main() {
     const res = await fetch('/eval/summary');
     d = await res.json();
   } catch (e) {
-    root.innerHTML = `<div class="err">스냅샷을 불러오지 못했습니다: ${esc(e.message)}</div>`;
+    root.innerHTML = `<div class="err">측정 결과를 불러오지 못했습니다: ${esc(e.message)}</div>`;
     stamp.textContent = '';
     return;
   }
@@ -712,10 +728,10 @@ async function main() {
 
   // 스냅샷이라는 사실을 먼저 밝힌다 — 수치에 조건을 붙여 말하는 것이 이 프로젝트의 원칙이다.
   stamp.innerHTML =
-    `이 페이지는 <b>발행된 스냅샷</b>이다(지금 다시 잰 값이 아니다). ` +
-    `생성 ${esc((d.generated_at || '').replace('T', ' ').slice(0, 16))}` +
+    `이 페이지의 숫자는 <b>그때 재서 저장해 둔 것</b>이다 — 지금 다시 잰 값이 아니다. ` +
+    `잰 때 ${esc((d.generated_at || '').replace('T', ' ').slice(0, 16))}` +
     (d.git_sha ? ` · 커밋 <code>${esc(d.git_sha)}</code>` : '') +
-    ` · 갱신은 <code>python -m eval.publish</code>`;
+    ` · 다시 재려면 <code>python -m eval.publish</code>`;
 
   root.innerHTML = '';
 

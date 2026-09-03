@@ -39,9 +39,11 @@ def test_축을_둘_이상_물으면_에이전트로_보낸다(router_on, q):
     assert r.mode == "agent" and len(r.axes) >= 2
 
 
-def test_에이전트_선택_이유에_비용이_적힌다(router_on):
+def test_에이전트_선택_이유에_더_걸린다는_사실이_적힌다(router_on):
     # 사용자가 왜 10초를 기다리는지 화면에서 알 수 있어야 한다.
-    assert "LLM" in decide("리랭커를 왜 껐고 지금 코드는 어떻게 돼?").reason
+    # 예전에는 'LLM ~4회' 라고 적었는데, 그건 만든 사람만 아는 단위다 —
+    # 기다리는 사람에게 필요한 정보는 호출 횟수가 아니라 **더 걸린다는 사실**이다.
+    assert "더 걸립니다" in decide("리랭커를 왜 껐고 지금 코드는 어떻게 돼?").reason
 
 
 def test_표지어가_없으면_단발(router_on):

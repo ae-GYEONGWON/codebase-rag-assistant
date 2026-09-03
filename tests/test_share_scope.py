@@ -102,7 +102,7 @@ def test_범위를_고정하면_에이전트로_가지_않는다():
 
 def test_범위를_좁혀_못_찾은_것과_코퍼스에_없는_것을_구분한다():
     narrowed = rag._no_hit_text("commit")
-    assert "커밋 이력" in narrowed and "자동" in narrowed
+    assert "변경 이력" in narrowed and "자동" in narrowed
     assert rag._no_hit_text("auto") == rag.OUT_OF_SCOPE
 
 
@@ -118,4 +118,4 @@ def test_범위가_검색기까지_도달한다(monkeypatch):
     out = rag.answer("아무 질문", scope="commit")
     assert seen["doc_types"] == ("commit",)
     assert out["mode"] == "no_hit"
-    assert "커밋 이력" in out["answer"]
+    assert "변경 이력" in out["answer"]

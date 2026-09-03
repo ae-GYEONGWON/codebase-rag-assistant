@@ -40,7 +40,7 @@ from dataclasses import dataclass
 from typing import Tuple
 
 from app.config import settings
-from app.intent import classify
+from app.intent import classify, josa, labels_of
 
 # 에이전트 한 번의 대략적인 LLM 호출 수(라운드 + 최종 답변). 비용 표시용 근사치다.
 AGENT_LLM_CALLS = 4
@@ -66,19 +66,23 @@ def decide(question: str, force: str | None = None) -> Route:
     기존 스위치의 의미가 바뀌면 안 된다.
     """
     if force in ("single", "agent"):
-        return Route(force, "명시적으로 지정됨")
+        return Route(force, "요청하신 방식으로 찾았습니다")
 
     if not settings.use_router:
-        return (Route("agent", "라우터 꺼짐 · USE_AGENT=true")
+        return (Route("agent", "설정에 따라 나눠서 찾습니다")
                 if settings.use_agent else
-                Route("single", "라우터 꺼짐 · 단발 RAG 가 기본 경로"))
+                Route("single", "기본 방식 — 한 번 찾아서 답합니다"))
 
     intent = classify(question)
     if intent.is_multihop:
         return Route("agent",
-                     f"축 {len(intent.axes)}개({'·'.join(intent.axes)})를 함께 물음 — "
-                     f"한 번의 검색으로는 한 축이 밀린다 (LLM ~{AGENT_LLM_CALLS}회)",
+                     f"{josa(labels_of(intent.axes), '을', '를')} 함께 물으셔서 나눠서 찾았습니다 — "
+                     "한 번에 찾으면 한쪽이 밀립니다 (그만큼 더 걸립니다)",
+                     intent.axes)
+    if intent.axis:
+        return Route("single",
+                     f"{intent.display_name}만 물으셔서 한 번에 찾았습니다",
                      intent.axes)
     return Route("single",
-                 f"단일 축({intent.name}) — 검색 1회로 충분하다 (LLM 1회)",
+                 "어느 쪽을 묻는지 분명하지 않아 전체에서 한 번에 찾았습니다",
                  intent.axes)

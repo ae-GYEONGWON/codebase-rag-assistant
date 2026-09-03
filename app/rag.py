@@ -15,8 +15,8 @@ from app.config import settings
 from app.retriever import search, snippets_for
 
 OUT_OF_SCOPE = (
-    "제공된 문서에서 관련 내용을 찾을 수 없습니다. "
-    "이 봇은 인덱싱된 프로젝트의 문서·코드에 대해서만 답할 수 있습니다."
+    "이 질문에 답할 근거를 찾지 못했습니다. "
+    "저는 이 프로젝트의 문서·코드·변경 이력에 적힌 것만 답할 수 있습니다."
 )
 
 SYSTEM_PROMPT = (
@@ -25,7 +25,7 @@ SYSTEM_PROMPT = (
     "코드 발췌는 `# 파일: … / # 심볼: …` 헤더로 시작합니다.\n"
     "규칙:\n"
     "1. 반드시 아래 [근거] 에만 기반해 한국어로 답하세요. 없는 내용은 지어내지 말고 "
-    "'제공된 문서에서 관련 내용을 찾을 수 없습니다.'라고 답하세요.\n"
+    f"'{OUT_OF_SCOPE}' 라고 답하세요.\n"
     "2. 읽는 사람은 개발자가 아닐 수 있습니다. **핵심 결론을 평이한 한 문장으로 먼저** 쓰고, "
     "그 뒤에 필요하면 불릿/표로 풀어 쓰세요. 장황하지 않게.\n"
     "3. 근거로 쓴 발췌를 문장 끝에 [1], [2] 형태 각주로 표기하세요. 번호는 [근거 N]의 N과 일치시킵니다.\n"
@@ -137,7 +137,19 @@ SCOPE_AXES: Dict[str, tuple] = {
     "commit": ("commit",),
 }
 
-SCOPE_LABEL = {"doc": "문서", "code": "코드", "commit": "커밋 이력"}
+# 화면에 쓰는 이름은 `app/intent.py` 의 AXIS_LABEL 한 곳에서만 정한다.
+# 여기에 표를 하나 더 두면 반드시 갈린다 — 실제로 '커밋 이력' ↔ '변경 이력' 로 갈렸다.
+def _scope_label(scope: str) -> str:
+    from app.intent import label_of
+
+    return label_of(scope)
+
+
+def _ro(scope: str) -> str:
+    """‘문서’로 / ‘변경 이력’으로 — 조사를 받침에 맞춘다."""
+    from app.intent import josa
+
+    return josa(_scope_label(scope), "으로", "로")[len(_scope_label(scope)):]
 
 
 def _axis_of(scope: str | None) -> tuple | None:
@@ -157,7 +169,8 @@ def _scoped_route(chosen, scope: str | None):
     from app.router import Route
 
     return Route("single",
-                 f"검색 범위를 '{SCOPE_LABEL[scope]}' 하나로 고정함 — 축이 하나라 단발 검색")
+                 f"찾을 곳을 ‘{_scope_label(scope)}’{_ro(scope)} 지정하셔서 "
+                 "거기서만 한 번에 찾았습니다")
 
 
 def _no_hit_text(scope: str | None) -> str:
@@ -167,8 +180,8 @@ def _no_hit_text(scope: str | None) -> str:
     것을 모른 채 질문을 포기한다.
     """
     if _axis_of(scope):
-        return (f"'{SCOPE_LABEL[scope]}' 범위에서는 근거를 찾지 못했습니다. "
-                "검색 범위를 '자동' 으로 두고 다시 물어보세요.")
+        return (f"‘{_scope_label(scope)}’ 에서는 관련 내용을 찾지 못했습니다. "
+                "입력창 아래에서 찾을 곳을 ‘자동’ 으로 바꾸면 다른 곳도 함께 찾습니다.")
     return OUT_OF_SCOPE
 
 

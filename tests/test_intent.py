@@ -44,7 +44,9 @@ def test_이유와_구현이_함께면_unknown():
     # 멀티홉 질문. 한 축으로 접으면 반대쪽 근거를 잃으므로 판별을 포기해야 한다.
     i = classify("RRF 를 왜 쓰고 코드에서 어떻게 구현돼 있어?")
     assert i.axis is None
-    assert "멀티홉" in i.reason
+    # 문구가 아니라 **뜻**을 고정한다 — 두 가지를 함께 물었다는 사실이 화면에 남아야 한다.
+    assert "함께" in i.reason
+    assert i.display_name == "전체"      # 'unknown' 이 화면에 새어 나가지 않는다
 
 
 def test_표지어가_없으면_unknown():

@@ -59,6 +59,34 @@ _DOC_WORDS = (
 AXES = ("doc", "code", "commit")
 
 
+# 내부 축 이름 → **화면에 쓰는 이름**. 화면에 나가는 말은 여기 한 곳에서만 정한다 —
+# 여러 곳에서 각자 번역하면 같은 것을 두 이름으로 부르게 되고, 그게 모르는 단어 하나보다
+# 해롭다는 것을 이 프로젝트에서 이미 겪었다(`판정기` ↔ `채점자`).
+AXIS_LABEL = {"doc": "문서", "code": "코드", "commit": "변경 이력"}
+
+
+def label_of(axis: str | None) -> str:
+    return AXIS_LABEL.get(axis or "", "전체")
+
+
+def labels_of(axes) -> str:
+    return "·".join(AXIS_LABEL.get(a, a) for a in axes)
+
+
+def josa(word: str, with_final: str, without_final: str) -> str:
+    """한글 조사를 받침에 맞춰 붙인다 — `문서를` / `변경 이력을`.
+
+    화면 문구를 코드에서 조립하면 조사가 반드시 어긋난다(`코드 를`, `변경 이력를`).
+    '(으)로' 처럼 괄호로 도망가면 읽는 사람이 그 괄호를 해석해야 하므로, 붙일 것은 붙인다.
+    """
+    last = word[-1] if word else ""
+    final = (ord(last) - 0xAC00) % 28 if "가" <= last <= "힣" else 0
+    # '으로/로' 만 예외다 — ㄹ 받침(8)은 받침이 있는데도 '로' 를 쓴다("서울로").
+    if with_final == "으로" and final == 8:
+        return word + without_final
+    return word + (with_final if final else without_final)
+
+
 @dataclass(frozen=True)
 class Intent:
     """판별 결과. `axis=None` 이면 '모르겠음' — 호출부는 기존 동작을 유지해야 한다."""
@@ -72,7 +100,15 @@ class Intent:
 
     @property
     def name(self) -> str:
+        """내부 이름(doc|code|commit|unknown). **화면에는 쓰지 않는다** — 실제로
+        'unknown' 이 배지에 그대로 찍히고 있었다. 화면용은 `display_name`."""
         return self.axis or "unknown"
+
+    @property
+    def display_name(self) -> str:
+        """화면에 쓰는 이름. 못 가린 경우는 '전체' 다 — 사용자에게는 판별 실패가 아니라
+        '전체에서 찾았다'는 사실이 중요하다."""
+        return label_of(self.axis)
 
     @property
     def is_multihop(self) -> bool:
@@ -88,7 +124,7 @@ def classify(question: str) -> Intent:
     """질문 → 의도. 규칙만 쓰며 LLM 을 부르지 않는다(지연 0에 가깝다)."""
     q = question.strip()
     if not q:
-        return Intent(None, "빈 질문")
+        return Intent(None, "질문이 비어 있습니다")
 
     code = _matches(q, _CODE_WORDS)
     doc = _matches(q, _DOC_WORDS)
@@ -103,16 +139,18 @@ def classify(question: str) -> Intent:
     # 커밋 표지어는 다른 축과 겹쳐도 우선한다 — "언제 바뀌었나"는 다른 축이 답할 수 없다.
     # 단, 구현 어휘가 같이 오면 멀티홉("왜 바뀌었고 지금 코드는?")이므로 접지 않는다.
     if commit and not code:
-        return Intent("commit", f"변경·시점 표지어 {len(commit)}개", commit, axes)
+        return Intent("commit", f"‘언제·왜 바뀌었나’ 를 묻는 말이 {len(commit)}개 있습니다",
+                      commit, axes)
 
     # 이유 어휘와 구현 어휘가 함께면 멀티홉 — 한 축으로 접으면 반대쪽 근거를 잃는다.
     if code and doc:
-        return Intent(None, "구현·이유 어휘가 함께 등장(멀티홉으로 봄)", code + doc, axes)
+        return Intent(None, "‘왜 그렇게 했나’ 와 ‘코드가 어떻게 되나’ 를 함께 물었습니다",
+                      code + doc, axes)
     if code:
-        return Intent("code", f"구현·위치 표지어 {len(code)}개", code, axes)
+        return Intent("code", f"‘코드에서 어떻게’ 를 묻는 말이 {len(code)}개 있습니다", code, axes)
     if doc:
-        return Intent("doc", f"이유·설계 표지어 {len(doc)}개", doc, axes)
-    return Intent(None, "표지어 없음", (), axes)
+        return Intent("doc", f"‘왜 그렇게 정했나’ 를 묻는 말이 {len(doc)}개 있습니다", doc, axes)
+    return Intent(None, "어느 쪽을 묻는지 가리키는 말이 없습니다", (), axes)
 
 
 def symbol_slots_for(question: str, default: int) -> Tuple[int, Intent]:
