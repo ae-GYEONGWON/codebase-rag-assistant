@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko" data-theme="auto">
+<html lang="ko" data-theme="light">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -29,18 +29,9 @@
   --font-mono:"SFMono-Regular","JetBrains Mono",Consolas,"D2Coding",monospace;
   --max:1080px;
 }
-@media (prefers-color-scheme: dark) {
-  :root[data-theme="auto"] {
-    color-scheme: dark;
-    --c-bg:#0f1115; --c-surface:#161a21; --c-border:#262c37; --c-border-str:#39424f;
-    --c-text:#e6e9ef; --c-text-dim:#a3acbb; --c-text-mute:#727d8d;
-    --c-accent:#748ffc; --c-accent-sub:#1e2540;
-    --c-ok:#51cf66; --c-ok-bg:#132a19;
-    --c-warn:#ff8787; --c-warn-bg:#37191c;
-    --c-info:#4dabf7; --c-info-bg:#132437;
-    --shadow-1:0 1px 2px rgba(0,0,0,.4);
-  }
-}
+/* 화면 밝기는 챗봇 화면에서 고른 값을 그대로 따른다(head 안의 짧은 조각이 적용한다).
+   여기에 토글을 또 두지 않는 이유는, 같은 설정을 두 곳에서 바꾸면 어느 쪽이 이기는지
+   사용자가 알 수 없기 때문이다. 고르는 곳은 한 군데다. */
 :root[data-theme="dark"] {
   color-scheme: dark;
   --c-bg:#0f1115; --c-surface:#161a21; --c-border:#262c37; --c-border-str:#39424f;
@@ -257,6 +248,15 @@ details.more > summary:hover{text-decoration:underline}
 .toc{font-size:13px; color:var(--c-text-dim); margin:0 0 var(--s-5)}
 .toc a{margin-right:var(--s-3); white-space:nowrap}
 </style>
+<script>
+/* 챗봇 화면에서 고른 화면 밝기를 여기서도 쓴다. 같은 주소이므로 저장값을 공유한다.
+   ★ 이 조각은 <head> 안, 화면이 그려지기 전에 돌아야 한다 — 아래쪽에 두면
+   밝은 화면이 한 번 번쩍인 뒤 어두워진다. */
+try {
+  var t = localStorage.getItem('theme');
+  document.documentElement.dataset.theme = (t === 'dark' || t === 'light') ? t : 'light';
+} catch (e) { /* 저장소를 못 읽는 환경이면 기본값 그대로 */ }
+</script>
 </head>
 <body>
 <div class="wrap">

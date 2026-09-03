@@ -137,12 +137,12 @@ REMOVED_FROM_UI = [
 ]
 
 
-def _screen_text() -> str:
+def _screen_text(name: str = "index.html") -> str:
     """화면 파일에서 **주석을 걷어낸** 것. 주석은 화면에 나가지 않으므로,
     거기 적힌 '예전에는 DOC 라고 썼다' 같은 설명까지 금지하면 기록을 못 남긴다."""
     import re
 
-    html = (REPO_ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    html = (REPO_ROOT / "web" / name).read_text(encoding="utf-8")
     html = re.sub(r"/\*.*?\*/", " ", html, flags=re.S)      # /* ... */  (JS·CSS 공통)
     html = re.sub(r"^\s*//.*$", " ", html, flags=re.M)       # 줄 주석
     html = re.sub(r"<!--.*?-->", " ", html, flags=re.S)      # HTML 주석
@@ -168,36 +168,36 @@ def test_hidden_속성이_클래스에_밀리지_않는다():
     assert "[hidden] { display: none !important; }" in html
 
 
-def test_어두운_팔레트가_두_곳에서_같은지():
-    """어두운 색 값이 '기기 설정' 용과 '어둡게' 용으로 두 벌 적혀 있다.
+def test_화면_밝기는_사람이_고른_값만_따른다():
+    """'기기 설정'(auto) 을 없앴다 — 무엇의 설정인지 화면에서 알 수 없어 되묻게 만들었다.
 
-    미디어 조건 안팎으로 같은 값을 공유할 방법이 CSS 에 없어서 줄이지 못했다.
-    한쪽만 고치면 **어떤 사용자에게만** 색이 어긋나고, 그건 고친 사람 화면에서는
-    보이지 않는 종류의 고장이다. 그래서 두 벌이 같은지를 여기서 지킨다.
+    되돌아오면 어두운 팔레트가 다시 두 벌이 되고, 한쪽만 고쳐 **어떤 사용자에게만**
+    색이 틀어지는 고장이 함께 돌아온다.
     """
+    for name in ("index.html", "eval.html"):
+        html = _screen_text(name)          # 주석에 남긴 기록까지 막지는 않는다
+        assert 'data-theme="auto"' not in html, f"{name} 에 auto 테마가 돌아왔다"
+        assert "prefers-color-scheme" not in html, f"{name} 이 기기 설정을 다시 따라간다"
+
+
+def test_어두운_팔레트는_화면마다_한_벌뿐이다():
     import re
 
-    css = (REPO_ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    for name in ("index.html", "eval.html"):
+        html = (REPO_ROOT / "web" / name).read_text(encoding="utf-8")
+        blocks = [m for m in re.finditer(r':root\[data-theme="dark"\] \{(.*?)\}', html, re.S)
+                  if "--c-bg" in m.group(1)]
+        assert len(blocks) == 1, f"{name} 의 어두운 팔레트가 {len(blocks)}벌이다"
 
-    def _tokens(block: str) -> dict:
-        return dict(re.findall(r'(--[\w-]+)\s*:\s*([^;]+);', block))
 
-    def _palette(pattern: str) -> str:
-        # `color-scheme` 만 있는 블록이 먼저 나오므로, **색 값이 든** 블록을 고른다.
-        for m in re.finditer(pattern, css, re.S):
-            if "--c-bg" in m.group(1):
-                return m.group(1)
-        return ""
-
-    auto = _palette(r'@media \(prefers-color-scheme: dark\) \{\s*'
-                    r':root\[data-theme="auto"\] \{(.*?)\}')
-    dark = _palette(r':root\[data-theme="dark"\] \{(.*?)\}')
-    assert auto and dark, "어두운 팔레트 블록을 찾지 못했다"
-
-    a, d = _tokens(auto), _tokens(dark)
-    a.pop("color-scheme", None); d.pop("color-scheme", None)
-    assert a, "‘기기 설정’ 쪽 팔레트가 비어 있다"
-    assert a == d, f"두 팔레트가 어긋난다: {set(a.items()) ^ set(d.items())}"
+def test_두_화면이_같은_저장값을_쓴다():
+    """챗봇에서 '어둡게' 를 골랐는데 측정 결과가 밝게 뜨면 같은 제품으로 읽히지 않는다."""
+    chat = (REPO_ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    dash = (REPO_ROOT / "web" / "eval.html").read_text(encoding="utf-8")
+    assert "localStorage.setItem('theme'" in chat
+    assert "localStorage.getItem('theme')" in dash
+    # 대시보드의 적용 조각은 <head> 안에 있어야 한다 — 아래에 두면 화면이 번쩍인다.
+    assert dash.index("localStorage.getItem('theme')") < dash.index("<body>")
 
 
 def test_대화_목록_글자가_감싼_요소의_색을_따른다():
