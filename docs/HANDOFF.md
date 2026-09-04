@@ -15,7 +15,7 @@
 대상 코드베이스의 **문서 · 소스코드 · git 이력** 세 축을 지식원으로, 질문에 **근거와 출처를 붙여**
 답하는 RAG 어시스턴트. 단순 문서 챗봇이 아니라 "운영 중인 시스템을 아는 어시스턴트"를 노린다.
 
-설계·측정의 자세한 근거는 [`docs/engineering-notes.md`](engineering-notes.md) 에 28건으로 정리돼 있다.
+설계·측정의 자세한 근거는 [`docs/engineering-notes.md`](engineering-notes.md) 에 29건으로 정리돼 있다.
 **이 저장소에서 가장 먼저 읽을 문서다.**
 
 ## 2. 개발 환경 세팅 (새 PC 에서)
@@ -520,6 +520,11 @@ python -m eval.verify score --profile eval      # 문항 불량률 계산 + 검�
 - 임베딩 제공자(`hf` ↔ `openai`)를 바꾸면 **반드시 `--reset` 재인덱싱** (차원·공간이 다르다).
   LLM provider 만 바꾸는 것은 재인덱싱이 필요 없다.
 - 하이퍼파라미터(`mmr_lambda` 등)는 코퍼스에 종속된다. 코퍼스가 바뀌면 재측정할 것 (노트 #13).
+- **`.env` 를 다른 PC 로 그대로 복사하지 말 것.** `KNOWLEDGE_DIRS` 같은 **절대경로가 따라가서**
+  그 PC 엔 없는 경로가 되고, 화면이 '문서 0'만 뜬다. 새 PC 에서는 `.env.example` 을 복사할 것
+  (기본값이 `CORPUS_PROFILE=demo`). 프로필을 바꾼 뒤에는 `python -m app.ingest --profile demo`
+  를 한 번 돌려야 한다 — `chroma_db/` 는 git 제외라 **PC 마다 한 번씩** 만든다 (노트 #29).
+  지금은 두 경우 모두 **첫 화면이 원인과 다음 명령을 알려준다.**
 - **테스트가 "내 PC 에 깔린 것"에 기대지 않게 할 것.** 2026-09-04 에 CI 가 10건 실패했는데
   코드는 멀쩡했다 — 재작성 테스트는 `.env` 의 API 키가 있어야만 통과했고(키가 없으면
   `active_llm` 이 extractive 로 폴백한다), 토크나이저 테스트는 선택 의존성 `kiwipiepy` 를

@@ -128,7 +128,7 @@
 **숫자를 자랑하기 전에 그 숫자가 무언가를 가려내기는 하는지를 먼저 쟀고, 못 가려낸다는
 결과를 그대로 적었습니다.** (자세히 → [노트 #21·#22](docs/engineering-notes.md))
 
-구현하며 마주친 문제와 해결 과정 28건은 **[엔지니어링 노트](docs/engineering-notes.md)** 에 정리.
+구현하며 마주친 문제와 해결 과정 29건은 **[엔지니어링 노트](docs/engineering-notes.md)** 에 정리.
 
 ---
 
@@ -316,7 +316,7 @@ eval/
   ragas_score.py  RAGAS Faithfulness 대조(격리 환경 .venv-ragas 에서 실행)
 tests/            pytest (토크나이저·정규화·config·AST·검색통합)
 docs/
-  engineering-notes.md  구현 중 마주친 문제 28건
+  engineering-notes.md  구현 중 마주친 문제 29건
   HANDOFF.md            작업 현황·로드맵(여러 PC 에서 이어서 개발)
 ```
 
