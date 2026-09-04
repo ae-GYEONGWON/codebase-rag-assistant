@@ -4,11 +4,22 @@
 붙였을 때 깨지면 안 되는 것**을 본다. 특히 이 시스템의 핵심 능력인
 **희귀 식별자 정확매칭**(ERR7742 류)이 분석기 교체로 사라지면 안 된다.
 """
+import importlib.util
+
 import pytest
 
 from app.tokenizer import tokenize_kiwi, tokenize_ngram
 
-IMPLS = [tokenize_ngram, tokenize_kiwi]
+# kiwi 는 **선택 의존성**이다(requirements-experiments.txt, 사전 모델까지 110MB).
+# 측정 결과 기본값이 아니라서 기본 설치에서 뺐고(노트 #24), 그래서 `pip install -r
+# requirements.txt` 만 한 환경 — clone 직후의 새 PC, 그리고 CI — 에는 없다.
+# 없을 때 실패가 아니라 **건너뛰기**여야 HANDOFF 의 "pytest 는 전부 통과한다"가 사실이 된다.
+requires_kiwi = pytest.mark.skipif(
+    importlib.util.find_spec("kiwipiepy") is None,
+    reason="kiwipiepy 없음 — pip install -r requirements-experiments.txt",
+)
+
+IMPLS = [tokenize_ngram, pytest.param(tokenize_kiwi, marks=requires_kiwi)]
 
 
 # --- 두 구현이 공통으로 지켜야 할 것 -----------------------------------------
@@ -39,17 +50,20 @@ def test_조사가_달라도_어간이_겹친다(fn):
 
 # --- 형태소 분석기가 개선하는 것 ---------------------------------------------
 
+@requires_kiwi
 def test_kiwi는_조사를_떼고_어간만_남긴다():
     toks = tokenize_kiwi("리랭커를 왜 껐어?")
     assert "리랭커" in toks
     assert "리랭커를" not in toks
 
 
+@requires_kiwi
 def test_kiwi는_한_글자_조각을_버린다():
     # '으', '수', '것' 같은 것이 남으면 2-gram 이 겪던 잡음 문제가 그대로 재현된다.
     assert all(len(t) >= 2 or t.isascii() for t in tokenize_kiwi("1.0 으로 정한 근거가 뭐야?"))
 
 
+@requires_kiwi
 def test_kiwi는_같은_토큰을_두_번_넣지_않는다():
     # ASCII 는 정규식 패스가 이미 넣는다. 형태소 패스가 또 넣으면 BM25 의 tf 가
     # 두 배가 되어 IDF 가 깎이고, 희귀 식별자 매칭이라는 강점이 무뎌진다.
@@ -57,6 +71,7 @@ def test_kiwi는_같은_토큰을_두_번_넣지_않는다():
     assert toks.count("mmr") == 1
 
 
+@requires_kiwi
 def test_kiwi가_ngram보다_토큰이_적다():
     # 정밀도의 대가로 재현율을 조금 잃는 교환이다. 그 방향 자체를 고정해 둔다.
     q = "MMR 다양성 계수를 1.0 으로 정한 근거가 뭐야?"

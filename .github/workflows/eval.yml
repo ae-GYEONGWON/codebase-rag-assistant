@@ -69,6 +69,14 @@ jobs:
           path: ~/.cache/huggingface
           key: hf-${{ hashFiles('requirements.txt') }}-ko-sroberta
 
+      # kiwi 는 서비스 기본값이 아니라 기본 설치에서 뺐다(선택 의존성, 사전까지 110MB).
+      # 그래서 테스트는 없으면 건너뛴다 — 그대로 두면 kiwi 경로가 **어디서도 안 돌고**,
+      # 깨져도 아무도 모른다(실제로 그 상태였다). 여기서만 깔아 회귀를 잡는다.
+      # ※ requirements.txt 는 건드리지 않는다. 원칙이 지키는 건 clone 하는 사람의 첫
+      #   경험이지 CI 가 아니다.
+      - name: 형태소 분석기 설치 (kiwi 경로 테스트용)
+        run: pip install "kiwipiepy>=0.18.0"   # requirements-experiments.txt 와 같은 하한
+
       - name: 단위 테스트
         run: python -m pytest -q
 
