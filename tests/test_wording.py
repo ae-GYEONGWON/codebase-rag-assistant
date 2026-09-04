@@ -371,3 +371,32 @@ def test_README_앞부분은_용어_없이_읽힌다():
               "멀티홉", "groundedness", "하이브리드", "RRF", "BM25"]
     hits = [w for w in banned if w in head]
     assert not hits, f"README 앞부분에 남은 말: {hits}"
+
+
+# --- 비어 있을 때 화면이 원인을 말하는가 (노트 #29) ---------------------------
+
+def test_읽을것이_없으면_다음_명령까지_알려준다():
+    """빈 화면에 원인만 적고 해법을 안 적으면, 막힌 사람은 문서를 뒤지러 나간다.
+
+    실제로 두 번 막혔다 — `.env` 프로필이 어긋나서 한 번, 색인이 없어서 한 번.
+    두 원인은 해법이 달라 **메시지도 둘**이어야 한다.
+    """
+    html = _screen_text()
+
+    assert "python -m app.ingest" in html, "인덱싱 명령이 화면에 없다"
+    assert "CORPUS_PROFILE=demo" in html, "프로필을 바꾸라는 말이 화면에 없다"
+    assert "읽을 지식원을 찾지 못했습니다" in html, "경로를 못 찾은 경우의 안내가 없다"
+    assert "아직 읽어 두지 않았습니다" in html, "색인이 없는 경우의 안내가 없다"
+
+
+def test_준비_안내에_만든사람_용어가_없다():
+    """이 안내는 **막힌 사람이 처음 읽는 문장**이다. 여기서 용어가 나오면 그 자리에서 끝난다."""
+    import re
+
+    html = (REPO_ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    fn = re.search(r"function renderSetupNote\(t\) \{(.*?)\n\}", html, re.S)
+    assert fn, "renderSetupNote 를 찾지 못했다"
+    body = re.sub(r"^\s*//.*$", " ", fn.group(1), flags=re.M)   # 주석은 화면에 안 나간다
+
+    for term in ("인덱싱", "색인", "청크", "임베딩", "컬렉션", "코퍼스", "chroma"):
+        assert term not in body, f"준비 안내에 {term!r} 가 들어갔다 — 쉬운 말로 바꿀 것"

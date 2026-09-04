@@ -235,6 +235,22 @@ button, input, textarea { font: inherit; color: inherit; }
                padding: 2px 0 2px 10px; margin-top: 8px; line-height: 1.5; }
 .tour-follow b { color: var(--c-text-dim); font-weight: 600; }
 .tour-more { margin-top: var(--s-4); font-size: 13px; color: var(--c-text-dim); }
+
+/* 읽을 것이 없을 때만 나오는 안내. 경고색을 쓰되 오류처럼 붉게 채우지는 않는다 —
+   고장이 아니라 **아직 준비가 안 된 상태**이고, 할 일은 명령 한 줄이다. */
+.setup-note { border: 1px solid var(--c-warn); background: var(--c-warn-bg);
+  border-radius: var(--r-md); padding: var(--s-4); margin: 0 auto var(--s-5);
+  max-width: 620px; text-align: left; font-size: 14px; line-height: 1.65; }
+.setup-note h3 { margin: 0 0 6px; font-size: 15px; }
+.setup-note p { margin: 0 0 8px; color: var(--c-text-dim); }
+/* 문장 안에 섞이는 이름(.env 같은 것)과, 그대로 쳐야 하는 명령은 생김새가 달라야 한다.
+   전부 block 으로 두면 문장이 토막 난다 — 실제로 그렇게 깨졌다. */
+.setup-note code { padding: 1px 5px; background: var(--c-surface);
+  border: 1px solid var(--c-border); border-radius: var(--r-sm); font-size: 12.5px; }
+.setup-note code.cmd { display: block; padding: 8px 10px; margin: 8px 0 0;
+  font-size: 13px; overflow-x: auto; white-space: pre; }
+.setup-note ul { margin: 6px 0 0; padding-left: 18px; color: var(--c-text-dim); }
+.setup-note li { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; }
 .tour-more a { color: var(--c-accent); }
 @media (max-width: 860px) { .tour { grid-template-columns: 1fr; } }
 
@@ -692,6 +708,10 @@ body.is-readonly .composer { display: none; }
         <!-- 빈 상태 -->
         <section class="empty" id="empty">
           <h2>무엇이든 물어보세요</h2>
+          <!-- 읽을 것이 없을 때 **원인과 다음 명령**을 여기서 말한다(노트 #29).
+               비어 있을 때 아무 말도 안 하면 처음 보는 사람은 "원래 아무것도 모르는
+               시스템"으로 읽는다. 채워져 있으면 이 자리는 아예 없다. -->
+          <div class="setup-note" id="setup-note" hidden></div>
           <p>이 프로젝트의 <strong>문서 · 코드 · 변경 이력</strong>에 적힌 것만 근거로 답합니다.
              답마다 <strong>어디서 나온 말인지</strong>를 함께 보여주고, 그 파일의 원문까지 열어 볼 수 있습니다.</p>
           <div class="tour" id="tour"></div>
@@ -799,7 +819,7 @@ const state = {
 const $ = (id) => document.getElementById(id);
 const els = {
   thread: $('thread'), inner: $('thread-inner'), empty: $('empty'), chips: $('chips'),
-  tour: $('tour'),
+  tour: $('tour'), setupNote: $('setup-note'),
   form: $('f'), q: $('q'), send: $('send'), live: $('live'), toast: $('toast'),
   statusDot: $('status-dot'), statusText: $('status-text'), modeNote: $('mode-note'),
   files: $('files'), stDoc: $('st-doc'), stCode: $('st-code'),
@@ -1011,7 +1031,7 @@ const AXIS_NAME = { doc: '문서', code: '코드', commit: '변경 이력' };
 const FOUND_LABEL = {
   hit: '관련 내용을 찾았습니다',
   out_of_scope: '관련 내용이 없어 답하지 않았습니다',
-  empty_index: '아직 아무것도 읽어 두지 않았습니다',
+  empty_index: '아직 아무것도 읽어 두지 않았습니다 — 첫 화면의 안내대로 한 번 읽어 들이면 됩니다',
   empty_filter: '지정하신 곳에는 자료가 없습니다',
 };
 
@@ -1679,6 +1699,40 @@ $('scrim').addEventListener('click', () => setDrawer(false));
 /* ============================================================================
    초기 로드 — 지식원 목록·상태·추천 질문
    ========================================================================== */
+/* 읽을 것이 없을 때 원인과 다음 명령을 화면에 띄운다.
+   두 원인은 해법이 달라 메시지도 나눈다 —
+     ① 파일은 있는데 색인이 0    → 인덱싱을 안 한 것(`chroma_db/` 는 git 제외라 clone 직후가 그 상태)
+     ② 파일 자체가 0             → 지식원 경로를 못 찾은 것(`.env` 를 다른 PC 로 옮기면 이렇게 된다)
+   ②가 먼저다. 경로가 없으면 인덱싱을 해도 여전히 0 이라, ①을 먼저 시키면 헛걸음시킨다. */
+function renderSetupNote(t) {
+  const box = els.setupNote;
+  if (!box) return;
+  const profile = t.profile || '?';
+  const cmd = `python -m app.ingest --profile ${profile}`;
+  const files = (t.count || 0) + (t.code_count || 0);
+  const missing = t.missing_paths || [];
+  let html = '';
+
+  if (files === 0) {
+    html = '<h3>읽을 지식원을 찾지 못했습니다</h3>' +
+      `<p>지금 <b>${esc(profile)}</b> 설정으로 돌고 있는데, 여기에 적힌 경로가 이 컴퓨터에 없습니다. ` +
+      '<code>.env</code> 를 다른 컴퓨터에서 그대로 가져오면 이렇게 됩니다.</p>' +
+      (missing.length ? '<ul>' + missing.map(p => '<li>' + esc(p) + '</li>').join('') + '</ul>' : '') +
+      '<p>이 저장소 자체를 읽게 하려면 <code>.env</code> 에서 ' +
+      '<b>CORPUS_PROFILE=demo</b> 로 바꾸고 아래를 실행하세요.</p>' +
+      '<code class="cmd">python -m app.ingest --profile demo</code>';
+  } else if (t.indexed === 0) {
+    html = '<h3>아직 읽어 두지 않았습니다</h3>' +
+      `<p>파일은 찾았지만(문서 ${t.count} · 코드 ${t.code_count}) 아직 한 번도 읽어 들이지 ` +
+      '않았습니다. 읽어 둔 내용은 저장소에 포함되지 않아 <b>컴퓨터마다 한 번씩</b> 만들어야 합니다.</p>' +
+      '<p>아래를 실행하면 1~2분 뒤부터 답합니다. <b>서버는 켜 둔 채로도 됩니다.</b></p>' +
+      '<code class="cmd">' + esc(cmd) + '</code>';
+  }
+
+  box.innerHTML = html;
+  box.hidden = !html;
+}
+
 async function boot() {
   // 주소가 /s/<id> 면 공유된 대화를 읽기 전용으로 그린다. 화면은 같은 파일이다 —
   // 읽기 전용 화면을 따로 만들면 렌더러가 두 벌이 되고 한쪽만 고치는 사고가 난다.
@@ -1694,6 +1748,7 @@ async function boot() {
 
     els.stDoc.textContent = topics.count ?? '–';
     els.stCode.textContent = topics.code_count ?? '–';
+    renderSetupNote(topics);
 
     els.files.innerHTML = '';
     (topics.files || []).slice(0, 60).forEach(f => {

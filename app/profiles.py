@@ -104,6 +104,29 @@ class CorpusProfile:
         """기능 지도에 들어 있는 질문들(칩 폴백용). 지도가 곧 추천 질문이 되게 한다."""
         return tuple(item["q"] for g in self.tour for item in g.get("items", []))
 
+    def missing_paths(self) -> Tuple[str, ...]:
+        """설정된 지식원 중 **이 PC 에 없는** 경로.
+
+        ★ 왜 필요한가 — `.env` 를 다른 PC 로 옮기면 `KNOWLEDGE_DIRS` 같은 절대경로가
+        그대로 따라온다. 그 PC 엔 없는 경로라 파일이 0개가 되는데, 화면은 "문서 0"만
+        조용히 보여줘서 **원인을 알 수 없다**. 실제로 그 상태로 두 번 막혔다(노트 #29).
+        경로 목록을 돌려주면 화면이 "무엇을 못 찾았는지"까지 말할 수 있다.
+        """
+        roots: List[Path] = []
+        for src in (self.docs, self.code):
+            roots.extend(getattr(src, "roots", ()) or ())
+        roots.extend(self.git_repos)
+        # 순서를 지키며 중복 제거 — 화면에 같은 경로가 두 번 뜨면 설정이 두 곳인 줄 안다.
+        seen, missing = set(), []
+        for r in roots:
+            s = str(r)
+            if s in seen:
+                continue
+            seen.add(s)
+            if not r.exists():
+                missing.append(s)
+        return tuple(missing)
+
     def summary(self) -> str:
         parts = [
             f"docs={self.docs if self.index_docs else 'off'}",

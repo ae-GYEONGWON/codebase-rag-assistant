@@ -148,6 +148,20 @@ def health() -> dict:
     }
 
 
+def indexed_chunks() -> int:
+    """활성 프로필 컬렉션에 들어 있는 청크 수. 실패하면 -1(= 확인 못 함).
+
+    `chroma_db/` 는 git 제외라 **clone 직후엔 반드시 0 이다.** 화면이 "색인이 없다"와
+    "지식원 경로가 없다"를 구분해 말하려면 이 값이 필요하다.
+    """
+    try:
+        from app.ingest import get_vectorstore
+
+        return int(get_vectorstore()._collection.count())
+    except Exception:
+        return -1
+
+
 @app.get("/topics")
 def topics() -> dict:
     """지식원 목록 + 시작 질문. 프런트의 '이 봇이 아는 것' 패널·칩에 사용."""
@@ -156,10 +170,16 @@ def topics() -> dict:
 
     files = list_sources()
     code = list_code_sources()
+    p = active_profile()
     return {
         "count": len(files),
         "files": files,
         "code_count": len(code),
+        # 빈 화면의 **원인**을 화면이 말할 수 있게 하는 세 가지(노트 #29).
+        # 파일이 0 인 것과 색인이 0 인 것은 원인도 해법도 다르다 — 나눠서 준다.
+        "profile": p.name,
+        "indexed": indexed_chunks(),
+        "missing_paths": list(p.missing_paths()),
         "suggestions": list(active_profile().suggestions) or FALLBACK_QUESTIONS,
         # 기능 지도 — 무엇을 물을 수 있는지가 아니라 **무엇이 구현돼 있는지**를 알린다.
         "tour": [dict(g) for g in active_profile().tour],

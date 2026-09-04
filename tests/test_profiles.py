@@ -116,3 +116,33 @@ def test_알수없는_ref_는_해결방법까지_알려준다():
     with pytest.raises(RuntimeError) as e:
         src.list_files(["*.md"])
     assert "git tag" in str(e.value)
+
+
+# --- 빈 화면의 원인을 짚어 주기 (노트 #29) -----------------------------------
+
+def test_없는_경로만_골라낸다(tmp_path):
+    """`.env` 를 다른 PC 로 옮기면 절대경로가 그대로 따라온다 — 그때 무엇을 못 찾았는지
+    화면이 말할 수 있어야 한다. 있는 경로는 섞이면 안 된다(그러면 목록이 소음이 된다)."""
+    from app.config import Settings
+
+    있는곳 = tmp_path / "여기있다"
+    있는곳.mkdir()
+    없는곳 = tmp_path / "여긴없다"
+
+    cfg = Settings(
+        corpus_profile="private",
+        knowledge_dirs=f"{있는곳},{없는곳}",
+        code_dirs=str(없는곳),
+        git_repos="",
+    )
+    missing = build_profile("private", cfg).missing_paths()
+
+    assert str(없는곳) in missing
+    assert str(있는곳) not in missing
+    assert len(missing) == 1, "같은 경로가 두 소스에 걸쳐 있으면 한 번만 나와야 한다"
+
+
+def test_demo_프로필은_없는_경로가_없다():
+    """demo 는 저장소 자기 자신이라 어느 PC 에서든 경로가 성립한다.
+    여기서 무언가 나오면 프로필이 로컬 경로에 묶였다는 뜻이다."""
+    assert build_profile("demo").missing_paths() == ()
