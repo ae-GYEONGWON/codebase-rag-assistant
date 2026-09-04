@@ -173,7 +173,15 @@ def _run_rewrite(monkeypatch, llm_output, question, turns):
 
     # active_llm 은 읽기 전용 property 라 provider 쪽을 바꾼다.
     monkeypatch.setattr(C.settings, "llm_provider", "gemini")
+    # ★ provider 만 바꾸면 부족하다 — active_llm 은 **키가 실제로 있는지**까지 보고
+    #   없으면 extractive 로 폴백한다. 그래서 이 테스트는 `.env` 에 키가 있는 PC 에서만
+    #   통과하고 CI 에서는 rewrite 가 시작도 못 한 채 no_llm 으로 빠졌다.
+    #   테스트가 환경에 기대고 있었던 것이지 코드가 틀린 게 아니었다.
+    monkeypatch.setattr(C.settings, "google_api_key", "test-key")
     monkeypatch.setattr(R, "_llm", lambda: _FakeLLM(llm_output))
+    # 재작성 경로에 실제로 들어갔는지 먼저 못박는다. 이게 없으면 다음에 같은 종류로
+    # 새면 "왜 값이 다르지" 로만 보이고 원인이 환경이라는 게 드러나지 않는다.
+    assert C.settings.active_llm == "gemini"
     return C.rewrite_query(question, turns)
 
 
