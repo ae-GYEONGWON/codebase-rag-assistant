@@ -6,7 +6,7 @@
 > git 으로 따라가지 않으므로, 여기 적히지 않은 맥락은 다른 PC 에서 그대로 사라진다.
 > 새 PC 에서는 이 문서 → [`engineering-notes.md`](engineering-notes.md) 순으로 읽으면 된다.
 >
-> 최종 갱신: 2026-09-03
+> 최종 갱신: 2026-09-04
 
 ---
 
@@ -48,11 +48,16 @@ python -m app.ingest --reset     # 이 프로필의 컬렉션을 지우고 재�
 ### 제대로 돌아가는지 확인하는 법 (새 PC 에서 가장 먼저)
 
 ```bash
-python -m pytest -q                            # 227개. 전부 통과해야 한다
+python -m pytest -q                            # 273개. 실패 0 이어야 한다
 python -m app.ingest --profile eval --reset    # 고정 코퍼스 인덱싱(324청크)
 python -m eval.run_eval --profile eval --gate  # 회귀 게이트 — 기준선 대비 하락이면 exit 1
 python -m eval.publish --check                 # 대시보드 스냅샷이 낡았는지
 ```
+
+**`skipped 8` 은 정상이다.** 형태소 분석기(`kiwipiepy`)가 선택 의존성이라, 안 깐 PC 에서는
+kiwi 토크나이저 테스트가 건너뛰어진다. 이 8건까지 돌려 보려면
+`pip install -r requirements-experiments.txt` 를 하면 된다(CI 는 이 경로도 확인한다).
+**실패(failed)가 0 인지만 보면 된다.**
 
 셋 다 통과하면 이 문서에 적힌 수치가 그 PC 에서 재현된 것이다.
 게이트가 실패하면 **먼저 인덱싱을 의심할 것** — 임베딩 제공자가 다르거나(`hf` ↔ `openai`)
@@ -515,3 +520,9 @@ python -m eval.verify score --profile eval      # 문항 불량률 계산 + 검�
 - 임베딩 제공자(`hf` ↔ `openai`)를 바꾸면 **반드시 `--reset` 재인덱싱** (차원·공간이 다르다).
   LLM provider 만 바꾸는 것은 재인덱싱이 필요 없다.
 - 하이퍼파라미터(`mmr_lambda` 등)는 코퍼스에 종속된다. 코퍼스가 바뀌면 재측정할 것 (노트 #13).
+- **테스트가 "내 PC 에 깔린 것"에 기대지 않게 할 것.** 2026-09-04 에 CI 가 10건 실패했는데
+  코드는 멀쩡했다 — 재작성 테스트는 `.env` 의 API 키가 있어야만 통과했고(키가 없으면
+  `active_llm` 이 extractive 로 폴백한다), 토크나이저 테스트는 선택 의존성 `kiwipiepy` 를
+  조건 없이 불렀다. **둘 다 키·패키지가 있는 PC 에서만 초록이었다.** 외부에 기대는
+  테스트는 그 조건을 테스트 안에서 직접 만들거나(monkeypatch), 없으면 건너뛰게 할 것.
+  이 8건이 막고 있어서 **회귀 게이트는 그동안 한 번도 끝까지 돌지 못했다.**
