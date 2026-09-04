@@ -272,7 +272,7 @@ try {
         <b>제 진단이 틀렸던 두 번</b>도 지우지 않고 남겼습니다.
       </p>
     </div>
-    <a class="back" href="/">← 데모로</a>
+    <a class="back" id="back" href="/">← 데모로</a>
   </div>
 
   <div id="stamp" class="stamp">불러오는 중…</div>
@@ -751,13 +751,43 @@ function renderHero(d) {
   return box;
 }
 
+/* 이 페이지는 **두 곳**에서 열린다 — 그래서 데이터를 두 자리에서 찾는다.
+
+     1. 앱 서버:      /eval        → /eval/summary  (app/main.py 가 파일을 읽어 돌려줌)
+     2. GitHub Pages: /<repo>/     → summary.json   (같은 폴더에 복사해 둔 것)
+
+   Pages 에는 앱이 없다. 그래서 첫 주소가 404 로 떨어지고 두 번째에서 잡힌다.
+   ★ 파일을 두 벌로 갈라 두지 않는 이유 — 갈라 두면 한쪽만 고치는 날이 반드시 온다.
+     헛치는 요청 한 번이 그것보다 싸다. */
+const SUMMARY_SOURCES = ['/eval/summary', 'summary.json'];
+
+async function loadSummary() {
+  let last = null;
+  for (const url of SUMMARY_SOURCES) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) { last = new Error(`${url} → HTTP ${res.status}`); continue; }
+      const data = await res.json();
+      // 앱 없이 열렸다면 '데모로' 돌아갈 곳이 없다 — 저장소로 보낸다.
+      if (url !== SUMMARY_SOURCES[0]) {
+        const back = document.getElementById('back');
+        if (back) {
+          back.href = 'https://github.com/ae-GYEONGWON/codebase-rag-assistant';
+          back.textContent = '← 저장소로';
+        }
+      }
+      return data;
+    } catch (e) { last = e; }
+  }
+  throw last || new Error('스냅샷을 찾지 못했습니다.');
+}
+
 async function main() {
   const stamp = document.getElementById('stamp');
   const root = document.getElementById('main');
   let d;
   try {
-    const res = await fetch('/eval/summary');
-    d = await res.json();
+    d = await loadSummary();
   } catch (e) {
     root.innerHTML = `<div class="err">측정 결과를 불러오지 못했습니다: ${esc(e.message)}</div>`;
     stamp.textContent = '';

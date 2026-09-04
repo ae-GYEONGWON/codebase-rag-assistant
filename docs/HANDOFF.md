@@ -320,6 +320,36 @@ python -m eval.publish --check  # 스냅샷이 낡았는지만 확인(CI 가 매
   **모르는 단어 하나보다 용어 혼용이 더 해롭다.**
 - 근거는 번호가 아니라 **제목 + 링크**로 건다. '노트 #7' 은 처음 보는 사람에게 기호일 뿐이다.
 
+### 대시보드를 서버 없이 여는 법 — GitHub Pages
+
+`/eval` 은 **앱 없이도 그대로 뜬다.** 외부 글꼴·라이브러리를 쓰지 않는 HTML 한 장이고,
+읽는 데이터가 이미 git 에 커밋된 `summary.json` 한 개이기 때문이다. 그래서 챗봇 배포와
+분리해서 먼저 올린다 — 이력서에 넣을 링크는 **죽지 않는 것**이 먼저다.
+
+`.github/workflows/pages.yml` 이 하는 일은 사실상 복사 두 번이다(빌드도 설치도 없다).
+
+| 원본 | 올라가는 이름 |
+|---|---|
+| `web/eval.html` | `index.html` |
+| `eval/published/summary.json` | `summary.json` |
+
+**같은 파일이 두 곳에서 열린다.** 그래서 화면이 데이터를 두 자리에서 찾는다
+(`web/eval.html` 의 `SUMMARY_SOURCES`):
+
+1. 앱 서버 — `/eval` → `/eval/summary`, 돌아가는 링크는 `← 데모로`
+2. Pages — `/<repo>/` → 옆의 `summary.json`, 앱이 없으니 링크를 `← 저장소로` 로 바꾼다
+
+정적용 파일을 따로 만들지 않았다. **두 벌이 되면 한쪽만 고치는 날이 반드시 온다** —
+Pages 에서 헛치는 요청 한 번이 그것보다 싸다.
+
+🔴 **저장소 설정에서 사람이 한 번 해야 하는 것** (이걸 안 하면 워크플로가 통과해도 화면이 없다):
+
+- Settings → Pages → Source 를 **GitHub Actions** 로 (기본값 `Deploy from a branch` 로는 무시된다)
+- 저장소가 **public** 이어야 무료다. private 이면 이력서 링크가 404 다.
+
+주소: `https://ae-gyeongwon.github.io/codebase-rag-assistant/`
+**살아 있는 것을 눈으로 확인한 뒤에 README·이력서에 적는다.**
+
 ## 5. 로드맵
 
 ### 지금 어디까지 왔나 (2026-09-02)

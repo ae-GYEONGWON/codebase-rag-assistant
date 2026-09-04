@@ -1,0 +1,66 @@
+# 측정 결과 대시보드를 GitHub Pages 로 올린다
+#
+# 왜 이것만 올리는가 — 이 프로젝트에서 남에게 보여줄 값어치가 가장 큰 화면은 챗봇이 아니라
+# **측정 결과**인데, 챗봇은 서버·모델·비용이 필요해서 링크가 죽을 위험이 크다. 반대로 이
+# 대시보드는 서버가 필요 없다: 외부 글꼴도 라이브러리도 쓰지 않는 HTML 한 장과, 이미 git 에
+# 커밋돼 있는 스냅샷 JSON 한 개가 전부다.
+#
+# 그래서 여기서 하는 일은 사실상 **파일 두 개를 복사하는 것**이다. 빌드도 설치도 없다.
+#
+#   web/eval.html                 → index.html
+#   eval/published/summary.json   → summary.json
+#
+# 대시보드는 두 자리에서 데이터를 찾는다(web/eval.html 의 SUMMARY_SOURCES 주석 참고).
+# 앱 서버로 열면 /eval/summary, 여기서는 옆에 놓인 summary.json 을 집는다. 파일을 정적용으로
+# 따로 만들어 두지 않는 이유도 거기 적어 뒀다 — 두 벌이 되면 한쪽만 고치는 날이 온다.
+#
+# ⚠️ 저장소 설정에서 한 번은 손으로 해야 하는 것:
+#      Settings → Pages → Source 를 **GitHub Actions** 로. (기본값인 'Deploy from a branch'
+#      로는 이 워크플로의 배포가 무시된다.) 그리고 저장소가 **public** 이어야 무료다.
+
+name: pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/eval.html'
+      - 'eval/published/summary.json'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 배포는 겹치면 안 된다. 다만 진행 중인 것을 죽이지는 않는다 — 반쯤 올라간 상태가 남는다.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 올릴 것만 모은다
+        run: |
+          set -e
+          mkdir -p site
+          cp web/eval.html site/index.html
+          cp eval/published/summary.json site/summary.json
+          # Jekyll 을 태우지 않는다 — 우리가 올리는 건 이미 완성된 HTML 이다.
+          touch site/.nojekyll
+          ls -l site
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4
