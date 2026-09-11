@@ -241,6 +241,10 @@ button, input, textarea { font: inherit; color: inherit; }
                padding: 2px 0 2px 10px; margin-top: 8px; line-height: 1.5; }
 .tour-follow b { color: var(--c-text-dim); font-weight: 600; }
 .tour-more { margin-top: var(--s-4); font-size: 13px; color: var(--c-text-dim); }
+/* 경계를 말하는 줄. 본문 단락보다 약하게 두되 b 는 또렷하게 — 여기만 읽고 가는 사람이 있다. */
+.scope-note { font-size: 13px; line-height: 1.7; }
+.scope-note b { color: var(--c-text); font-weight: 640; }
+.scope-note a { color: var(--c-accent); }
 /* 직접 물어보라고 말하는 자리. 준비된 질문만 놓여 있으면
    '잘 답할 만한 것만 골라 둔 것 아니야'라는 의심을 화면이 스스로 만든다. */
 .ask-own { margin-top: var(--s-4); font-size: 13px; color: var(--c-text-dim); line-height: 1.7; }
@@ -731,6 +735,11 @@ body.is-readonly .composer { display: none; }
           <div class="setup-note" id="setup-note" hidden></div>
           <p>이 프로젝트의 <strong>문서 · 코드 · 변경 이력</strong>에 적힌 것만 근거로 답합니다.
              답마다 <strong>어디서 나온 말인지</strong>를 함께 보여주고, 그 파일의 원문까지 열어 볼 수 있습니다.</p>
+          <!-- 경계를 먼저 말한다(노트 #30). 안 밝히면 "MMR 이 뭐야?" 에 답을 못 하는 것이
+               제품의 한계가 아니라 고장으로 읽힌다. 실제로 그렇게 읽혔다. -->
+          <p class="scope-note">그래서 <b>일반적인 용어 설명은 하지 않습니다.</b>
+             여기 적혀 있는 것은 개념이 아니라 <b>무엇을 왜 그렇게 정했는지의 기록</b>이고,
+             그 기록에 없는 말은 모른다고 답합니다 — <a href="/eval">어떻게 그렇게 뒀는지</a>.</p>
           <div class="tour" id="tour"></div>
           <div class="chips" id="chips" hidden></div>
           <!-- 위 질문은 전부 준비된 것이다. 그 사실을 먼저 밝히고 직접 물어보라고
