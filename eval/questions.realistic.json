@@ -1,0 +1,82 @@
+{
+  "_comment": "실사용형 평가셋 — 기존 골든셋과 '같은 코퍼스·같은 검색기, 질문의 말씨만 다름' 통제 비교용. 게이트에 쓰지 않는다(별도 파일·별도 러너).",
+  "_why": "골든셋 20문항은 전부 '이미 시스템을 아는 사람'이 썼다. 내부 용어(SL_CAP_PERCENT)와 축 지시어('코드에서','문서에는')가 문항에 들어 있어, 검색기가 풀기 전에 질문이 답의 절반을 알려주고 있었다. 실사용 질문에는 그 둘이 없다.",
+  "_labels": "라벨은 검색기 출력이 아니라 고정 스냅샷(eval-corpus-v1) 원본을 직접 grep 해서 만들었다. expected 는 OR 채점.",
+  "_kinds": {
+    "definition": "개념을 묻는다('X가 뭐야?'). 코퍼스에 정의 문장이 없을 수 있다 — 내부 메모는 정의를 안 쓴다.",
+    "outsider-word": "같은 것을 코퍼스에 없는 바깥말로 묻는다. 어휘 불일치.",
+    "no-axis": "문서/코드/커밋 중 어디를 볼지 말하지 않는다. 짧다."
+  },
+  "cases": [
+    {
+      "q": "MMR 이 뭐야?",
+      "kind": "definition",
+      "origin": "manual",
+      "expected": ["docs/engineering-notes.md", "app/retriever.py", "app/config.py"],
+      "note": "코퍼스에 MMR 의 정의 문장은 없다. 있는 것은 '적합도 항을 RRF 로 교체'·'λ 재측정' 같은 운용 기록뿐."
+    },
+    {
+      "q": "RRF 가 뭐야?",
+      "kind": "definition",
+      "origin": "manual",
+      "expected": ["app/retriever.py", "docs/engineering-notes.md"],
+      "note": "MMR 과 달리 정의가 있다 — app/retriever.py 6행 'RRF(Reciprocal Rank Fusion)로 합쳐'. 같은 종류 질문인데 코퍼스가 답을 가진 쪽/못 가진 쪽 대조군."
+    },
+    {
+      "q": "청크가 뭐야?",
+      "kind": "definition",
+      "origin": "manual",
+      "expected": ["app/loader.py", "app/config.py", "app/code_loader.py"],
+      "note": "app/loader.py 1행 '헤더 인지 청크로 분할' + config 의 chunk_size."
+    },
+    {
+      "q": "범위 밖 판정이 뭐야?",
+      "kind": "definition",
+      "origin": "manual",
+      "expected": ["app/retriever.py", "docs/engineering-notes.md"],
+      "note": "app/retriever.py 9행에 정의에 해당하는 문장이 있다('최고 유사도가 임계 미만이면 …')."
+    },
+    {
+      "q": "재순위 매기는 기능은 왜 껐어?",
+      "kind": "outsider-word",
+      "origin": "manual",
+      "expected": ["docs/engineering-notes.md", "app/reranker.py", "app/config.py"],
+      "note": "'재순위' 는 스냅샷 전체에 0건. 코퍼스는 전부 '리랭커' 로 적혀 있다."
+    },
+    {
+      "q": "엉뚱한 질문 들어오면 어떻게 막아?",
+      "kind": "outsider-word",
+      "origin": "manual",
+      "expected": ["app/retriever.py", "docs/engineering-notes.md"],
+      "note": "'엉뚱' 0건. 코퍼스 표기는 '범위 밖'."
+    },
+    {
+      "q": "검색 두 개를 어떻게 하나로 합쳐?",
+      "kind": "outsider-word",
+      "origin": "manual",
+      "expected": ["app/retriever.py", "docs/engineering-notes.md"],
+      "note": "'하이브리드'·'융합'·'RRF' 를 한 번도 쓰지 않고 같은 것을 묻는다."
+    },
+    {
+      "q": "임베딩 모델 뭐 써?",
+      "kind": "no-axis",
+      "origin": "manual",
+      "expected": ["app/config.py", "app/embeddings.py"],
+      "note": "짧고 축을 안 밝힌다. 답은 config 의 hf_embedding_model."
+    },
+    {
+      "q": "왜 느려?",
+      "kind": "no-axis",
+      "origin": "manual",
+      "expected": ["docs/engineering-notes.md"],
+      "note": "노트 #3 '첫 질문만 18.6초 — LLM 이 아니라 임베딩이 범인'."
+    },
+    {
+      "q": "테스트 어떻게 돌려?",
+      "kind": "no-axis",
+      "origin": "manual",
+      "expected": ["README.md"],
+      "note": "README 102행 'python -m pytest'."
+    }
+  ]
+}
