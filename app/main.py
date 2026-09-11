@@ -148,6 +148,22 @@ def health() -> dict:
     }
 
 
+def indexed_commits() -> int:
+    """읽어 둔 **변경 이력(커밋)** 조각 수. 실패하면 -1(= 확인 못 함).
+
+    첫 화면 소개에 "무엇을 얼마나 읽어 뒀는지"를 적으려면 세 축의 수가 다 필요한데,
+    문서·코드는 파일 목록에서 세지지만 커밋은 파일이 아니다. git 을 다시 부르지 않고
+    이미 저장된 것에서 센다 — 이 화면은 페이지를 열 때마다 불린다.
+    """
+    try:
+        from app.ingest import get_vectorstore
+
+        return len(get_vectorstore()._collection.get(where={"doc_type": "commit"},
+                                                     include=[])["ids"])
+    except Exception:
+        return -1
+
+
 def indexed_chunks() -> int:
     """활성 프로필 컬렉션에 들어 있는 청크 수. 실패하면 -1(= 확인 못 함).
 
@@ -208,6 +224,12 @@ def topics() -> dict:
         "suggestions": list(active_profile().suggestions) or FALLBACK_QUESTIONS,
         # 기능 지도 — 무엇을 물을 수 있는지가 아니라 **무엇이 구현돼 있는지**를 알린다.
         "tour": [dict(g) for g in active_profile().tour],
+        # 묻기 **전에** 읽는 소개와, 못하는 것. 무엇을 아는지 모르면 물어볼 것도
+        # 떠오르지 않고, 못하는 것을 안 밝히면 한계가 고장으로 읽힌다(노트 #30).
+        "overview": dict(p.overview) if p.overview else None,
+        "limits": [dict(x) for x in p.limits],
+        # 소개에 "무엇을 얼마나 읽어 뒀는지"를 적기 위한 세 번째 축.
+        "commit_count": indexed_commits(),
         "llm": settings.active_llm,
         "router": settings.use_router,
     }

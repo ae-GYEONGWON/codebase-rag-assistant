@@ -241,12 +241,44 @@ button, input, textarea { font: inherit; color: inherit; }
                padding: 2px 0 2px 10px; margin-top: 8px; line-height: 1.5; }
 .tour-follow b { color: var(--c-text-dim); font-weight: 600; }
 .tour-more { margin-top: var(--s-4); font-size: 13px; color: var(--c-text-dim); }
-/* 경계를 말하는 줄. 본문 단락보다 약하게 두되 b 는 또렷하게 — 여기만 읽고 가는 사람이 있다. */
-.scope-note { font-size: 13px; line-height: 1.7; }
-.scope-note b { color: var(--c-text); font-weight: 640; }
-.scope-note a { color: var(--c-accent); }
+
+/* 소개 — 첫 화면에서 가장 먼저 읽는 자리. 본문보다 한 단 크게 둔다.
+   ★ 폭을 좁히되 **가운데로 밀지 않는다.** 아래 카드와 왼쪽 끝이 어긋나면 읽는 눈이
+   매 덩어리마다 시작점을 다시 찾아야 한다(실제로 화면에서 그렇게 보였다). */
+.intro { margin: 0 0 var(--s-5); text-align: left; }
+.intro p { margin: 0 0 var(--s-3); max-width: 62ch; font-size: 14.5px; line-height: 1.75; color: var(--c-text-dim); }
+.intro p b { color: var(--c-text); font-weight: 640; }
+.intro .stats { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center;
+  font-size: 12.5px; color: var(--c-text-mute); border-top: 1px solid var(--c-border);
+  padding-top: var(--s-3); margin-top: var(--s-4); }
+.intro .stats b { color: var(--c-text-dim); font-weight: 640; }
+/* 경계를 말하는 줄. 소개 안에 두되 약하게 — 여기만 읽고 가는 사람이 있다. */
+.intro .scope-note { font-size: 13px; line-height: 1.7; }
+.intro .scope-note b { color: var(--c-text); font-weight: 640; }
+.intro .scope-note a { color: var(--c-accent); }
+
+/* 구획 제목 — 소개 / 물어볼 것 / 못하는 것 세 덩어리를 눈으로 가른다. */
+.sec-h { margin: var(--s-5) 0 var(--s-3); text-align: left;
+  font-size: 13px; letter-spacing: -.01em; display: flex; align-items: baseline; gap: 8px; }
+.sec-h span { font-size: 11.5px; color: var(--c-text-mute); font-weight: 400; }
+
+/* 못하는 것 — 카드보다 약하게. 자랑이 아니라 미리 알리는 자리다. */
+.limits { display: grid; gap: var(--s-3); text-align: left; }
+.limit .why, .limit .instead { max-width: 62ch; }
+.limit { border: 1px dashed var(--c-border); border-radius: 10px; padding: var(--s-3) var(--s-4); }
+.limit .bad { font-size: 13px; color: var(--c-text-mute); text-decoration: line-through; }
+.limit .why { font-size: 12.5px; color: var(--c-text-dim); line-height: 1.7; margin: 4px 0 0; }
+.limit .why b { color: var(--c-text); font-weight: 640; }
+.limit .instead { font-size: 12.5px; color: var(--c-text-dim); margin-top: 8px; }
+.limit .instead b { color: var(--c-text); font-weight: 640; }
+.limit .tour-q { margin-top: 6px; }
+
 /* 직접 물어보라고 말하는 자리. 준비된 질문만 놓여 있으면
    '잘 답할 만한 것만 골라 둔 것 아니야'라는 의심을 화면이 스스로 만든다. */
+/* 맨 아래 두 문단도 왼쪽 끝을 위 덩어리에 맞춘다 — 여기만 가운데면 훑던 눈이
+   마지막에 한 번 더 시작점을 찾는다. 제목도 같은 줄에서 시작하게 둔다. */
+.empty h2, .ask-own, .tour-more { text-align: left; margin-left: 0; margin-right: 0; }
+.ask-own, .tour-more { max-width: 62ch; }
 .ask-own { margin-top: var(--s-4); font-size: 13px; color: var(--c-text-dim); line-height: 1.7; }
 .ask-own b { color: var(--c-text); font-weight: 640; }
 .q-seed {
@@ -733,15 +765,16 @@ body.is-readonly .composer { display: none; }
                비어 있을 때 아무 말도 안 하면 처음 보는 사람은 "원래 아무것도 모르는
                시스템"으로 읽는다. 채워져 있으면 이 자리는 아예 없다. -->
           <div class="setup-note" id="setup-note" hidden></div>
-          <p>이 프로젝트의 <strong>문서 · 코드 · 변경 이력</strong>에 적힌 것만 근거로 답합니다.
-             답마다 <strong>어디서 나온 말인지</strong>를 함께 보여주고, 그 파일의 원문까지 열어 볼 수 있습니다.</p>
-          <!-- 경계를 먼저 말한다(노트 #30). 안 밝히면 "MMR 이 뭐야?" 에 답을 못 하는 것이
-               제품의 한계가 아니라 고장으로 읽힌다. 실제로 그렇게 읽혔다. -->
-          <p class="scope-note">그래서 <b>일반적인 용어 설명은 하지 않습니다.</b>
-             여기 적혀 있는 것은 개념이 아니라 <b>무엇을 왜 그렇게 정했는지의 기록</b>이고,
-             그 기록에 없는 말은 모른다고 답합니다 — <a href="/eval">어떻게 그렇게 뒀는지</a>.</p>
+          <!-- 묻기 **전에** 읽는 소개. 무엇을 아는 어시스턴트인지 모르면 물어볼 것도
+               떠오르지 않는다 — 처음 온 사람은 빈 입력창 앞에서 그대로 멈춘다. -->
+          <div class="intro" id="intro" hidden></div>
+          <h3 class="sec-h" id="guide-h" hidden>무엇을 물어볼 수 있나<span>아래를 눌러 보셔도 되고, 직접 쓰셔도 됩니다</span></h3>
           <div class="tour" id="tour"></div>
           <div class="chips" id="chips" hidden></div>
+          <!-- 못하는 것을 **먼저** 밝힌다(노트 #30). 안 밝히면 한계가 고장으로 읽힌다 —
+               실제로 그렇게 읽혔다. 개념을 물었는데 답이 없으니 덜 만든 것처럼 보였다. -->
+          <h3 class="sec-h" id="limits-h" hidden>이건 잘 못합니다<span>먼저 밝혀 둡니다</span></h3>
+          <div class="limits" id="limits" hidden></div>
           <!-- 위 질문은 전부 준비된 것이다. 그 사실을 먼저 밝히고 직접 물어보라고
                말해야, 이 저장소가 /eval 에서 다루는 의심(문제를 낸 사람과 푸는 시스템을
                만든 사람이 같다)과 첫 화면이 어긋나지 않는다. -->
@@ -857,6 +890,7 @@ const $ = (id) => document.getElementById(id);
 const els = {
   thread: $('thread'), inner: $('thread-inner'), empty: $('empty'), chips: $('chips'),
   tour: $('tour'), setupNote: $('setup-note'),
+  intro: $('intro'), guideH: $('guide-h'), limits: $('limits'), limitsH: $('limits-h'),
   form: $('f'), q: $('q'), send: $('send'), live: $('live'), toast: $('toast'),
   statusDot: $('status-dot'), statusText: $('status-text'), modeNote: $('mode-note'),
   files: $('files'), stDoc: $('st-doc'), stCode: $('st-code'),
@@ -1755,6 +1789,53 @@ $('scrim').addEventListener('click', () => setDrawer(false));
      ① 파일은 있는데 색인이 0    → 인덱싱을 안 한 것(`chroma_db/` 는 git 제외라 clone 직후가 그 상태)
      ② 파일 자체가 0             → 지식원 경로를 못 찾은 것(`.env` 를 다른 PC 로 옮기면 이렇게 된다)
    ②가 먼저다. 경로가 없으면 인덱싱을 해도 여전히 0 이라, ①을 먼저 시키면 헛걸음시킨다. */
+// 소개·한계 글에만 쓰는 아주 작은 굵게 표시. **먼저** 이스케이프하므로 태그가 새어들 수 없다.
+// 굵게를 쓰는 이유는 장식이 아니라, 처음 온 사람이 훑을 때 **문장 하나는 걸리게** 하려는 것이다.
+function bold(text) {
+  return esc(text).replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+}
+
+// 묻기 전에 읽는 소개. 프로필이 소개를 주지 않으면(예: private) 이 자리는 아예 없다 —
+// 빈 제목만 남으면 "여기 뭔가 있어야 하는데 비었다" 로 읽힌다.
+function renderIntro(t) {
+  const ov = t.overview;
+  if (!ov) { els.intro.hidden = true; return; }
+  const stats = [];
+  if (t.count != null) stats.push('문서 <b>' + t.count + '</b>');
+  if (t.code_count != null) stats.push('코드 <b>' + t.code_count + '</b>');
+  // 커밋은 파일이 아니라 저장된 것에서 세므로 확인 못 하면 -1 이 온다. 그때는 줄을 뺀다.
+  if (t.commit_count > 0) stats.push('변경 이력 <b>' + t.commit_count + '</b>');
+  els.intro.innerHTML =
+    '<p>' + bold(ov.what) + '</p>' +
+    '<p>' + bold(ov.for) + '</p>' +
+    '<p class="scope-note">읽어 둔 것 밖은 답하지 않고, <b>일반적인 용어 설명도 하지 ' +
+    '않습니다</b> — 무엇을 못 하는지는 아래에 적어 뒀습니다. ' +
+    '무엇을 재고 무엇을 정했는지는 <a href="/eval">어떻게 검증했는지</a> 에 있습니다.</p>' +
+    (stats.length ? '<div class="stats">지금 읽어 둔 것 — ' + stats.join(' · ') + '</div>' : '');
+  els.intro.hidden = false;
+}
+
+// 못하는 것. 각 항목에 **되는 질문**을 버튼으로 붙인다 — 한계만 나열하면 읽는 사람이
+// 다음에 무엇을 해야 할지 모른 채 남는다.
+function renderLimits(t) {
+  const items = t.limits || [];
+  els.limits.innerHTML = '';
+  els.limits.hidden = els.limitsH.hidden = !items.length;
+  items.forEach(it => {
+    const card = el('div', 'limit');
+    card.innerHTML = '<div class="bad">' + esc(it.q) + '</div>' +
+                     '<p class="why">' + bold(it.why) + '</p>' +
+                     (it.instead ? '<div class="instead">' + bold(it.instead) + '</div>' : '');
+    if (it.ask) {
+      const b = el('button', 'tour-q', esc(it.ask));
+      b.type = 'button';
+      b.onclick = () => { ask(it.ask); };
+      card.appendChild(b);
+    }
+    els.limits.appendChild(card);
+  });
+}
+
 function renderSetupNote(t) {
   const box = els.setupNote;
   if (!box) return;
@@ -1813,8 +1894,12 @@ async function boot() {
       els.files.appendChild(n);
     });
 
+    renderIntro(topics);
+    renderLimits(topics);
+
     // 기능 지도가 있으면 그것을 쓰고, 없으면 예전 칩으로 떨어진다(다른 프로필 호환).
     const tour = topics.tour || [];
+    els.guideH.hidden = !tour.length;
     els.tour.innerHTML = '';
     if (tour.length) {
       els.chips.hidden = true;

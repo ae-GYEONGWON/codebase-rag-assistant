@@ -400,3 +400,37 @@ def test_준비_안내에_만든사람_용어가_없다():
 
     for term in ("인덱싱", "색인", "청크", "임베딩", "컬렉션", "코퍼스", "chroma"):
         assert term not in body, f"준비 안내에 {term!r} 가 들어갔다 — 쉬운 말로 바꿀 것"
+
+
+# --- 첫 화면(소개 · 못하는 것) -----------------------------------------------
+
+def test_소개에_만든_사람의_말이_없다():
+    """처음 온 사람이 **가장 먼저** 읽는 자리라, 여기서 모르는 말이 나오면 그 자리에서 끝난다."""
+    ov = build_profile("demo").overview
+    assert ov, "소개가 비어 있다 — 첫 화면이 무엇을 아는 어시스턴트인지 말하지 않는다"
+    for key in ("what", "for"):
+        assert not _offenders(ov[key]), (key, ov[key])
+
+
+def test_못하는_것을_먼저_밝힌다():
+    """밝히지 않으면 한계가 고장으로 읽힌다(노트 #30). 실제로 그렇게 읽혔다."""
+    limits = build_profile("demo").limits
+    assert len(limits) >= 3, "못하는 것이 세 가지 미만이면 화면에서 구실을 못 한다"
+    for lim in limits:
+        assert lim["q"].strip() and lim["why"].strip()
+        # q(안 되는 질문)·ask(대신 되는 질문)는 **사용자가 묻는 내용**이라 검사 대상이 아니다.
+        for key in ("why", "instead"):
+            if lim.get(key):
+                assert not _offenders(lim[key]), (key, lim[key])
+
+
+def test_못하는_것에는_대신_물을_것이_붙는다():
+    """한계만 나열하면 읽는 사람이 다음에 무엇을 할지 모른 채 남는다."""
+    limits = build_profile("demo").limits
+    assert sum(1 for x in limits if x.get("ask")) >= 2
+
+
+def test_소개의_말은_화면_다른_곳과_같은_이름을_쓴다():
+    """같은 것을 두 이름으로 부르는 것이 모르는 단어 하나보다 해롭다(HANDOFF 글쓰기 원칙)."""
+    ov = build_profile("demo").overview
+    assert "문서 · 코드 · 변경 이력" in ov["what"]
